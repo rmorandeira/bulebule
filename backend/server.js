@@ -6,6 +6,7 @@ const { rollDice, evaluateHand, compareHands } = require('./gameLogic');
 
 const app = express();
 app.use(cors({ origin: '*' }));
+app.get('/', (_, res) => res.send('OK'));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
