@@ -113,7 +113,7 @@ export default function GameBoard({ room, myId, onLeave }) {
               <span className="scoreboard__pos">{i + 1}.</span>
               <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
               <div className="scoreboard__dice">
-                {p.currentDice.slice(0, 3).map((v, j) => <Die key={j} value={v} small />)}
+                {p.currentDice.map((v, j) => <Die key={j} value={v} small />)}
               </div>
               <span className="scoreboard__wins">{p.wins}</span>
             </div>
