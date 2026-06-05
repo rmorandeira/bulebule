@@ -40,7 +40,7 @@ export default function Lobby() {
   return (
     <div className="lobby">
       <div className="lobby__header">
-        <h1 className="lobby__title">Poker<br />de Dados</h1>
+        <h1 className="lobby__title">Bule<br />Bule</h1>
         <p className="lobby__subtitle">A K Q J 10 9</p>
       </div>
 

@@ -404,6 +404,20 @@ body {
 
 .actions .btn { flex: 1; }
 
+.actions__roll-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.shake-hint {
+  font-size: 12px;
+  color: var(--text-subtle);
+  text-align: center;
+  font-weight: 500;
+}
+
 .waiting-label {
   font-size: 14px;
   color: var(--text-subtle);

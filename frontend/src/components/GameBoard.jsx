@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import socket from '../socket'
 import Die from './Die'
+
+const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+const needsMotionPermission = () =>
+  typeof DeviceMotionEvent !== 'undefined' &&
+  typeof DeviceMotionEvent.requestPermission === 'function'
 
 export default function GameBoard({ room, myId, onLeave }) {
   const [discardIndices, setDiscardIndices] = useState([])
   const [rolling, setRolling] = useState(false)
+  const [shakeEnabled, setShakeEnabled] = useState(false)
 
   const currentPlayer = room.players[room.currentPlayerIndex]
   const isMyTurn = currentPlayer?.id === myId
@@ -17,7 +23,7 @@ export default function GameBoard({ room, myId, onLeave }) {
     setDiscardIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])
   }
 
-  function handleRoll() {
+  const handleRoll = useCallback(() => {
     const diceCount = me?.currentDice?.length ?? 5
     const keptIndices = Array.from({ length: diceCount }, (_, i) => i).filter(i => !discardIndices.includes(i))
     setDiscardIndices([])
@@ -26,7 +32,7 @@ export default function GameBoard({ room, myId, onLeave }) {
       setRolling(false)
       if (!res?.ok && res?.error) alert(res.error)
     })
-  }
+  }, [discardIndices, me?.currentDice?.length])
 
   function handleStand() {
     socket.emit('stand', (res) => {
@@ -36,6 +42,43 @@ export default function GameBoard({ room, myId, onLeave }) {
 
   function handleNextRound() {
     socket.emit('next_round')
+  }
+
+  // Auto-enable shake on Android (no permission needed)
+  useEffect(() => {
+    if (isMobile() && !needsMotionPermission()) {
+      setShakeEnabled(true)
+    }
+  }, [])
+
+  // Shake detection
+  useEffect(() => {
+    if (!shakeEnabled || !canRoll || rolling) return
+
+    let lastShake = 0
+    const THRESHOLD = 18
+    const COOLDOWN = 1200
+
+    function onMotion(e) {
+      const g = e.accelerationIncludingGravity
+      if (!g) return
+      const force = Math.sqrt((g.x || 0) ** 2 + (g.y || 0) ** 2 + (g.z || 0) ** 2)
+      const now = Date.now()
+      if (force > THRESHOLD && now - lastShake > COOLDOWN) {
+        lastShake = now
+        handleRoll()
+      }
+    }
+
+    window.addEventListener('devicemotion', onMotion)
+    return () => window.removeEventListener('devicemotion', onMotion)
+  }, [shakeEnabled, canRoll, rolling, handleRoll])
+
+  async function enableShakeIOS() {
+    try {
+      const perm = await DeviceMotionEvent.requestPermission()
+      if (perm === 'granted') setShakeEnabled(true)
+    } catch {}
   }
 
   const displayPlayer = isMyTurn ? me : currentPlayer
@@ -160,9 +203,19 @@ export default function GameBoard({ room, myId, onLeave }) {
           {isMyTurn && !me?.done && (
             <>
               {me?.rollCount === 0 && (
-                <button className="btn btn--primary btn--full" onClick={handleRoll} disabled={rolling}>
-                  Tirar dados
-                </button>
+                <div className="actions__roll-group">
+                  <button className="btn btn--primary btn--full" onClick={handleRoll} disabled={rolling}>
+                    Tirar dados
+                  </button>
+                  {isMobile() && needsMotionPermission() && !shakeEnabled && (
+                    <button className="btn btn--secondary btn--full" onClick={enableShakeIOS}>
+                      Activar agitar
+                    </button>
+                  )}
+                  {shakeEnabled && canRoll && (
+                    <p className="shake-hint">Agita el móvil para tirar</p>
+                  )}
+                </div>
               )}
               {me?.rollCount > 0 && mustPass && (
                 <button className="btn btn--primary btn--full" onClick={handleStand} disabled={rolling}>
@@ -172,7 +225,10 @@ export default function GameBoard({ room, myId, onLeave }) {
               {me?.rollCount > 0 && !mustPass && (
                 <>
                   <button className="btn btn--secondary" onClick={handleStand}>Plantarse</button>
-                  <button className="btn btn--primary" onClick={handleRoll} disabled={rolling}>Tirar dados</button>
+                  <div className="actions__roll-group">
+                    <button className="btn btn--primary" onClick={handleRoll} disabled={rolling}>Tirar dados</button>
+                    {shakeEnabled && <p className="shake-hint">Agita el móvil para tirar</p>}
+                  </div>
                 </>
               )}
             </>
