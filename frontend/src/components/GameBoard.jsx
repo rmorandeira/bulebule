@@ -81,7 +81,7 @@ export default function GameBoard({ room, myId, onLeave }) {
     if (!shakeEnabled || !canRoll || rolling) return
 
     let lastShake = 0
-    const THRESHOLD = 18
+    const THRESHOLD = 28
     const COOLDOWN = 1200
 
     function onMotion(e) {
