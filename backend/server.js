@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const { rollDice, evaluateHand, compareHands } = require('./gameLogic');
+const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -153,11 +153,12 @@ io.on('connection', (socket) => {
 
     if (player.rollCount > 0) {
       player.rollHistory.push([...player.currentDice]);
+      player.currentDice = player.currentDice.map((die, i) =>
+        keptIndices.includes(i) ? die : rollDie()
+      );
+    } else {
+      player.currentDice = Array.from({ length: 5 }, rollDie);
     }
-    const keptDice = keptIndices
-      .filter(i => i >= 0 && i < player.currentDice.length)
-      .map(i => player.currentDice[i]);
-    player.currentDice = rollDice(keptDice);
     player.rollCount += 1;
 
     cb?.({ ok: true });

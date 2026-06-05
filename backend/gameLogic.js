@@ -54,4 +54,4 @@ function compareHands(h1, h2) {
   return 0;
 }
 
-module.exports = { rollDice, evaluateHand, compareHands };
+module.exports = { rollDie, rollDice, evaluateHand, compareHands };
