@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import Die from './Die'
-import { playDiceRoll } from '../sounds'
+import { playDiceRoll, DICE_ROLL_DURATION_MS } from '../sounds'
+
+const DIE_ANIM_DURATION_MS = 160
+const STAGGER_MS = (DICE_ROLL_DURATION_MS - DIE_ANIM_DURATION_MS) / 4 // ~97ms entre dados
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 const needsMotionPermission = () =>
@@ -12,6 +15,8 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [discardIndices, setDiscardIndices] = useState([])
   const [rolling, setRolling] = useState(false)
   const [shakeEnabled, setShakeEnabled] = useState(false)
+  const [animatingRollIdx, setAnimatingRollIdx] = useState(null)
+  const prevRollStateRef = useRef({ playerIdx: -1, rollCount: 0 })
 
   const currentPlayer = room.players[room.currentPlayerIndex]
   const isMyTurn = currentPlayer?.id === myId
@@ -45,6 +50,24 @@ export default function GameBoard({ room, myId, onLeave }) {
   function handleNextRound() {
     socket.emit('next_round')
   }
+
+  // Detectar nueva tirada y disparar animación
+  useEffect(() => {
+    const playerIdx = room.currentPlayerIndex
+    const rollCount = (isMyTurn ? me : currentPlayer)?.rollCount ?? 0
+    const prev = prevRollStateRef.current
+
+    if (playerIdx !== prev.playerIdx) {
+      prevRollStateRef.current = { playerIdx, rollCount: 0 }
+    }
+
+    if (rollCount > 0 && rollCount > prevRollStateRef.current.rollCount) {
+      prevRollStateRef.current = { playerIdx, rollCount }
+      setAnimatingRollIdx(rollCount - 1)
+      const timer = setTimeout(() => setAnimatingRollIdx(null), DICE_ROLL_DURATION_MS + 100)
+      return () => clearTimeout(timer)
+    }
+  }, [room.currentPlayerIndex, me?.rollCount, currentPlayer?.rollCount])
 
   // Auto-enable shake on Android (no permission needed)
   useEffect(() => {
@@ -182,6 +205,7 @@ export default function GameBoard({ room, myId, onLeave }) {
                       value={val}
                       selected={isInteractive && discardIndices.includes(dieIdx)}
                       onClick={isInteractive ? () => toggleDiscard(dieIdx) : null}
+                      animDelay={rollIdx === animatingRollIdx ? dieIdx * STAGGER_MS : null}
                     />
                   ))}
                 </div>

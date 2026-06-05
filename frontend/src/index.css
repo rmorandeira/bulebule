@@ -34,6 +34,18 @@ body {
   flex-direction: column;
 }
 
+/* ── Die animations ─────────────────────────────────────── */
+@keyframes die-pop {
+  0%   { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+  65%  { opacity: 1; transform: scale(1.1) rotate(3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.die-wrapper--animated {
+  opacity: 0;
+  animation: die-pop 0.16s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 /* ── Die ────────────────────────────────────────────────── */
 .die-wrapper {
   display: flex;

@@ -1,4 +1,4 @@
-export default function Die({ value, selected, onClick, small = false }) {
+export default function Die({ value, selected, onClick, small = false, animDelay = null }) {
   const cls = [
     'die',
     small ? 'die--small' : '',
@@ -6,8 +6,11 @@ export default function Die({ value, selected, onClick, small = false }) {
     onClick ? 'die--interactive' : '',
   ].filter(Boolean).join(' ')
 
+  const wrapperCls = ['die-wrapper', animDelay !== null ? 'die-wrapper--animated' : ''].filter(Boolean).join(' ')
+  const wrapperStyle = animDelay !== null ? { animationDelay: `${animDelay}ms` } : {}
+
   return (
-    <div className="die-wrapper">
+    <div className={wrapperCls} style={wrapperStyle}>
       <button className={cls} onClick={onClick} disabled={!onClick} aria-label={`Dado ${value}${selected ? ' (descartado)' : ''}`}>
         {value}
       </button>
