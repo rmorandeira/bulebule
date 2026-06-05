@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import socket from '../socket'
 import Die from './Die'
+import { playDiceRoll } from '../sounds'
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 const needsMotionPermission = () =>
@@ -24,6 +25,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   }
 
   const handleRoll = useCallback(() => {
+    playDiceRoll()
     const diceCount = me?.currentDice?.length ?? 5
     const keptIndices = Array.from({ length: diceCount }, (_, i) => i).filter(i => !discardIndices.includes(i))
     setDiscardIndices([])
