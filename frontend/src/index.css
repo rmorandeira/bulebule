@@ -269,15 +269,20 @@ body {
   min-height: 100dvh;
 }
 
-.game__header {
+/* ── Navbar ──────────────────────────────────────────────── */
+.navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 12px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.btn-back {
+.navbar__exit {
   background: none;
   border: none;
   font-size: 14px;
@@ -287,7 +292,11 @@ body {
   padding: 4px 0;
 }
 
-.game__round { font-size: 13px; color: var(--text-subtle); font-weight: 600; }
+.navbar__round {
+  font-size: 13px;
+  color: var(--text-subtle);
+  font-weight: 600;
+}
 
 /* ── Scoreboard ──────────────────────────────────────────── */
 .scoreboard {
