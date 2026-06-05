@@ -229,32 +229,34 @@ export default function GameBoard({ room, myId, onLeave }) {
           {isMyTurn && !me?.done && (
             <>
               {me?.rollCount === 0 && (
-                <div className="actions__roll-group">
-                  <button className="btn btn--primary btn--full" onClick={handleRoll} disabled={rolling}>
-                    Tirar dados
-                  </button>
-                  {isMobile() && needsMotionPermission() && !shakeEnabled && (
-                    <button className="btn btn--secondary btn--full" onClick={enableShakeIOS}>
-                      Activar agitar
+                <>
+                  <div className="actions__row">
+                    <button className="btn btn--primary" onClick={handleRoll} disabled={rolling}>
+                      Tirar dados
                     </button>
-                  )}
-                  {shakeEnabled && canRoll && (
-                    <p className="shake-hint">Agita el móvil para tirar</p>
-                  )}
-                </div>
+                    {isMobile() && needsMotionPermission() && !shakeEnabled && (
+                      <button className="btn btn--secondary" onClick={enableShakeIOS}>
+                        Activar agitar
+                      </button>
+                    )}
+                  </div>
+                  {shakeEnabled && canRoll && <p className="shake-hint">Agita el móvil para tirar</p>}
+                </>
               )}
               {me?.rollCount > 0 && mustPass && (
-                <button className="btn btn--primary btn--full" onClick={handleStand} disabled={rolling}>
-                  Pasar turno
-                </button>
+                <div className="actions__row">
+                  <button className="btn btn--primary" onClick={handleStand} disabled={rolling}>
+                    Pasar turno
+                  </button>
+                </div>
               )}
               {me?.rollCount > 0 && !mustPass && (
                 <>
-                  <button className="btn btn--secondary" onClick={handleStand}>Plantarse</button>
-                  <div className="actions__roll-group">
+                  <div className="actions__row">
+                    <button className="btn btn--secondary" onClick={handleStand}>Plantarse</button>
                     <button className="btn btn--primary" onClick={handleRoll} disabled={rolling}>Tirar dados</button>
-                    {shakeEnabled && <p className="shake-hint">Agita el móvil para tirar</p>}
                   </div>
+                  {shakeEnabled && <p className="shake-hint">Agita el móvil para tirar</p>}
                 </>
               )}
             </>

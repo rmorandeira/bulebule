@@ -408,18 +408,19 @@ body {
 
 /* ── Actions ─────────────────────────────────────────────── */
 .actions {
-  padding: 16px 20px 32px;
+  padding: 16px 20px 64px;
   display: flex;
+  flex-direction: column;
   gap: 10px;
   border-top: 1px solid var(--border);
 }
 
-.actions .btn { flex: 1; }
-
-.actions__roll-group {
+.actions__row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.actions__row .btn {
   flex: 1;
 }
 
