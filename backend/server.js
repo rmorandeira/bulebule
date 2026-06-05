@@ -5,9 +5,12 @@ const cors = require('cors');
 const { rollDice, evaluateHand, compareHands } = require('./gameLogic');
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: '*' }));
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+  transports: ['polling', 'websocket'],
+});
 
 const rooms = {};
 
@@ -196,4 +199,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`Servidor en http://0.0.0.0:${PORT}`));
