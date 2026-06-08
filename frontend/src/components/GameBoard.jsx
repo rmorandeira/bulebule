@@ -51,6 +51,11 @@ export default function GameBoard({ room, myId, onLeave }) {
     socket.emit('next_round')
   }
 
+  function handleLeave() {
+    socket.emit('leave_room')
+    onLeave()
+  }
+
   // Detectar nueva tirada y disparar animación
   useEffect(() => {
     const playerIdx = room.currentPlayerIndex
@@ -116,7 +121,7 @@ export default function GameBoard({ room, myId, onLeave }) {
 
       {/* Navbar persistente */}
       <nav className="navbar">
-        <button className="navbar__exit" onClick={onLeave}>← Salir</button>
+        <button className="navbar__exit" onClick={handleLeave}>← Salir</button>
         <span className="navbar__round">Ronda {room.roundNumber}</span>
       </nav>
 

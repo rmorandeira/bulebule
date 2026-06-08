@@ -7,6 +7,7 @@ const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
 const app = express();
 app.use(cors({ origin: '*' }));
 app.get('/', (_, res) => res.send('OK'));
+app.get('/health', (_, res) => res.json({ status: 'ok' }));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
@@ -27,6 +28,8 @@ function makePlayer(id, name) {
 function sanitize(room) {
   return {
     code: room.code,
+    name: room.name,
+    maxPlayers: room.maxPlayers,
     hostId: room.hostId,
     phase: room.phase,
     roundNumber: room.roundNumber,
@@ -46,9 +49,24 @@ function sanitize(room) {
   };
 }
 
+function sanitizeForList(room) {
+  return {
+    code: room.code,
+    name: room.name,
+    playerCount: room.players.length,
+    maxPlayers: room.maxPlayers,
+    phase: room.phase,
+  };
+}
+
 function broadcast(code) {
   const room = rooms[code];
   if (room) io.to(code).emit('room_state', sanitize(room));
+}
+
+function broadcastRoomList() {
+  const list = Object.values(rooms).map(sanitizeForList);
+  io.emit('rooms_list', list);
 }
 
 function startRound(room) {
@@ -69,11 +87,9 @@ function startRound(room) {
 function finishTurn(room, player) {
   player.done = true;
   player.hand = evaluateHand(player.currentDice);
-
   if (room.currentPlayerIndex === 0) {
     room.maxRolls = player.rollCount;
   }
-
   const next = room.players.findIndex((p, i) => i > room.currentPlayerIndex && !p.done);
   if (next !== -1) {
     room.currentPlayerIndex = next;
@@ -94,44 +110,81 @@ function endRound(room) {
 
 io.on('connection', (socket) => {
 
-  socket.on('create_room', ({ playerName }, cb) => {
+  socket.on('list_rooms', (cb) => {
+    cb?.({ rooms: Object.values(rooms).map(sanitizeForList) });
+  });
+
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6 }, cb) => {
+    if (!playerName?.trim() || !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     let code;
     do { code = genCode(); } while (rooms[code]);
-    console.log(`create_room: code="${code}" host="${playerName}"`);
+
     rooms[code] = {
-      code, hostId: socket.id, phase: 'lobby',
-      roundNumber: 0, currentPlayerIndex: 0, maxRolls: null, roundWinnerId: null,
-      players: [makePlayer(socket.id, playerName)],
+      code,
+      name: roomName.trim(),
+      maxPlayers: Math.min(Math.max(2, parseInt(maxPlayers) || 6), 10),
+      hostId: socket.id,
+      phase: 'lobby',
+      roundNumber: 0,
+      currentPlayerIndex: 0,
+      maxRolls: null,
+      roundWinnerId: null,
+      players: [makePlayer(socket.id, playerName.trim())],
     };
+
     socket.join(code);
     socket.data.roomCode = code;
-    cb({ ok: true, code });
+    console.log(`create_room: "${roomName}" code="${code}" host="${playerName}"`);
+    cb?.({ ok: true, code });
     broadcast(code);
+    broadcastRoomList();
   });
 
   socket.on('join_room', ({ code, playerName }, cb) => {
-    console.log(`join_room: code="${code}" name="${playerName}" rooms=[${Object.keys(rooms).join(',')}]`);
-    const room = rooms[code];
-    if (!room) return cb({ ok: false, error: 'Sala no encontrada' });
+    if (!playerName?.trim()) return cb?.({ ok: false, error: 'Introduce tu nombre' });
+    const room = rooms[code?.toUpperCase()];
+    if (!room) return cb?.({ ok: false, error: 'Sala no encontrada' });
+    if (room.phase !== 'lobby') return cb?.({ ok: false, error: 'La partida ya ha comenzado' });
+    if (room.players.length >= room.maxPlayers) return cb?.({ ok: false, error: 'Sala llena' });
 
-    // Allow reconnection: same name already in the room
-    const existing = room.players.find(p => p.name === playerName);
-    if (existing) {
-      existing.id = socket.id;
-      if (room.hostId === existing.id) room.hostId = socket.id;
-      socket.join(code);
-      socket.data.roomCode = code;
-      cb({ ok: true, code });
-      broadcast(code);
-      return;
-    }
-
-    if (room.phase !== 'lobby') return cb({ ok: false, error: 'La partida ya ha comenzado' });
-    room.players.push(makePlayer(socket.id, playerName));
+    room.players.push(makePlayer(socket.id, playerName.trim()));
     socket.join(code);
     socket.data.roomCode = code;
-    cb({ ok: true, code });
+    console.log(`join_room: "${room.name}" player="${playerName}"`);
+    cb?.({ ok: true, code });
     broadcast(code);
+    broadcastRoomList();
+  });
+
+  socket.on('destroy_room', (cb) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || room.hostId !== socket.id) return cb?.({ ok: false });
+
+    io.to(code).emit('room_destroyed');
+    delete rooms[code];
+    socket.data.roomCode = null;
+    cb?.({ ok: true });
+    broadcastRoomList();
+  });
+
+  socket.on('leave_room', (cb) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return cb?.({ ok: false });
+
+    room.players = room.players.filter(p => p.id !== socket.id);
+    socket.leave(code);
+    socket.data.roomCode = null;
+
+    if (room.players.length === 0) {
+      delete rooms[code];
+    } else {
+      if (room.hostId === socket.id) room.hostId = room.players[0].id;
+      broadcast(code);
+    }
+    cb?.({ ok: true });
+    broadcastRoomList();
   });
 
   socket.on('start_game', (cb) => {
@@ -141,6 +194,7 @@ io.on('connection', (socket) => {
     startRound(room);
     cb?.({ ok: true });
     broadcast(room.code);
+    broadcastRoomList();
   });
 
   socket.on('roll', ({ keptIndices = [] }, cb) => {
@@ -193,9 +247,14 @@ io.on('connection', (socket) => {
       const r = rooms[code];
       if (!r) return;
       r.players = r.players.filter(p => p.id !== socket.id);
-      if (r.players.length === 0) { delete rooms[code]; return; }
+      if (r.players.length === 0) {
+        delete rooms[code];
+        broadcastRoomList();
+        return;
+      }
       if (r.hostId === socket.id) r.hostId = r.players[0].id;
       broadcast(code);
+      broadcastRoomList();
     }, 20_000);
   });
 });
