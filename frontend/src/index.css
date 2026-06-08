@@ -89,10 +89,21 @@ body {
 
 .die--interactive {
   cursor: pointer;
+  touch-action: none;
 }
 
 .die--interactive:active {
   transform: scale(0.93);
+}
+
+@keyframes die-swipe-out {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(70px); opacity: 0; }
+}
+
+.die--discarding {
+  animation: die-swipe-out 0.3s ease-in forwards;
+  pointer-events: none;
 }
 
 .die--selected {

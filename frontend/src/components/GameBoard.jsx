@@ -13,6 +13,7 @@ const needsMotionPermission = () =>
 
 export default function GameBoard({ room, myId, onLeave }) {
   const [discardIndices, setDiscardIndices] = useState([])
+  const [rollDiscardHistory, setRollDiscardHistory] = useState([])
   const [rolling, setRolling] = useState(false)
   const [shakeEnabled, setShakeEnabled] = useState(false)
   const [animatingRollIdx, setAnimatingRollIdx] = useState(null)
@@ -25,14 +26,21 @@ export default function GameBoard({ room, myId, onLeave }) {
   const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed
   const mustPass = isMyTurn && !me?.done && (me?.rollCount ?? 0) >= maxAllowed
 
-  function toggleDiscard(i) {
-    setDiscardIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])
+  // Reset discard state on new turn or round
+  useEffect(() => {
+    setDiscardIndices([])
+    setRollDiscardHistory([])
+  }, [room.roundNumber, room.currentPlayerIndex])
+
+  function handleDiscard(i) {
+    setDiscardIndices(prev => prev.includes(i) ? prev : [...prev, i])
   }
 
   const handleRoll = useCallback(() => {
     playDiceRoll()
     const diceCount = me?.currentDice?.length ?? 5
     const keptIndices = Array.from({ length: diceCount }, (_, i) => i).filter(i => !discardIndices.includes(i))
+    setRollDiscardHistory(prev => [...prev, [...discardIndices]])
     setDiscardIndices([])
     setRolling(true)
     socket.emit('roll', { keptIndices }, (res) => {
@@ -109,6 +117,16 @@ export default function GameBoard({ room, myId, onLeave }) {
       const perm = await DeviceMotionEvent.requestPermission()
       if (perm === 'granted') setShakeEnabled(true)
     } catch {}
+  }
+
+  // For history rows (my own turn): only show the freshly rolled dice.
+  // Roll 0 always shows all 5 (first roll). Roll N shows indices from rollDiscardHistory[N-1].
+  function getDiceToShow(rollIdx, dice, isCurrentRoll) {
+    if (isCurrentRoll || rollIdx === 0 || !isMyTurn) {
+      return dice.map((value, origIndex) => ({ value, origIndex }))
+    }
+    const newIndices = rollDiscardHistory[rollIdx - 1] ?? []
+    return newIndices.map(i => ({ value: dice[i], origIndex: i }))
   }
 
   const displayPlayer = isMyTurn ? me : currentPlayer
@@ -196,21 +214,22 @@ export default function GameBoard({ room, myId, onLeave }) {
           {allRolls.map((dice, rollIdx) => {
             const isCurrentRoll = rollIdx === allRolls.length - 1
             const isInteractive = isCurrentRoll && isMyTurn && !me?.done && canRoll
+            const diceToShow = getDiceToShow(rollIdx, dice, isCurrentRoll)
 
             return (
               <div key={rollIdx} className="roll">
                 <span className="roll__label">Tirada {rollIdx + 1}</span>
-                {isInteractive && (
-                  <p className="roll__hint">Selecciona los dados a descartar</p>
+                {isInteractive && me?.rollCount > 0 && discardIndices.length === 0 && (
+                  <p className="roll__hint">Desliza hacia abajo para descartar</p>
                 )}
                 <div className="roll__dice">
-                  {dice.map((val, dieIdx) => (
+                  {diceToShow.map(({ value, origIndex }, localIdx) => (
                     <Die
-                      key={dieIdx}
-                      value={val}
-                      selected={isInteractive && discardIndices.includes(dieIdx)}
-                      onClick={isInteractive ? () => toggleDiscard(dieIdx) : null}
-                      animDelay={rollIdx === animatingRollIdx ? dieIdx * STAGGER_MS : null}
+                      key={origIndex}
+                      value={value}
+                      onDiscard={isInteractive && !discardIndices.includes(origIndex) ? () => handleDiscard(origIndex) : null}
+                      discarded={isInteractive && discardIndices.includes(origIndex)}
+                      animDelay={rollIdx === animatingRollIdx ? localIdx * STAGGER_MS : null}
                     />
                   ))}
                 </div>
