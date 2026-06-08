@@ -1118,3 +1118,11 @@ body {
 .results__wins { font-size: 13px; color: var(--text-subtle); }
 
 .results .btn--full { margin: 16px 20px 64px; width: calc(100% - 40px); }
+
+.app-footer {
+  text-align: center;
+  padding: 12px 0 20px;
+  font-size: 11px;
+  color: var(--text-subtle);
+  opacity: 0.5;
+}
