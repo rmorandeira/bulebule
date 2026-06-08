@@ -13,7 +13,10 @@ const needsMotionPermission = () =>
 
 export default function GameBoard({ room, myId, onLeave }) {
   const [discardIndices, setDiscardIndices] = useState([])
+  const [fullyDiscardedIndices, setFullyDiscardedIndices] = useState([])
+  const [hintDismissed, setHintDismissed] = useState(false)
   const [rollDiscardHistory, setRollDiscardHistory] = useState([])
+  const discardTimeoutsRef = useRef([])
   const [rolling, setRolling] = useState(false)
   const [shakeEnabled, setShakeEnabled] = useState(false)
   const [animatingRollIdx, setAnimatingRollIdx] = useState(null)
@@ -29,28 +32,43 @@ export default function GameBoard({ room, myId, onLeave }) {
   // Dice are interactive when it's my turn, I've rolled at least once, and can still roll again
   const diceInteractive = isMyTurn && !me?.done && (me?.rollCount ?? 0) > 0 && !mustPass
 
+  const clearDiscards = useCallback(() => {
+    discardTimeoutsRef.current.forEach(clearTimeout)
+    discardTimeoutsRef.current = []
+    setDiscardIndices([])
+    setFullyDiscardedIndices([])
+    setHintDismissed(false)
+  }, [])
+
   // Reset discard state on new turn or round
   useEffect(() => {
-    setDiscardIndices([])
+    clearDiscards()
     setRollDiscardHistory([])
-  }, [room.roundNumber, room.currentPlayerIndex])
+  }, [room.roundNumber, room.currentPlayerIndex, clearDiscards])
 
   function handleDiscard(i) {
+    setHintDismissed(true)
     setDiscardIndices(prev => prev.includes(i) ? prev : [...prev, i])
+    const tid = setTimeout(() => {
+      setFullyDiscardedIndices(prev => [...prev, i])
+    }, 320)
+    discardTimeoutsRef.current.push(tid)
   }
 
   const handleRoll = useCallback(() => {
     playDiceRoll()
     const diceCount = me?.currentDice?.length ?? 5
     const keptIndices = Array.from({ length: diceCount }, (_, i) => i).filter(i => !discardIndices.includes(i))
-    setRollDiscardHistory(prev => [...prev, [...discardIndices]])
-    setDiscardIndices([])
+    if ((me?.rollCount ?? 0) > 0) {
+      setRollDiscardHistory(prev => [...prev, [...discardIndices]])
+    }
+    clearDiscards()
     setRolling(true)
     socket.emit('roll', { keptIndices }, (res) => {
       setRolling(false)
       if (!res?.ok && res?.error) alert(res.error)
     })
-  }, [discardIndices, me?.currentDice?.length])
+  }, [discardIndices, me?.currentDice?.length, clearDiscards])
 
   function handleStand() {
     socket.emit('stand', (res) => {
@@ -143,6 +161,7 @@ export default function GameBoard({ room, myId, onLeave }) {
         return (
           <>
             <div className="results__winner">
+              <p className="results__winner-label">Ganador</p>
               <h2 className="results__name">{winner?.name}</h2>
               <p className="results__hand">{winner?.hand?.desc}</p>
             </div>
@@ -224,21 +243,21 @@ export default function GameBoard({ room, myId, onLeave }) {
             return (
               <div key={rollIdx} className="roll">
                 <span className="roll__label">Tirada {rollIdx + 1}</span>
-                {isInteractive && me?.rollCount > 0 && discardIndices.length === 0 && (
+                {isInteractive && me?.rollCount > 0 && !hintDismissed && !rolling && (
                   <p className="roll__hint">Toca o desliza un dado para descartarlo</p>
                 )}
                 <div className="roll__dice">
                   {dice.map((val, origIndex) => {
                     const localIdx = newIndices.indexOf(origIndex)
-                    if (localIdx === -1) {
-                      return <div key={origIndex} className="die-wrapper die-wrapper--empty" />
-                    }
+                    if (localIdx === -1) return null
+                    if (fullyDiscardedIndices.includes(origIndex)) return null
+                    const isDiscarding = isInteractive && discardIndices.includes(origIndex)
                     return (
                       <Die
                         key={origIndex}
                         value={val}
-                        onDiscard={isInteractive && !discardIndices.includes(origIndex) ? () => handleDiscard(origIndex) : null}
-                        discarded={isInteractive && discardIndices.includes(origIndex)}
+                        onDiscard={isInteractive && !isDiscarding ? () => handleDiscard(origIndex) : null}
+                        discarded={isDiscarding}
                         animDelay={rollIdx === animatingRollIdx ? localIdx * STAGGER_MS : null}
                       />
                     )

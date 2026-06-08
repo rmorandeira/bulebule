@@ -121,11 +121,6 @@ body {
 
 .pip--red { background: #c0392b; }
 
-.die-wrapper--empty {
-  flex: 1;
-  min-width: 0;
-  aspect-ratio: 1;
-}
 
 .die--interactive:active {
   transform: scale(0.93);
@@ -968,8 +963,15 @@ body {
 }
 
 .roll__dice > .die-wrapper {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 auto;
+  width: calc((100% - 4 * 8px) / 5);
+  max-width: 500px;
+  overflow: hidden;
+  transition: max-width 0.3s ease-in;
+}
+
+.roll__dice > .die-wrapper--collapsing {
+  max-width: 0;
 }
 
 .roll__dice > .die-wrapper > .die {
@@ -1054,6 +1056,7 @@ body {
   margin-bottom: 8px;
 }
 
+.results__winner-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 4px; }
 .results__name { font-size: 32px; font-weight: 800; }
 .results__hand { font-size: 16px; color: var(--text-subtle); margin-top: 4px; }
 

@@ -6,7 +6,7 @@ const SWIPE_THRESHOLD = 40
 const PIP_PATTERNS = {
   'AS': [0,0,0, 0,1,0, 0,0,0],          // 1 pip  — rojo
   '7':  [1,1,1, 0,1,0, 1,1,1],          // 7 pips — negro
-  '8':  [1,1,1, 1,0,1, 1,1,1],          // 8 pips — rojo
+  '8':  [1,1,1, 1,1,1, 1,1,1],          // 8 pips — rojo (3×3 completo)
 }
 const RED_VALUES = new Set(['AS', '8', 'K'])
 
@@ -67,7 +67,7 @@ export default function Die({ value, onDiscard, discarded = false, small = false
     }
   }, [])
 
-  const wrapperCls = ['die-wrapper', animDelay !== null ? 'die-wrapper--animated' : ''].filter(Boolean).join(' ')
+  const wrapperCls = ['die-wrapper', discarded && 'die-wrapper--collapsing', animDelay !== null ? 'die-wrapper--animated' : ''].filter(Boolean).join(' ')
   const wrapperStyle = animDelay !== null ? { animationDelay: `${animDelay}ms` } : {}
 
   const cls = [
