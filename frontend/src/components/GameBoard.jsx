@@ -233,23 +233,29 @@ export default function GameBoard({ room, myId, onLeave }) {
 
         {/* Roll history */}
         <div className="rolls">
-          {allRolls.map((dice, rollIdx) => {
+          {(() => {
+            // Active player uses local state (updated synchronously on roll).
+            // Spectators use server state broadcast with each room_state.
+            const effectiveDiscardHistory = isMyTurn
+              ? rollDiscardHistory
+              : (displayPlayer?.rollDiscardHistory ?? [])
+
+            return allRolls.map((dice, rollIdx) => {
             const isCurrentRoll = rollIdx === allRolls.length - 1
             const isInteractive = isCurrentRoll && diceInteractive
 
-            // Base = indices nuevos en esta tirada (tirada 0 = los 5, tirada N = los descartados antes de N)
-            // History row = base menos lo que se descartó antes de la tirada siguiente
-            // Current row = base completo (todos los nuevos, se puede descartar de ellos)
-            const base = !isMyTurn
+            // First roll: show all 5. Subsequent rolls: show only the freshly rolled dice.
+            const base = rollIdx === 0
               ? dice.map((_, i) => i)
-              : rollIdx === 0
-                ? dice.map((_, i) => i)
-                : rollDiscardHistory[rollIdx - 1] ?? []
+              : effectiveDiscardHistory[rollIdx - 1] ?? []
 
-            const newIndices = (!isMyTurn || isCurrentRoll)
+            // History row: hide dice discarded before the next roll.
+            // Current row: show all fresh dice.
+            const newIndices = isCurrentRoll
               ? base
-              : base.filter(i => !(rollDiscardHistory[rollIdx] ?? []).includes(i))
+              : base.filter(i => !(effectiveDiscardHistory[rollIdx] ?? []).includes(i))
 
+            // Live discard animation for spectators via server pendingDiscards.
             const serverDiscards = !isMyTurn && isCurrentRoll
               ? (displayPlayer?.pendingDiscards ?? [])
               : []
@@ -279,7 +285,8 @@ export default function GameBoard({ room, myId, onLeave }) {
                 </div>
               </div>
             )
-          })}
+          })
+          })()}
 
           {displayPlayer?.rollCount === 0 && (
             <p className="roll__pending">

@@ -26,7 +26,7 @@ function genCode() {
 }
 
 function makePlayer(id, name) {
-  return { id, name, currentDice: [], rollHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [] };
+  return { id, name, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [] };
 }
 
 function makeBotPlayer() {
@@ -125,6 +125,7 @@ function sanitize(room) {
       isBot: p.isBot ?? false,
       currentDice: p.currentDice,
       rollHistory: p.rollHistory,
+      rollDiscardHistory: p.rollDiscardHistory ?? [],
       rollCount: p.rollCount,
       done: p.done,
       hand: p.hand,
@@ -163,6 +164,7 @@ function startRound(room) {
   for (const p of room.players) {
     p.currentDice = [];
     p.rollHistory = [];
+    p.rollDiscardHistory = [];
     p.rollCount = 0;
     p.done = false;
     p.hand = null;
@@ -311,7 +313,10 @@ io.on('connection', (socket) => {
     if (player.rollCount >= maxAllowed) return cb?.({ ok: false, error: 'No puedes tirar más' });
 
     if (player.rollCount > 0) {
+      const diceCount = player.currentDice.length;
+      const discarded = Array.from({ length: diceCount }, (_, i) => i).filter(i => !keptIndices.includes(i));
       player.rollHistory.push([...player.currentDice]);
+      player.rollDiscardHistory.push(discarded);
       player.currentDice = player.currentDice.map((die, i) =>
         keptIndices.includes(i) ? die : rollDie()
       );
