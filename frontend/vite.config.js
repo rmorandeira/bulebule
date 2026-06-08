@@ -6,6 +6,9 @@ const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'))
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ['@3d-dice/dice-box'],
+  },
   server: {
     allowedHosts: true,
     proxy: {

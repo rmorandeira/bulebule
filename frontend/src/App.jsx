@@ -167,16 +167,13 @@ export default function App() {
   }
 
   return (
-    <>
-      <RoomList
-        user={user}
-        playerName={playerName}
-        onNameChange={setPlayerName}
-        onLogin={handleLogin}
-        onSettings={() => setScreen('settings')}
-        onCreateClick={() => setScreen('create')}
-      />
-      <footer className="app-footer">v{__APP_VERSION__}</footer>
-    </>
+    <RoomList
+      user={user}
+      playerName={playerName}
+      onNameChange={setPlayerName}
+      onLogin={handleLogin}
+      onSettings={() => setScreen('settings')}
+      onCreateClick={() => setScreen('create')}
+    />
   )
 }
