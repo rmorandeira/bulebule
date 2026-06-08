@@ -215,7 +215,7 @@ export default function GameBoard({ room, myId, onLeave }) {
               <div key={rollIdx} className="roll">
                 <span className="roll__label">Tirada {rollIdx + 1}</span>
                 {isInteractive && me?.rollCount > 0 && discardIndices.length === 0 && (
-                  <p className="roll__hint">Toca un dado para descartarlo</p>
+                  <p className="roll__hint">Toca o desliza un dado para descartarlo</p>
                 )}
                 <div className="roll__dice">
                   {dice.map((val, origIndex) => {
