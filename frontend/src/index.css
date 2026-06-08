@@ -207,6 +207,78 @@ body {
 
 .join-row { display: flex; gap: 10px; }
 
+/* ── Login ───────────────────────────────────────────────── */
+.login-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.login-section__hint {
+  font-size: 14px;
+  color: var(--text-subtle);
+}
+
+.login-section__btn {
+  display: flex;
+  justify-content: center;
+}
+
+/* ── User card ───────────────────────────────────────────── */
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f5f2ee;
+  border-radius: 12px;
+}
+
+.user-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.user-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-card__name {
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-card__email {
+  font-size: 12px;
+  color: var(--text-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-card__logout {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
 .error {
   font-size: 13px;
   color: #c0392b;
