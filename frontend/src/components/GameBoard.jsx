@@ -252,9 +252,6 @@ export default function GameBoard({ room, myId, onLeave }) {
             return (
               <div key={rollIdx} className="roll">
                 <span className="roll__label">Tirada {rollIdx + 1}</span>
-                {isInteractive && me?.rollCount > 0 && !hintDismissed && !rolling && (
-                  <p className="roll__hint">Toca o desliza un dado para descartarlo</p>
-                )}
                 <div className="roll__dice">
                   {dice.map((val, origIndex) => {
                     const localIdx = newIndices.indexOf(origIndex)
@@ -287,6 +284,11 @@ export default function GameBoard({ room, myId, onLeave }) {
             <div className="hand-result">{displayPlayer.hand.desc}</div>
           )}
         </div>
+
+        {/* Hint */}
+        {diceInteractive && !hintDismissed && !rolling && (
+          <p className="discard-hint">Toca o desliza un dado para descartarlo</p>
+        )}
 
         {/* Actions */}
         <div className="actions">

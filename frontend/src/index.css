@@ -987,6 +987,14 @@ body {
   font-weight: 500;
 }
 
+.discard-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-subtle);
+  font-weight: 500;
+  padding: 8px 0 4px;
+}
+
 .roll__pending {
   font-size: 14px;
   color: var(--text-subtle);
