@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import socket from '../socket'
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
@@ -11,26 +11,21 @@ export default function CreateRoom({ playerName, user, onBack }) {
   const [loading, setLoading] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState([])
+  const [allUsers, setAllUsers] = useState([])
   const [invitedFriends, setInvitedFriends] = useState([])
-  const searchTimerRef = useRef(null)
 
   const canInvite = !vsBot && !!user
 
+  // Load all registered users once
   useEffect(() => {
-    if (!canInvite || searchQuery.length < 2) {
-      setSearchResults([])
-      return
-    }
-    clearTimeout(searchTimerRef.current)
-    searchTimerRef.current = setTimeout(() => {
-      socket.emit('search_users', { query: searchQuery }, (res) => {
-        const filtered = (res?.users ?? []).filter(u => !invitedFriends.find(f => f.userId === u.userId))
-        setSearchResults(filtered)
-      })
-    }, 300)
-    return () => clearTimeout(searchTimerRef.current)
-  }, [searchQuery, canInvite])
+    if (!canInvite) return
+    socket.emit('search_users', { query: '' }, (res) => setAllUsers(res?.users ?? []))
+  }, [canInvite])
+
+  const searchResults = allUsers.filter(u =>
+    !invitedFriends.find(f => f.userId === u.userId) &&
+    (!searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
 
   function addFriend(friend) {
     setInvitedFriends(prev => prev.find(f => f.userId === friend.userId) ? prev : [...prev, friend])

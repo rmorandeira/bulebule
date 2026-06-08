@@ -374,13 +374,12 @@ io.on('connection', (socket) => {
     if (registeredUsers[userId]) registeredUsers[userId].pushSubscription = subscription;
   });
 
-  socket.on('search_users', ({ query }, cb) => {
-    if (!query || query.length < 2) return cb?.({ users: [] });
+  socket.on('search_users', ({ query = '' }, cb) => {
     const q = query.toLowerCase();
     const myUserId = socket.data.userId;
     const results = Object.values(registeredUsers)
-      .filter(u => u.userId !== myUserId && u.name.toLowerCase().includes(q))
-      .slice(0, 5)
+      .filter(u => u.userId !== myUserId && (!q || u.name.toLowerCase().includes(q)))
+      .slice(0, 20)
       .map(u => ({ userId: u.userId, name: u.name, picture: u.picture }));
     cb?.({ users: results });
   });
