@@ -52,6 +52,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   function handleDiscard(i) {
     setHintDismissed(true)
     setDiscardIndices(prev => prev.includes(i) ? prev : [...prev, i])
+    socket.emit('discard', { index: i })
     const tid = setTimeout(() => {
       setFullyDiscardedIndices(prev => [...prev, i])
     }, 320)
@@ -249,6 +250,10 @@ export default function GameBoard({ room, myId, onLeave }) {
               ? base
               : base.filter(i => !(rollDiscardHistory[rollIdx] ?? []).includes(i))
 
+            const serverDiscards = !isMyTurn && isCurrentRoll
+              ? (displayPlayer?.pendingDiscards ?? [])
+              : []
+
             return (
               <div key={rollIdx} className="roll">
                 <span className="roll__label">Tirada {rollIdx + 1}</span>
@@ -258,7 +263,9 @@ export default function GameBoard({ room, myId, onLeave }) {
                     if (localIdx === -1) return null
                     if (fullyDiscardedIndices.includes(origIndex)) return null
                     if (rolling && rollingSnapshotRef.current.includes(origIndex)) return null
-                    const isDiscarding = isInteractive && discardIndices.includes(origIndex)
+                    const isDiscarding = isInteractive
+                      ? discardIndices.includes(origIndex)
+                      : serverDiscards.includes(origIndex)
                     return (
                       <Die
                         key={origIndex}

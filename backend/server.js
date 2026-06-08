@@ -26,7 +26,7 @@ function genCode() {
 }
 
 function makePlayer(id, name) {
-  return { id, name, currentDice: [], rollHistory: [], rollCount: 0, done: false, hand: null, wins: 0 };
+  return { id, name, currentDice: [], rollHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [] };
 }
 
 function makeBotPlayer() {
@@ -129,6 +129,7 @@ function sanitize(room) {
       done: p.done,
       hand: p.hand,
       wins: p.wins,
+      pendingDiscards: p.pendingDiscards ?? [],
     })),
   };
 }
@@ -165,6 +166,7 @@ function startRound(room) {
     p.rollCount = 0;
     p.done = false;
     p.hand = null;
+    p.pendingDiscards = [];
   }
 }
 
@@ -289,6 +291,17 @@ io.on('connection', (socket) => {
     broadcastRoomList();
   });
 
+  socket.on('discard', ({ index }, cb) => {
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.phase !== 'playing') return cb?.({ ok: false });
+    const player = room.players[room.currentPlayerIndex];
+    if (player.id !== socket.id || player.done) return cb?.({ ok: false });
+    if (typeof index !== 'number') return cb?.({ ok: false });
+    if (!player.pendingDiscards.includes(index)) player.pendingDiscards.push(index);
+    cb?.({ ok: true });
+    broadcast(room.code);
+  });
+
   socket.on('roll', ({ keptIndices = [] }, cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
@@ -306,6 +319,7 @@ io.on('connection', (socket) => {
       player.currentDice = Array.from({ length: 5 }, rollDie);
     }
     player.rollCount += 1;
+    player.pendingDiscards = [];
 
     cb?.({ ok: true });
     broadcast(room.code);
