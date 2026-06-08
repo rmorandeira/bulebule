@@ -17,6 +17,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [hintDismissed, setHintDismissed] = useState(false)
   const [rollDiscardHistory, setRollDiscardHistory] = useState([])
   const discardTimeoutsRef = useRef([])
+  const rollingSnapshotRef = useRef([])
   const [rolling, setRolling] = useState(false)
   const [shakeEnabled, setShakeEnabled] = useState(false)
   const [animatingRollIdx, setAnimatingRollIdx] = useState(null)
@@ -42,6 +43,8 @@ export default function GameBoard({ room, myId, onLeave }) {
 
   // Reset discard state on new turn or round
   useEffect(() => {
+    rollingSnapshotRef.current = []
+    setRolling(false)
     clearDiscards()
     setRollDiscardHistory([])
   }, [room.roundNumber, room.currentPlayerIndex, clearDiscards])
@@ -62,11 +65,15 @@ export default function GameBoard({ room, myId, onLeave }) {
     if ((me?.rollCount ?? 0) > 0) {
       setRollDiscardHistory(prev => [...prev, [...discardIndices]])
     }
+    rollingSnapshotRef.current = [...discardIndices]
     clearDiscards()
     setRolling(true)
     socket.emit('roll', { keptIndices }, (res) => {
-      setRolling(false)
-      if (!res?.ok && res?.error) alert(res.error)
+      if (!res?.ok) {
+        rollingSnapshotRef.current = []
+        setRolling(false)
+        if (res?.error) alert(res.error)
+      }
     })
   }, [discardIndices, me?.currentDice?.length, clearDiscards])
 
@@ -97,6 +104,8 @@ export default function GameBoard({ room, myId, onLeave }) {
 
     if (rollCount > 0 && rollCount > prevRollStateRef.current.rollCount) {
       prevRollStateRef.current = { playerIdx, rollCount }
+      rollingSnapshotRef.current = []
+      setRolling(false)
       setAnimatingRollIdx(rollCount - 1)
       const timer = setTimeout(() => setAnimatingRollIdx(null), DICE_ROLL_DURATION_MS + 100)
       return () => clearTimeout(timer)
@@ -251,6 +260,7 @@ export default function GameBoard({ room, myId, onLeave }) {
                     const localIdx = newIndices.indexOf(origIndex)
                     if (localIdx === -1) return null
                     if (fullyDiscardedIndices.includes(origIndex)) return null
+                    if (rolling && rollingSnapshotRef.current.includes(origIndex)) return null
                     const isDiscarding = isInteractive && discardIndices.includes(origIndex)
                     return (
                       <Die
