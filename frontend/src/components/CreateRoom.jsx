@@ -1,14 +1,46 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
 
-export default function CreateRoom({ playerName, onBack }) {
+export default function CreateRoom({ playerName, user, onBack }) {
   const [vsBot, setVsBot] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [invitedFriends, setInvitedFriends] = useState([])
+  const searchTimerRef = useRef(null)
+
+  const canInvite = !vsBot && !!user
+
+  useEffect(() => {
+    if (!canInvite || searchQuery.length < 2) {
+      setSearchResults([])
+      return
+    }
+    clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      socket.emit('search_users', { query: searchQuery }, (res) => {
+        const filtered = (res?.users ?? []).filter(u => !invitedFriends.find(f => f.userId === u.userId))
+        setSearchResults(filtered)
+      })
+    }, 300)
+    return () => clearTimeout(searchTimerRef.current)
+  }, [searchQuery, canInvite])
+
+  function addFriend(friend) {
+    setInvitedFriends(prev => prev.find(f => f.userId === friend.userId) ? prev : [...prev, friend])
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  function removeFriend(userId) {
+    setInvitedFriends(prev => prev.filter(f => f.userId !== userId))
+  }
 
   function create() {
     if (!playerName.trim()) return setError('Vuelve atrás e introduce tu nombre')
@@ -21,7 +53,10 @@ export default function CreateRoom({ playerName, onBack }) {
       vsBot,
     }, (res) => {
       setLoading(false)
-      if (!res?.ok) setError(res?.error || 'Error al crear la sala')
+      if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
+      invitedFriends.forEach(friend => {
+        socket.emit('invite_to_room', { toUserId: friend.userId, roomCode: res.code, roomName: roomName.trim() })
+      })
     })
   }
 
@@ -97,6 +132,43 @@ export default function CreateRoom({ playerName, onBack }) {
           <p className="create-room__bot-hint">
             Jugarás contra el ordenador en una partida de 2 jugadores.
           </p>
+        )}
+
+        {canInvite && (
+          <div className="invite-section">
+            <label className="form-label">Invitar amigos</label>
+
+            {invitedFriends.length > 0 && (
+              <div className="invited-chips">
+                {invitedFriends.map(f => (
+                  <span key={f.userId} className="invited-chip">
+                    {f.picture && <img src={f.picture} alt="" className="invited-chip__avatar" referrerPolicy="no-referrer" />}
+                    {f.name}
+                    <button className="invited-chip__remove" onClick={() => removeFriend(f.userId)} aria-label="Quitar">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="invite-search">
+              <input
+                className="input"
+                placeholder="Buscar por nombre..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              {searchResults.length > 0 && (
+                <ul className="invite-results">
+                  {searchResults.map(u => (
+                    <li key={u.userId} className="invite-result-item" onClick={() => addFriend(u)}>
+                      {u.picture && <img src={u.picture} alt="" className="invite-result-item__avatar" referrerPolicy="no-referrer" />}
+                      <span>{u.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         )}
 
         {error && <p className="error">{error}</p>}

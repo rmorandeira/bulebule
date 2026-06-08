@@ -2,12 +2,20 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const webpush = require('web-push');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
+
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BPqTNNswJUQa5m4cfsVK2eQMV_2KuogrMMHiDM4xVw84uOu_24knBdqzBRHoGyjyMYGGO6J2nfFQdm7sk5Gg0HM';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'e8_vT6EZUuqLl-SbBGGUm_U6diqzxk2bwEAsC2WNLOM';
+webpush.setVapidDetails('mailto:rmorandeira@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
+
+const registeredUsers = {};
 
 const app = express();
 app.use(cors({ origin: '*' }));
 app.get('/', (_, res) => res.send('OK'));
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
+app.get('/api/vapid-public-key', (_, res) => res.json({ key: VAPID_PUBLIC }));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
@@ -355,7 +363,51 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
+  socket.on('register_user', ({ userId, name, email, picture }) => {
+    if (!userId || !name) return;
+    registeredUsers[userId] = { ...(registeredUsers[userId] || {}), userId, name, email, picture, socketId: socket.id };
+    socket.data.userId = userId;
+  });
+
+  socket.on('subscribe_push', ({ userId, subscription }) => {
+    if (!userId || !subscription) return;
+    if (registeredUsers[userId]) registeredUsers[userId].pushSubscription = subscription;
+  });
+
+  socket.on('search_users', ({ query }, cb) => {
+    if (!query || query.length < 2) return cb?.({ users: [] });
+    const q = query.toLowerCase();
+    const myUserId = socket.data.userId;
+    const results = Object.values(registeredUsers)
+      .filter(u => u.userId !== myUserId && u.name.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map(u => ({ userId: u.userId, name: u.name, picture: u.picture }));
+    cb?.({ users: results });
+  });
+
+  socket.on('invite_to_room', ({ toUserId, roomCode, roomName }, cb) => {
+    const invitee = registeredUsers[toUserId];
+    if (!invitee) return cb?.({ ok: false, error: 'Usuario no encontrado' });
+    const inviterName = (socket.data.userId && registeredUsers[socket.data.userId]?.name) || 'Alguien';
+
+    if (invitee.socketId) {
+      io.to(invitee.socketId).emit('room_invite', { roomCode, roomName, inviterName });
+    }
+    if (invitee.pushSubscription) {
+      const payload = JSON.stringify({
+        title: '¡Te han invitado!',
+        body: `${inviterName} te invita a "${roomName}"`,
+        url: `/?join=${roomCode}`,
+      });
+      webpush.sendNotification(invitee.pushSubscription, payload).catch(err => console.error('Push error:', err));
+    }
+    cb?.({ ok: true });
+  });
+
   socket.on('disconnect', () => {
+    if (socket.data.userId && registeredUsers[socket.data.userId]) {
+      registeredUsers[socket.data.userId].socketId = null;
+    }
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
