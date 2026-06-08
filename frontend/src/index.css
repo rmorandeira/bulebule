@@ -89,7 +89,13 @@ body {
 
 .die--interactive {
   cursor: pointer;
-  touch-action: none;
+  touch-action: manipulation;
+}
+
+.die-wrapper--empty {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 1;
 }
 
 .die--interactive:active {

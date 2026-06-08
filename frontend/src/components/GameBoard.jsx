@@ -120,16 +120,6 @@ export default function GameBoard({ room, myId, onLeave }) {
     } catch {}
   }
 
-  // For history rows (my own turn): only show the freshly rolled dice.
-  // Roll 0 always shows all 5 (first roll). Roll N shows indices from rollDiscardHistory[N-1].
-  function getDiceToShow(rollIdx, dice, isCurrentRoll) {
-    if (isCurrentRoll || rollIdx === 0 || !isMyTurn) {
-      return dice.map((value, origIndex) => ({ value, origIndex }))
-    }
-    const newIndices = rollDiscardHistory[rollIdx - 1] ?? []
-    return newIndices.map(i => ({ value: dice[i], origIndex: i }))
-  }
-
   const displayPlayer = isMyTurn ? me : currentPlayer
   const allRolls = displayPlayer
     ? [...displayPlayer.rollHistory, ...(displayPlayer.rollCount > 0 ? [displayPlayer.currentDice] : [])]
@@ -215,24 +205,34 @@ export default function GameBoard({ room, myId, onLeave }) {
           {allRolls.map((dice, rollIdx) => {
             const isCurrentRoll = rollIdx === allRolls.length - 1
             const isInteractive = isCurrentRoll && isMyTurn && !me?.done && canRoll
-            const diceToShow = getDiceToShow(rollIdx, dice, isCurrentRoll)
+
+            // Roll 0: all 5 are new. Roll N (my turn): only the discarded indices from previous roll.
+            const newIndices = (rollIdx === 0 || !isMyTurn)
+              ? dice.map((_, i) => i)
+              : rollDiscardHistory[rollIdx - 1] ?? []
 
             return (
               <div key={rollIdx} className="roll">
                 <span className="roll__label">Tirada {rollIdx + 1}</span>
                 {isInteractive && me?.rollCount > 0 && discardIndices.length === 0 && (
-                  <p className="roll__hint">Desliza hacia abajo para descartar</p>
+                  <p className="roll__hint">Toca un dado para descartarlo</p>
                 )}
                 <div className="roll__dice">
-                  {diceToShow.map(({ value, origIndex }, localIdx) => (
-                    <Die
-                      key={origIndex}
-                      value={value}
-                      onDiscard={isInteractive && !discardIndices.includes(origIndex) ? () => handleDiscard(origIndex) : null}
-                      discarded={isInteractive && discardIndices.includes(origIndex)}
-                      animDelay={rollIdx === animatingRollIdx ? localIdx * STAGGER_MS : null}
-                    />
-                  ))}
+                  {dice.map((val, origIndex) => {
+                    const localIdx = newIndices.indexOf(origIndex)
+                    if (localIdx === -1) {
+                      return <div key={origIndex} className="die-wrapper die-wrapper--empty" />
+                    }
+                    return (
+                      <Die
+                        key={origIndex}
+                        value={val}
+                        onDiscard={isInteractive && !discardIndices.includes(origIndex) ? () => handleDiscard(origIndex) : null}
+                        discarded={isInteractive && discardIndices.includes(origIndex)}
+                        animDelay={rollIdx === animatingRollIdx ? localIdx * STAGGER_MS : null}
+                      />
+                    )
+                  })}
                 </div>
               </div>
             )
