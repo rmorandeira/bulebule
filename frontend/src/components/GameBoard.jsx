@@ -23,7 +23,8 @@ export default function GameBoard({ room, myId, onLeave }) {
   const isMyTurn = currentPlayer?.id === myId
   const me = room.players.find(p => p.id === myId)
   const maxAllowed = room.maxRolls ?? 3
-  const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed
+  const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed &&
+    ((me?.rollCount ?? 0) === 0 || discardIndices.length > 0)
   const mustPass = isMyTurn && !me?.done && (me?.rollCount ?? 0) >= maxAllowed
 
   // Reset discard state on new turn or round
@@ -278,7 +279,7 @@ export default function GameBoard({ room, myId, onLeave }) {
                 <>
                   <div className="actions__row">
                     <button className="btn btn--secondary" onClick={handleStand}>Plantarse</button>
-                    <button className="btn btn--primary" onClick={handleRoll} disabled={rolling}>Tirar dados</button>
+                    <button className="btn btn--primary" onClick={handleRoll} disabled={rolling || !canRoll}>Tirar dados</button>
                   </div>
                   {shakeEnabled && <p className="shake-hint">Agita el móvil para tirar</p>}
                 </>
