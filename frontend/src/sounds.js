@@ -1,52 +1,63 @@
 export const DICE_ROLL_DURATION_MS = 550
 
+let audioBuffer = null
+let audioCtx = null
+let activeSource = null
+let activeGain = null
+
+async function getBuffer() {
+  if (audioBuffer) return audioBuffer
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  const res = await fetch('/assets/dice-roll.wav')
+  const arrayBuffer = await res.arrayBuffer()
+  audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+  return audioBuffer
+}
+
+getBuffer().catch(() => {})
+
+export function stopDiceRoll(fadeMs = 300) {
+  if (!activeGain || !activeSource) return
+  const gain = activeGain
+  const source = activeSource
+  activeGain = null
+  activeSource = null
+  const t = audioCtx.currentTime
+  gain.gain.setValueAtTime(gain.gain.value, t)
+  gain.gain.linearRampToValueAtTime(0, t + fadeMs / 1000)
+  source.stop(t + fadeMs / 1000)
+}
+
 export function playDiceRoll() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const sampleRate = ctx.sampleRate
-    const bufferSize = Math.floor(sampleRate * (DICE_ROLL_DURATION_MS / 1000))
-    const buffer = ctx.createBuffer(1, bufferSize, sampleRate)
-    const data = buffer.getChannelData(0)
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    if (audioCtx.state === 'suspended') audioCtx.resume()
 
-    // Noise clicks — envelopes más lentos = más grave
-    const numClicks = 4 + Math.floor(Math.random() * 3)
-    for (let c = 0; c < numClicks; c++) {
-      const offset = Math.floor((c / (numClicks - 1)) * bufferSize * 0.72)
-      const clickLen = Math.floor(sampleRate * 0.07)
-      const amplitude = c === numClicks - 1 ? 0.7 : 0.3 + Math.random() * 0.25
-      for (let i = 0; i < clickLen && offset + i < bufferSize; i++) {
-        const env = Math.exp(-i / (sampleRate * 0.025))
-        data[offset + i] += (Math.random() * 2 - 1) * env * amplitude
-      }
+    // Detener tirada anterior si sigue activa
+    stopDiceRoll(80)
+
+    const play = (buf) => {
+      const source = audioCtx.createBufferSource()
+      const gainNode = audioCtx.createGain()
+
+      source.buffer = buf
+      source.loop = true
+      // Pequeña variación de velocidad en cada tirada para que suene distinto
+      source.playbackRate.value = 0.92 + Math.random() * 0.16
+
+      source.connect(gainNode)
+      gainNode.connect(audioCtx.destination)
+      source.start()
+
+      activeSource = source
+      activeGain = gainNode
     }
 
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'highpass'
-    filter.frequency.value = 60
-
-    const gain = ctx.createGain()
-    gain.gain.value = 0.8
-
-    source.connect(filter)
-    filter.connect(gain)
-    gain.connect(ctx.destination)
-    source.start()
-
-    // Componente de baja frecuencia (golpe grave)
-    const osc = ctx.createOscillator()
-    const oscGain = ctx.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(90, ctx.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.2)
-    oscGain.gain.setValueAtTime(0.4, ctx.currentTime)
-    oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
-    osc.connect(oscGain)
-    oscGain.connect(ctx.destination)
-    osc.start()
-    osc.stop(ctx.currentTime + 0.4)
+    if (audioBuffer) {
+      play(audioBuffer)
+    } else {
+      getBuffer().then(play).catch(() => {})
+    }
   } catch {
     // Audio bloqueado o no soportado
   }

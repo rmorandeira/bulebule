@@ -1,26 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import Die from './Die'
-import { playDiceRoll, DICE_ROLL_DURATION_MS } from '../sounds'
-
-const DIE_ANIM_DURATION_MS = 160
-const STAGGER_MS = (DICE_ROLL_DURATION_MS - DIE_ANIM_DURATION_MS) / 4 // ~97ms entre dados
+import DiceBoxScene from './DiceBoxScene'
+import { playDiceRoll } from '../sounds'
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 const needsMotionPermission = () =>
   typeof DeviceMotionEvent !== 'undefined' &&
   typeof DeviceMotionEvent.requestPermission === 'function'
 
+const ROLL_NAMES = ['uno', 'dos', 'tres', 'cuatro', 'cinco']
+
 export default function GameBoard({ room, myId, onLeave }) {
-  const [discardIndices, setDiscardIndices] = useState([])
-  const [fullyDiscardedIndices, setFullyDiscardedIndices] = useState([])
-  const [hintDismissed, setHintDismissed] = useState(false)
-  const [rollDiscardHistory, setRollDiscardHistory] = useState([])
-  const discardTimeoutsRef = useRef([])
-  const rollingSnapshotRef = useRef([])
+  const [keptIndices, setKeptIndices] = useState([])
+  const [rolledIndices, setRolledIndices] = useState(null)
   const [rolling, setRolling] = useState(false)
   const [shakeEnabled, setShakeEnabled] = useState(false)
-  const [animatingRollIdx, setAnimatingRollIdx] = useState(null)
   const prevRollStateRef = useRef({ playerIdx: -1, rollCount: 0 })
 
   const currentPlayer = room.players[room.currentPlayerIndex]
@@ -28,55 +23,53 @@ export default function GameBoard({ room, myId, onLeave }) {
   const me = room.players.find(p => p.id === myId)
   const maxAllowed = room.maxRolls ?? 3
   const mustPass = isMyTurn && !me?.done && (me?.rollCount ?? 0) >= maxAllowed
-  const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed &&
-    ((me?.rollCount ?? 0) === 0 || discardIndices.length > 0)
-  // Dice are interactive when it's my turn, I've rolled at least once, and can still roll again
-  const diceInteractive = isMyTurn && !me?.done && (me?.rollCount ?? 0) > 0 && !mustPass
+  const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed && !rolling
+  const diceInteractive = isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0
 
-  const clearDiscards = useCallback(() => {
-    discardTimeoutsRef.current.forEach(clearTimeout)
-    discardTimeoutsRef.current = []
-    setDiscardIndices([])
-    setFullyDiscardedIndices([])
-    setHintDismissed(false)
-  }, [])
-
-  // Reset discard state on new turn or round
+  // Reset al cambiar de turno o ronda
   useEffect(() => {
-    rollingSnapshotRef.current = []
+    setKeptIndices([])
+    setRolledIndices(null)
     setRolling(false)
-    clearDiscards()
-    setRollDiscardHistory([])
-  }, [room.roundNumber, room.currentPlayerIndex, clearDiscards])
+  }, [room.roundNumber, room.currentPlayerIndex])
 
-  function handleDiscard(i) {
-    setHintDismissed(true)
-    setDiscardIndices(prev => prev.includes(i) ? prev : [...prev, i])
-    socket.emit('discard', { index: i })
-    const tid = setTimeout(() => {
-      setFullyDiscardedIndices(prev => [...prev, i])
-    }, 320)
-    discardTimeoutsRef.current.push(tid)
+  // Sincronizar rollCount del servidor
+  useEffect(() => {
+    const playerIdx = room.currentPlayerIndex
+    const rollCount = (isMyTurn ? me : currentPlayer)?.rollCount ?? 0
+    const prev = prevRollStateRef.current
+    if (playerIdx !== prev.playerIdx) {
+      prevRollStateRef.current = { playerIdx, rollCount: 0 }
+    }
+    if (rollCount > 0 && rollCount > prevRollStateRef.current.rollCount) {
+      prevRollStateRef.current = { playerIdx, rollCount }
+    }
+  }, [room.currentPlayerIndex, me?.rollCount, currentPlayer?.rollCount, isMyTurn, me, currentPlayer])
+
+  function handleKeep(i) {
+    setKeptIndices(prev => prev.includes(i) ? prev : [...prev, i])
+  }
+
+  function handleUnkeep(i) {
+    setKeptIndices(prev => prev.filter(idx => idx !== i))
   }
 
   const handleRoll = useCallback(() => {
     playDiceRoll()
     const diceCount = me?.currentDice?.length ?? 5
-    const keptIndices = Array.from({ length: diceCount }, (_, i) => i).filter(i => !discardIndices.includes(i))
-    if ((me?.rollCount ?? 0) > 0) {
-      setRollDiscardHistory(prev => [...prev, [...discardIndices]])
-    }
-    rollingSnapshotRef.current = [...discardIndices]
-    clearDiscards()
+    const isFirstRoll = (me?.rollCount ?? 0) === 0
+    const newRolledIndices = isFirstRoll
+      ? null
+      : Array.from({ length: diceCount }, (_, i) => i).filter(i => !keptIndices.includes(i))
+    setRolledIndices(newRolledIndices)
     setRolling(true)
     socket.emit('roll', { keptIndices }, (res) => {
       if (!res?.ok) {
-        rollingSnapshotRef.current = []
         setRolling(false)
         if (res?.error) alert(res.error)
       }
     })
-  }, [discardIndices, me?.currentDice?.length, clearDiscards])
+  }, [keptIndices, me?.currentDice?.length, me?.rollCount])
 
   function handleStand() {
     socket.emit('stand', (res) => {
@@ -84,64 +77,31 @@ export default function GameBoard({ room, myId, onLeave }) {
     })
   }
 
-  function handleNextRound() {
-    socket.emit('next_round')
-  }
+  function handleNextRound() { socket.emit('next_round') }
 
   function handleLeave() {
     socket.emit('leave_room')
     onLeave()
   }
 
-  // Detectar nueva tirada y disparar animación
+  // Shake
   useEffect(() => {
-    const playerIdx = room.currentPlayerIndex
-    const rollCount = (isMyTurn ? me : currentPlayer)?.rollCount ?? 0
-    const prev = prevRollStateRef.current
-
-    if (playerIdx !== prev.playerIdx) {
-      prevRollStateRef.current = { playerIdx, rollCount: 0 }
-    }
-
-    if (rollCount > 0 && rollCount > prevRollStateRef.current.rollCount) {
-      prevRollStateRef.current = { playerIdx, rollCount }
-      rollingSnapshotRef.current = []
-      setRolling(false)
-      setAnimatingRollIdx(rollCount - 1)
-      const timer = setTimeout(() => setAnimatingRollIdx(null), DICE_ROLL_DURATION_MS + 100)
-      return () => clearTimeout(timer)
-    }
-  }, [room.currentPlayerIndex, me?.rollCount, currentPlayer?.rollCount])
-
-  // Auto-enable shake on Android (no permission needed)
-  useEffect(() => {
-    if (isMobile() && !needsMotionPermission()) {
-      setShakeEnabled(true)
-    }
+    if (isMobile() && !needsMotionPermission()) setShakeEnabled(true)
   }, [])
 
-  // Shake detection
   useEffect(() => {
-    if (!shakeEnabled || !canRoll || rolling) return
-
+    if (!shakeEnabled || !canRoll) return
     let lastShake = 0
-    const THRESHOLD = 28
-    const COOLDOWN = 1200
-
     function onMotion(e) {
       const g = e.accelerationIncludingGravity
       if (!g) return
       const force = Math.sqrt((g.x || 0) ** 2 + (g.y || 0) ** 2 + (g.z || 0) ** 2)
       const now = Date.now()
-      if (force > THRESHOLD && now - lastShake > COOLDOWN) {
-        lastShake = now
-        handleRoll()
-      }
+      if (force > 28 && now - lastShake > 1200) { lastShake = now; handleRoll() }
     }
-
     window.addEventListener('devicemotion', onMotion)
     return () => window.removeEventListener('devicemotion', onMotion)
-  }, [shakeEnabled, canRoll, rolling, handleRoll])
+  }, [shakeEnabled, canRoll, handleRoll])
 
   async function enableShakeIOS() {
     try {
@@ -151,20 +111,18 @@ export default function GameBoard({ room, myId, onLeave }) {
   }
 
   const displayPlayer = isMyTurn ? me : currentPlayer
-  const allRolls = displayPlayer
-    ? [...displayPlayer.rollHistory, ...(displayPlayer.rollCount > 0 ? [displayPlayer.currentDice] : [])]
-    : []
+  const totalDice = displayPlayer?.currentDice?.length || 5
+  const nextRollName = ROLL_NAMES[me?.rollCount ?? 0]
 
   return (
     <div className="screen game">
 
-      {/* Navbar persistente */}
       <nav className="navbar">
         <button className="navbar__exit" onClick={handleLeave}>← Salir</button>
         <span className="navbar__round">Ronda {room.roundNumber}</span>
       </nav>
 
-      {/* ── Pantalla de resultados ── */}
+      {/* ── Resultados ── */}
       {room.phase === 'results' ? (() => {
         const winner = room.players.find(p => p.id === room.roundWinnerId)
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
@@ -175,7 +133,6 @@ export default function GameBoard({ room, myId, onLeave }) {
               <h2 className="results__name">{winner?.name}</h2>
               <p className="results__hand">{winner?.hand?.desc}</p>
             </div>
-
             <div className="results__hands">
               {room.players.map(p => (
                 <div key={p.id} className={`results__row ${p.id === room.roundWinnerId ? 'results__row--winner' : ''}`}>
@@ -187,7 +144,6 @@ export default function GameBoard({ room, myId, onLeave }) {
                 </div>
               ))}
             </div>
-
             <div className="results__scores">
               <p className="results__scores-title">Clasificación</p>
               {sorted.map((p, i) => (
@@ -198,18 +154,16 @@ export default function GameBoard({ room, myId, onLeave }) {
                 </div>
               ))}
             </div>
-
-            {room.hostId === myId ? (
-              <button className="btn btn--primary btn--full" onClick={handleNextRound}>Nueva ronda</button>
-            ) : (
-              <p className="waiting-label">Esperando al host...</p>
-            )}
+            {room.hostId === myId
+              ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>Nueva ronda</button>
+              : <p className="waiting-label">Esperando al host...</p>
+            }
           </>
         )
       })() : (
-      /* ── Pantalla de juego ── */
+      /* ── Juego ── */
       <>
-        {/* Scoreboard */}
+        {/* Scoreboard — sin dados hasta que hayan tirado */}
         <div className="scoreboard">
           <p className="scoreboard__title">Clasificación</p>
           {[...room.players]
@@ -218,80 +172,71 @@ export default function GameBoard({ room, myId, onLeave }) {
               <div key={p.id} className={`scoreboard__row ${p.id === currentPlayer?.id ? 'scoreboard__row--active' : ''}`}>
                 <span className="scoreboard__pos">{i + 1}.</span>
                 <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
-                <div className="scoreboard__dice">
-                  {p.currentDice.map((v, j) => <Die key={j} value={v} small />)}
-                </div>
+                {p.currentDice?.length > 0 && (
+                  <div className="scoreboard__dice">
+                    {p.currentDice.map((v, j) => <Die key={j} value={v} small />)}
+                  </div>
+                )}
                 <span className="scoreboard__wins">{p.wins}</span>
               </div>
             ))}
         </div>
 
-        {/* Turn label */}
         {!isMyTurn && (
           <div className="turn-label">Turno de <strong>{currentPlayer?.name}</strong></div>
         )}
 
-        {/* Roll history */}
-        <div className="rolls">
-          {(() => {
-            // Active player uses local state (updated synchronously on roll).
-            // Spectators use server state broadcast with each room_state.
-            const effectiveDiscardHistory = isMyTurn
-              ? rollDiscardHistory
-              : (displayPlayer?.rollDiscardHistory ?? [])
+        {/* ── Tapete + Tu jugada ── */}
+        <div className="roll3d-wrapper">
 
-            return allRolls.map((dice, rollIdx) => {
-            const isCurrentRoll = rollIdx === allRolls.length - 1
-            const isInteractive = isCurrentRoll && diceInteractive
+          {/* Etiqueta de tirada actual (solo tras la primera) */}
+          {(displayPlayer?.rollCount ?? 0) > 0 && (
+            <span className="roll__label">Tirada {displayPlayer.rollCount}</span>
+          )}
 
-            // First roll: show all 5. Subsequent rolls: show only the freshly rolled dice.
-            const base = rollIdx === 0
-              ? dice.map((_, i) => i)
-              : effectiveDiscardHistory[rollIdx - 1] ?? []
+          {/* Tapete 3D — siempre visible (se inicializa antes del primer roll) */}
+          <DiceBoxScene
+            dice={displayPlayer?.currentDice ?? []}
+            rolledIndices={rolledIndices}
+            keptIndices={isMyTurn ? keptIndices : []}
+            interactive={diceInteractive}
+            onKeep={handleKeep}
+            onSettled={() => setRolling(false)}
+          />
 
-            // History row: hide dice discarded before the next roll.
-            // Current row: show all fresh dice.
-            const newIndices = isCurrentRoll
-              ? base
-              : base.filter(i => !(effectiveDiscardHistory[rollIdx] ?? []).includes(i))
+          {/* Tu jugada */}
+          {isMyTurn && (
+            <div className="my-play">
+              <div className="my-play__header">
+                <span className="my-play__title">Tu jugada</span>
+                {!mustPass && nextRollName && (
+                  <span className="my-play__next">Tirada {nextRollName}</span>
+                )}
+              </div>
 
-            // Live discard animation for spectators via server pendingDiscards.
-            const serverDiscards = !isMyTurn && isCurrentRoll
-              ? (displayPlayer?.pendingDiscards ?? [])
-              : []
-
-            return (
-              <div key={rollIdx} className="roll">
-                <span className="roll__label">Tirada {rollIdx + 1}</span>
-                <div className="roll__dice">
-                  {dice.map((val, origIndex) => {
-                    const localIdx = newIndices.indexOf(origIndex)
-                    if (localIdx === -1) return null
-                    if (fullyDiscardedIndices.includes(origIndex)) return null
-                    if (rolling && rollingSnapshotRef.current.includes(origIndex)) return null
-                    const isDiscarding = isInteractive
-                      ? discardIndices.includes(origIndex)
-                      : serverDiscards.includes(origIndex)
+              <div className="my-play__dice">
+                {Array.from({ length: totalDice }).map((_, slot) => {
+                  const originalIndex = keptIndices[slot]
+                  if (originalIndex !== undefined && displayPlayer?.currentDice?.[originalIndex] !== undefined) {
                     return (
                       <Die
-                        key={origIndex}
-                        value={val}
-                        onDiscard={isInteractive && !isDiscarding ? () => handleDiscard(origIndex) : null}
-                        discarded={isDiscarding}
-                        animDelay={rollIdx === animatingRollIdx ? localIdx * STAGGER_MS : null}
+                        key={originalIndex}
+                        value={displayPlayer.currentDice[originalIndex]}
+                        onDiscard={!mustPass ? () => handleUnkeep(originalIndex) : undefined}
                       />
                     )
-                  })}
-                </div>
+                  }
+                  return <div key={`empty-${slot}`} className="die-placeholder" />
+                })}
               </div>
-            )
-          })
-          })()}
 
-          {displayPlayer?.rollCount === 0 && (
-            <p className="roll__pending">
-              {isMyTurn ? 'Tira los dados para empezar' : `${currentPlayer?.name} aún no ha tirado`}
-            </p>
+              <div className="my-play__divider" />
+              <p className="discard-hint">
+                {keptIndices.length > 0 && !mustPass
+                  ? 'Toca un dado para devolverlo a la caja'
+                  : 'Toca un dado en la caja para guardarlo'}
+              </p>
+            </div>
           )}
 
           {displayPlayer?.done && displayPlayer?.hand && (
@@ -299,45 +244,33 @@ export default function GameBoard({ room, myId, onLeave }) {
           )}
         </div>
 
-        {/* Hint */}
-        {diceInteractive && !hintDismissed && !rolling && (
-          <p className="discard-hint">Toca o desliza un dado para descartarlo</p>
-        )}
-
-        {/* Actions */}
+        {/* ── Acciones ── */}
         <div className="actions">
           {isMyTurn && !me?.done && (
             <>
-              {me?.rollCount === 0 && (
-                <>
-                  <div className="actions__row">
-                    <button className="btn btn--primary" onClick={handleRoll} disabled={rolling}>
-                      Tirar dados
-                    </button>
-                    {isMobile() && needsMotionPermission() && !shakeEnabled && (
-                      <button className="btn btn--secondary" onClick={enableShakeIOS}>
-                        Activar agitar
-                      </button>
-                    )}
-                  </div>
-                  {shakeEnabled && canRoll && <p className="shake-hint">Agita el móvil para tirar</p>}
-                </>
-              )}
-              {me?.rollCount > 0 && mustPass && (
+              {mustPass ? (
                 <div className="actions__row">
-                  <button className="btn btn--primary" onClick={handleStand} disabled={rolling}>
-                    Pasar turno
+                  <button className="btn btn--primary btn--full" onClick={handleStand}>Pasar turno</button>
+                </div>
+              ) : (
+                <div className="actions__row">
+                  <button
+                    className="btn btn--secondary"
+                    onClick={handleStand}
+                    disabled={(me?.rollCount ?? 0) === 0 || rolling}
+                  >
+                    Plantarse
+                  </button>
+                  <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll}>
+                    Tirar dados
                   </button>
                 </div>
               )}
-              {me?.rollCount > 0 && !mustPass && (
-                <>
-                  <div className="actions__row">
-                    <button className="btn btn--secondary" onClick={handleStand}>Plantarse</button>
-                    <button className="btn btn--primary" onClick={handleRoll} disabled={rolling || !canRoll}>Tirar dados</button>
-                  </div>
-                  {shakeEnabled && <p className="shake-hint">Agita el móvil para tirar</p>}
-                </>
+              {shakeEnabled && canRoll && <p className="shake-hint">Agita el móvil para tirar</p>}
+              {isMobile() && needsMotionPermission() && !shakeEnabled && (
+                <button className="btn btn--secondary btn--full" onClick={enableShakeIOS} style={{ marginTop: 8 }}>
+                  Activar agitar
+                </button>
               )}
             </>
           )}
