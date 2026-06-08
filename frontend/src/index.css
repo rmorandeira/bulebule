@@ -75,6 +75,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   transition: background 0.15s, color 0.15s, transform 0.1s;
   flex-shrink: 0;
   letter-spacing: -0.5px;
@@ -91,6 +92,34 @@ body {
   cursor: pointer;
   touch-action: none;
 }
+
+/* ── Die faces ───────────────────────────────────────────── */
+.die-letter {
+  font-size: 2em;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--die-text);
+  pointer-events: none;
+}
+
+.die-letter--red { color: #c0392b; }
+
+.die-face-pips {
+  position: absolute;
+  inset: 18%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 14%;
+  pointer-events: none;
+}
+
+.pip {
+  background: var(--die-text);
+  border-radius: 50%;
+}
+
+.pip--red { background: #c0392b; }
 
 .die-wrapper--empty {
   flex: 1;

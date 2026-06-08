@@ -2,11 +2,36 @@ import { useRef, useEffect } from 'react'
 
 const SWIPE_THRESHOLD = 40
 
+// 3×3 grid: 1 = dot present, 0 = empty cell
+const PIP_PATTERNS = {
+  'AS': [0,0,0, 0,1,0, 0,0,0],          // 1 pip  — rojo
+  '7':  [1,1,1, 0,1,0, 1,1,1],          // 7 pips — negro
+  '8':  [1,1,1, 1,0,1, 1,1,1],          // 8 pips — rojo
+}
+const RED_VALUES = new Set(['AS', '8', 'K'])
+
+function DieFace({ value }) {
+  if (value in PIP_PATTERNS) {
+    const red = RED_VALUES.has(value)
+    return (
+      <div className="die-face-pips">
+        {PIP_PATTERNS[value].map((on, i) =>
+          on ? <div key={i} className={red ? 'pip pip--red' : 'pip'} /> : <div key={i} />
+        )}
+      </div>
+    )
+  }
+  return (
+    <span className={RED_VALUES.has(value) ? 'die-letter die-letter--red' : 'die-letter'}>
+      {value}
+    </span>
+  )
+}
+
 export default function Die({ value, onDiscard, discarded = false, small = false, animDelay = null }) {
   const btnRef = useRef(null)
   const onDiscardRef = useRef(onDiscard)
 
-  // Keep ref current so the native listener always calls the latest onDiscard
   useEffect(() => { onDiscardRef.current = onDiscard })
 
   useEffect(() => {
@@ -24,7 +49,7 @@ export default function Die({ value, onDiscard, discarded = false, small = false
       const dy = Math.abs(e.touches[0].clientY - startY)
       if (dy > SWIPE_THRESHOLD) {
         startY = null
-        e.preventDefault() // prevent scroll + prevent click from firing
+        e.preventDefault()
         onDiscardRef.current()
       }
     }
@@ -61,7 +86,7 @@ export default function Die({ value, onDiscard, discarded = false, small = false
         disabled={!onDiscard || discarded}
         aria-label={`Dado ${value}${discarded ? ' (descartado)' : ''}`}
       >
-        {value}
+        <DieFace value={value} />
       </button>
     </div>
   )

@@ -23,9 +23,11 @@ export default function GameBoard({ room, myId, onLeave }) {
   const isMyTurn = currentPlayer?.id === myId
   const me = room.players.find(p => p.id === myId)
   const maxAllowed = room.maxRolls ?? 3
+  const mustPass = isMyTurn && !me?.done && (me?.rollCount ?? 0) >= maxAllowed
   const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed &&
     ((me?.rollCount ?? 0) === 0 || discardIndices.length > 0)
-  const mustPass = isMyTurn && !me?.done && (me?.rollCount ?? 0) >= maxAllowed
+  // Dice are interactive when it's my turn, I've rolled at least once, and can still roll again
+  const diceInteractive = isMyTurn && !me?.done && (me?.rollCount ?? 0) > 0 && !mustPass
 
   // Reset discard state on new turn or round
   useEffect(() => {
@@ -204,12 +206,20 @@ export default function GameBoard({ room, myId, onLeave }) {
         <div className="rolls">
           {allRolls.map((dice, rollIdx) => {
             const isCurrentRoll = rollIdx === allRolls.length - 1
-            const isInteractive = isCurrentRoll && isMyTurn && !me?.done && canRoll
+            const isInteractive = isCurrentRoll && diceInteractive
 
-            // Roll 0: all 5 are new. Roll N (my turn): only the discarded indices from previous roll.
-            const newIndices = (rollIdx === 0 || !isMyTurn)
+            // Base = indices nuevos en esta tirada (tirada 0 = los 5, tirada N = los descartados antes de N)
+            // History row = base menos lo que se descartó antes de la tirada siguiente
+            // Current row = base completo (todos los nuevos, se puede descartar de ellos)
+            const base = !isMyTurn
               ? dice.map((_, i) => i)
-              : rollDiscardHistory[rollIdx - 1] ?? []
+              : rollIdx === 0
+                ? dice.map((_, i) => i)
+                : rollDiscardHistory[rollIdx - 1] ?? []
+
+            const newIndices = (!isMyTurn || isCurrentRoll)
+              ? base
+              : base.filter(i => !(rollDiscardHistory[rollIdx] ?? []).includes(i))
 
             return (
               <div key={rollIdx} className="roll">

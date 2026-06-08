@@ -1,5 +1,5 @@
-const DICE_VALUES = ['A', 'K', 'Q', 'J', '10', '9'];
-const VALUE_RANK = { A: 6, K: 5, Q: 4, J: 3, '10': 2, '9': 1 };
+const DICE_VALUES = ['AS', 'K', 'Q', 'J', '8', '7'];
+const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 };
 
 function rollDie() {
   return DICE_VALUES[Math.floor(Math.random() * DICE_VALUES.length)];

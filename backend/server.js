@@ -16,7 +16,7 @@ const io = new Server(server, {
 
 const rooms = {};
 
-const VALUE_RANK = { A: 6, K: 5, Q: 4, J: 3, '10': 2, '9': 1 };
+const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 };
 const BOT_ID = '__bot__';
 const BOT_NAME = 'Bot';
 
