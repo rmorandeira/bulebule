@@ -318,6 +318,49 @@ body {
   color: #fff;
 }
 
+.mode-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 14px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: #faf9f7;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  color: var(--text-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-btn--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.mode-btn__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.create-room__bot-hint {
+  font-size: 13px;
+  color: var(--text-subtle);
+  padding: 10px 14px;
+  background: #f5f2ee;
+  border-radius: 10px;
+  line-height: 1.5;
+}
+
 .btn-back {
   background: none;
   border: none;
