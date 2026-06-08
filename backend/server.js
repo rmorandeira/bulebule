@@ -5,8 +5,17 @@ const cors = require('cors');
 const webpush = require('web-push');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
 
-const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BPqTNNswJUQa5m4cfsVK2eQMV_2KuogrMMHiDM4xVw84uOu_24knBdqzBRHoGyjyMYGGO6J2nfFQdm7sk5Gg0HM';
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'e8_vT6EZUuqLl-SbBGGUm_U6diqzxk2bwEAsC2WNLOM';
+let VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
+let VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
+if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+  const keys = webpush.generateVAPIDKeys();
+  VAPID_PUBLIC = keys.publicKey;
+  VAPID_PRIVATE = keys.privateKey;
+  console.warn('VAPID keys not configured. Generated for this session (push subscriptions reset on restart).');
+  console.warn('Set these env vars to persist them:');
+  console.warn(`  VAPID_PUBLIC_KEY=${VAPID_PUBLIC}`);
+  console.warn(`  VAPID_PRIVATE_KEY=${VAPID_PRIVATE}`);
+}
 webpush.setVapidDetails('mailto:rmorandeira@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
 
 const registeredUsers = {};
