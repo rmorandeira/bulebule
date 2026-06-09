@@ -319,26 +319,10 @@ function step(ctx, now, propsRef) {
       if (!ctx.settleSince) ctx.settleSince = now
       else if (now - ctx.settleSince > 400) {
         ctx.settleSince = null
-        beginFace(ctx, now)
+        beginPlace(ctx, now)
       }
     } else {
       ctx.settleSince = null
-    }
-  }
-
-  // ── Face tween ───────────────────────────────────────────────────────────────
-  const facing = dice.filter(d => d.phase === 'facing')
-  if (facing.length > 0) {
-    const DUR = 420
-    let done = true
-    facing.forEach(d => {
-      const t = Math.min((now - d.ts) / DUR, 1)
-      d.mesh.quaternion.slerpQuaternions(d.fq, d.tq, eio(t))
-      if (t < 1) done = false
-    })
-    if (done) {
-      facing.forEach(d => { d.mesh.quaternion.copy(d.tq) })
-      beginPlace(ctx, now)
     }
   }
 
@@ -382,13 +366,14 @@ function beginFace(ctx, now) {
 }
 
 function beginPlace(ctx, now) {
-  // Only newly settled dice need placing; idle (kept) dice stay where they are
   ctx.dice.forEach((d, i) => {
-    if (d.phase !== 'facing') return
+    if (d.phase !== 'rolling') return
+    if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
     d.fp.copy(d.mesh.position)
     d.tp.set(SLOT_X(i), REST_Y, REST_Z)
     d.ts = now
     d.phase = 'placing'
+    // rotation is preserved as-is from physics
   })
 }
 
