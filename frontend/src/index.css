@@ -1096,6 +1096,24 @@ body {
   gap: 6px;
 }
 
+/* ── Dice roller 3D overlay ──────────────────────────────── */
+.dice-roller-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dice-roller-overlay > div {
+  width: min(420px, 100vw);
+  height: min(340px, 60vh);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
 /* ── Turn timer ──────────────────────────────────────────── */
 .turn-timer {
   font-size: 13px;

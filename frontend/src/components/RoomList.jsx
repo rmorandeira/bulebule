@@ -13,6 +13,13 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
   const [error, setError] = useState('')
   const [joiningCode, setJoiningCode] = useState(null)
   const [connected, setConnected] = useState(socket.connected)
+  const [animPhase, setAnimPhase] = useState('splash')
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setAnimPhase('logo-center'), 350)
+    const t2 = setTimeout(() => setAnimPhase('logo-top'), 2000)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
 
   useEffect(() => {
     function onConnect() {
@@ -50,26 +57,32 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
   }
 
   const isFull = (r) => r.playerCount >= r.maxPlayers
-  const openRooms = rooms.filter(r => r.phase === 'lobby' && !isFull(r))
+  const sheetVisible = animPhase === 'logo-top'
 
   return (
     <div className="home">
 
-      {/* Fondo animado */}
+      {/* Fondo con parallax zoom */}
       <div className="home__bg-wrapper">
         <div className="home__bg" />
       </div>
 
-      {/* Área scrollable: badge + tarjeta usuario + salas */}
-      <div className="home__sheet">
+      {/* Logo BULE BULE — animado splash → center → top */}
+      <img
+        className={`home__logo home__logo--${animPhase}`}
+        src="/assets/logo-bulebule.png"
+        alt="Bule Bule"
+        draggable={false}
+      />
 
-        {/* Badge de conexión */}
+      {/* Sheet — aparece con slide-up cuando el logo llega arriba */}
+      <div className={`home__sheet${sheetVisible ? '' : ' home__sheet--hidden'}`}>
+
         <div className={`home__conn-badge ${connected ? 'home__conn-badge--ok' : 'home__conn-badge--off'}`}>
           {connected ? 'Conectado' : 'Conectando...'}
         </div>
 
         {!user ? (
-          /* Sin sesión */
           <div className="home__login-card">
             <p className="home__login-hint">Inicia sesión para jugar</p>
             <GoogleLogin
@@ -81,7 +94,7 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
           </div>
         ) : (
           <>
-            {/* Tarjeta de usuario */}
+            {/* Tarjeta usuario */}
             <div className="home__user-card">
               <img className="home__avatar" src={user.picture} alt={user.name} referrerPolicy="no-referrer" />
               <div className="home__user-info">
@@ -96,14 +109,21 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
               </button>
             </div>
 
-            {/* Panel de salas — cristal esmerilado */}
+            {/* CTA principal */}
+            <button
+              className="home__create-btn"
+              onClick={onCreateClick}
+              disabled={!connected}
+            >
+              Nueva partida
+            </button>
+
+            {error && <p className="home__error">{error}</p>}
+
+            {/* Panel salas */}
             <div className="home__rooms-panel">
-              <p className="home__rooms-label">Salas disponibles</p>
-
-              {error && <p className="home__error">{error}</p>}
-
               {rooms.length === 0 ? (
-                <p className="home__rooms-empty">No hay salas abiertas. ¡Crea la primera!</p>
+                <p className="home__rooms-empty">No hay salas abiertas</p>
               ) : (
                 <div className="home__rooms-list">
                   {rooms.map(room => {
@@ -113,11 +133,11 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
                         <div className="home__room-info">
                           <span className="home__room-name">{room.name}</span>
                           <div className="home__room-meta">
-                            <span>{room.playerCount}/{room.maxPlayers} jugadores</span>
-                            {canJoin && <span className="home__room-status">ESPERANDO</span>}
-                            {!canJoin && <span className="home__room-status home__room-status--full">
-                              {isFull(room) ? 'Llena' : 'En curso'}
-                            </span>}
+                            <span>{room.playerCount}/{room.maxPlayers} Jugadores</span>
+                            {canJoin
+                              ? <span className="home__room-status">ESPERANDO</span>
+                              : <span className="home__room-status home__room-status--full">{isFull(room) ? 'Llena' : 'En curso'}</span>
+                            }
                           </div>
                         </div>
                         <button
@@ -133,28 +153,9 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
                 </div>
               )}
 
-              {/* Campo de nombre si se va a unir */}
-              <input
-                className="input"
-                placeholder="Nombre en partida"
-                value={playerName}
-                maxLength={12}
-                onChange={e => { onNameChange(e.target.value); setError('') }}
-              />
             </div>
           </>
         )}
-      </div>
-
-      {/* Botón fijo al pie */}
-      <div className="home__bottom">
-        <button
-          className="home__create-btn"
-          onClick={onCreateClick}
-          disabled={!connected || !user}
-        >
-          + Crear sala
-        </button>
       </div>
 
     </div>

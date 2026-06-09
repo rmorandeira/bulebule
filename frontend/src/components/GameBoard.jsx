@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import Die from './Die'
 import AlaCaidaToast from './AlaCaidaToast'
+import DiceRollerScene from './DiceRollerScene'
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 const needsMotionPermission = () =>
@@ -35,8 +36,10 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [showAlaCaida, setShowAlaCaida] = useState(false)
   const [botDisplayedKept, setBotDisplayedKept] = useState([])
   const [timeLeft, setTimeLeft] = useState(null)
+  const [rollingDice, setRollingDice] = useState(null)  // valores 3D en vuelo
   const prevDoneRef = useRef({})
   const botReadyTimerRef = useRef(null)
+  const prevRollCountRef = useRef({})
 
   const me = room.players.find(p => p.id === myId)
   const currentPlayer = room.players[room.currentPlayerIndex]
@@ -51,6 +54,19 @@ export default function GameBoard({ room, myId, onLeave }) {
   useEffect(() => {
     setPendingDiscards([])
   }, [room.roundNumber, room.currentPlayerIndex])
+
+  // Detectar nueva tirada y lanzar animación 3D
+  useEffect(() => {
+    const cp = room.players[room.currentPlayerIndex]
+    if (!cp) return
+    const prev = prevRollCountRef.current[cp.id] ?? 0
+    const curr = cp.rollCount ?? 0
+    if (curr > prev && cp.currentDice?.length) {
+      setRollingDice([...cp.currentDice])
+    }
+    prevRollCountRef.current[cp.id] = curr
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.currentPlayerIndex, room.players[room.currentPlayerIndex]?.rollCount])
 
   function toggleDiscard(index) {
     setPendingDiscards(prev =>
@@ -331,6 +347,15 @@ export default function GameBoard({ room, myId, onLeave }) {
             )}
           </div>
         </>
+      )}
+
+      {rollingDice && (
+        <div className="dice-roller-overlay">
+          <DiceRollerScene
+            values={rollingDice}
+            onSettled={() => setRollingDice(null)}
+          />
+        </div>
       )}
 
       {showAlaCaida && <AlaCaidaToast onDone={() => setShowAlaCaida(false)} />}

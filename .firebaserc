@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "dados-1c0fd"
+  },
+  "targets": {
+    "dados-1c0fd": {
+      "hosting": {
+        "bulebule": ["bulebule"]
+      }
+    }
+  }
+}
