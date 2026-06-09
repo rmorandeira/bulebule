@@ -422,6 +422,18 @@ io.on('connection', (socket) => {
     startTurnTimer(room);
   });
 
+  socket.on('report_faces', ({ faces } = {}, cb) => {
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.phase !== 'playing') return cb?.({ ok: false });
+    const player = room.players[room.currentPlayerIndex];
+    if (player.id !== socket.id || player.done || player.rollCount === 0) return cb?.({ ok: false });
+    const VALID = new Set(['AS', 'K', 'Q', 'J', '8', '7']);
+    if (!Array.isArray(faces) || faces.length !== 5 || !faces.every(f => VALID.has(f))) return cb?.({ ok: false });
+    player.currentDice = faces;
+    cb?.({ ok: true });
+    broadcast(room.code);
+  });
+
   socket.on('stand', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });

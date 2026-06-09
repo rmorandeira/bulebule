@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
 const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
@@ -74,17 +75,34 @@ function buildMats() {
 const eio = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
 const mag = v => Math.sqrt(v.x**2 + v.y**2 + v.z**2)
 
+const FACE_NORMALS = [
+  new THREE.Vector3( 1,  0,  0),
+  new THREE.Vector3(-1,  0,  0),
+  new THREE.Vector3( 0,  1,  0),
+  new THREE.Vector3( 0, -1,  0),
+  new THREE.Vector3( 0,  0,  1),
+  new THREE.Vector3( 0,  0, -1),
+]
+const UP = new THREE.Vector3(0, 1, 0)
+function getTopFace(mesh) {
+  let best = 0, bestDot = -Infinity
+  FACE_NORMALS.forEach((n, i) => {
+    const dot = n.clone().applyQuaternion(mesh.quaternion).dot(UP)
+    if (dot > bestDot) { bestDot = dot; best = i }
+  })
+  return FACE_VALUES[best]
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
   interactive, onDieClick, onSettled,
 }) {
-  const mountRef  = useRef(null)
-  const labelsRef = useRef(null)
-  const ctxRef    = useRef(null)
-  const propsRef  = useRef({})
-  propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled, labelsEl: labelsRef.current }
+  const mountRef = useRef(null)
+  const ctxRef   = useRef(null)
+  const propsRef = useRef({})
+  propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled }
 
   // ── Init Three.js scene (once) ──────────────────────────────────────────────
   useEffect(() => {
@@ -114,7 +132,7 @@ export default function DiceRollerScene({
     // 5 persistent die meshes
     const dice = Array.from({ length: 5 }, (_, i) => {
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(DIE, DIE, DIE),
+        new RoundedBoxGeometry(DIE, DIE, DIE, 4, DIE * 0.12),
         buildMats()
       )
       mesh.userData.idx = i
@@ -131,19 +149,20 @@ export default function DiceRollerScene({
 
       return {
         mesh, outline, body: null, value: null,
-        phase: 'hidden',  // hidden|rolling|facing|placing|idle
+        phase: 'hidden',  // hidden|rolling|facing|placing|idle|exiting
         ts: 0,
         fq: new THREE.Quaternion(), tq: new THREE.Quaternion(),
         fp: new THREE.Vector3(),    tp: new THREE.Vector3(),
         moveActive: false, moveTs: 0,
         moveFrom: new THREE.Vector3(), moveTo: new THREE.Vector3(),
+        exitFrom: new THREE.Vector3(), exitTs: 0,
       }
     })
 
     const ctx = {
       renderer, scene, camera, dice,
       RAPIER: null, world: null,
-      pendingRoll: null, settleSince: null, animId: null,
+      pendingRoll: null, rollAfterExit: null, settleSince: null, animId: null,
     }
     ctxRef.current = ctx
 
@@ -208,7 +227,7 @@ export default function DiceRollerScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollKey])
 
-  // ── Pending discards: borde rojo + mover al fondo (o devolver) ─────────────
+  // ── Pending discards: borde rojo + alpha 50% + mover al fondo ──────────────
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx) return
@@ -217,6 +236,10 @@ export default function DiceRollerScene({
       if (d.phase !== 'idle') return
       const discarded = pendingDiscards.includes(i)
       d.outline.visible = discarded
+      d.mesh.material.forEach(mat => {
+        mat.transparent = discarded
+        mat.opacity = discarded ? 0.5 : 1.0
+      })
       const targetZ = discarded ? DISCARD_Z : REST_Z
       d.moveFrom.copy(d.mesh.position)
       d.moveTo.set(SLOT_X(i), REST_Y, targetZ)
@@ -226,26 +249,7 @@ export default function DiceRollerScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiscards.join(',')])
 
-  return (
-    <div style={{ position: 'absolute', inset: 0 }}>
-      <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
-      <div ref={labelsRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        {[0,1,2,3,4].map(i => (
-          <div key={i} style={{
-            display: 'none',
-            position: 'absolute',
-            transform: 'translateX(-50%)',
-            color: '#e63946',
-            fontWeight: 800,
-            fontSize: '9px',
-            letterSpacing: '2px',
-            textShadow: '0 1px 3px rgba(0,0,0,0.55)',
-            whiteSpace: 'nowrap',
-          }}>DESCARTE</div>
-        ))}
-      </div>
-    </div>
-  )
+  return <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
 }
 
 // ─── Scene helpers (no React state closures) ──────────────────────────────────
@@ -268,6 +272,23 @@ function makeWorld(R) {
 function doRoll(ctx, values, rollingIndices) {
   const { RAPIER: R, world, dice } = ctx
   ctx.settleSince = null
+
+  // If any dice to re-roll are currently on the board, exit them first
+  const needExit = rollingIndices.filter(i =>
+    dice[i].mesh.visible && (dice[i].phase === 'idle' || dice[i].moveActive)
+  )
+  if (needExit.length > 0) {
+    const now = performance.now()
+    needExit.forEach(i => {
+      const d = dice[i]
+      d.exitFrom.copy(d.mesh.position)
+      d.exitTs = now
+      d.phase = 'exiting'
+      d.moveActive = false
+    })
+    ctx.rollAfterExit = { values, rollingIndices }
+    return
+  }
 
   rollingIndices.forEach((i, slot) => {
     // Remove old body
@@ -338,7 +359,10 @@ function step(ctx, now, propsRef) {
       if (t < 1) done = false
       else { d.mesh.position.copy(d.tp); d.phase = 'idle' }
     })
-    if (done) propsRef.current.onSettled?.()
+    if (done) {
+      const faces = ctx.dice.map(d => d.mesh.visible ? getTopFace(d.mesh) : d.value)
+      propsRef.current.onSettled?.(faces)
+    }
   }
 
   // ── Move tween (discard / return) ────────────────────────────────────────────
@@ -350,8 +374,23 @@ function step(ctx, now, propsRef) {
     if (t >= 1) { d.mesh.position.copy(d.moveTo); d.moveActive = false }
   })
 
-  // ── DESCARTE labels ──────────────────────────────────────────────────────────
-  updateLabels(ctx, propsRef.current)
+  // ── Exit tween (discarded dice leave the board before new roll) ───────────────
+  const EXIT_DUR = 360
+  const exiting = dice.filter(d => d.phase === 'exiting')
+  exiting.forEach(d => {
+    const t = (now - d.exitTs) / EXIT_DUR
+    const c = Math.min(t, 1)
+    d.mesh.position.x = d.exitFrom.x
+    d.mesh.position.y = d.exitFrom.y - c * c * 7
+    d.mesh.position.z = d.exitFrom.z + c * 1.5
+    if (t >= 1) { d.mesh.visible = false; d.phase = 'hidden' }
+  })
+  if (ctx.rollAfterExit && exiting.length > 0 && exiting.every(d => d.phase === 'hidden')) {
+    const { values, rollingIndices } = ctx.rollAfterExit
+    ctx.rollAfterExit = null
+    doRoll(ctx, values, rollingIndices)
+  }
+
 }
 
 function beginFace(ctx, now) {
@@ -374,37 +413,7 @@ function beginPlace(ctx, now) {
     d.tp.set(SLOT_X(i), REST_Y, REST_Z)
     d.ts = now
     d.phase = 'placing'
-    // rotation is preserved as-is from physics
+    // rotation preserved as-is from physics
   })
 }
 
-function updateLabels(ctx, props) {
-  const container = props.labelsEl
-  if (!container) return
-  const { dice, camera, renderer } = ctx
-  const pending = props.pendingDiscards ?? []
-  const rect = renderer.domElement.getBoundingClientRect()
-
-  for (let i = 0; i < 5; i++) {
-    const label = container.children[i]
-    if (!label) continue
-    const d = dice[i]
-
-    if (!pending.includes(i) || d.phase !== 'idle') {
-      label.style.display = 'none'
-      continue
-    }
-
-    // Project position just below the die
-    const pos = d.mesh.position.clone()
-    pos.y -= DIE * 0.85
-    pos.project(camera)
-
-    const x = (pos.x * 0.5 + 0.5) * rect.width
-    const y = (-pos.y * 0.5 + 0.5) * rect.height
-
-    label.style.display = 'block'
-    label.style.left = `${x}px`
-    label.style.top  = `${y}px`
-  }
-}

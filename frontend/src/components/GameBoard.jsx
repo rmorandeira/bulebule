@@ -282,7 +282,10 @@ export default function GameBoard({ room, myId, onLeave }) {
               pendingDiscards={pendingDiscards}
               interactive={isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0}
               onDieClick={toggleDiscard}
-              onSettled={() => setRollingIndices([])}
+              onSettled={(faces) => {
+                setRollingIndices([])
+                if (faces?.length === 5) socket.emit('report_faces', { faces })
+              }}
             />
           </div>
 
