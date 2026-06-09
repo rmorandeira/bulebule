@@ -153,8 +153,9 @@ export default function DiceRollerScene({
     function onTap(e) {
       if (!propsRef.current.interactive) return
       const rect = renderer.domElement.getBoundingClientRect()
-      const cx = e.touches ? e.touches[0].clientX : e.clientX
-      const cy = e.touches ? e.touches[0].clientY : e.clientY
+      const touch = e.changedTouches?.[0] ?? e.touches?.[0]
+      const cx = touch ? touch.clientX : e.clientX
+      const cy = touch ? touch.clientY : e.clientY
       m2.x = ((cx - rect.left) / rect.width)  *  2 - 1
       m2.y = ((cy - rect.top)  / rect.height) * -2 + 1
       ray.setFromCamera(m2, camera)
