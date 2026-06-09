@@ -60,13 +60,13 @@ export default function GameBoard({ room, myId, onLeave }) {
     setSceneValues(null)
   }, [room.roundNumber, room.currentPlayerIndex])
 
-  // Detectar nueva tirada → pasar rolling indices a la escena 3D
+  // Detectar nueva tirada propia → pasar rolling indices a la escena 3D
   useEffect(() => {
     const cp = room.players[room.currentPlayerIndex]
     if (!cp) return
     const prev = prevRollCountRef.current[cp.id] ?? 0
     const curr = cp.rollCount ?? 0
-    if (curr > prev && cp.currentDice?.length) {
+    if (curr > prev && cp.currentDice?.length && cp.id === myId) {
       const history = cp.rollDiscardHistory ?? []
       const newRolling = history.length === 0
         ? [0, 1, 2, 3, 4]
