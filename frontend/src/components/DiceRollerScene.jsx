@@ -1,285 +1,334 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
-// Face order for BoxGeometry: +X, -X, +Y, -Y, +Z, -Z
-// We assign die values to face indices
-const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']  // [+X, -X, +Y, -Y, +Z, -Z]
-const VALUE_TO_FACE = {}
-FACE_VALUES.forEach((v, i) => { VALUE_TO_FACE[v] = i })
+// BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
+const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
+const VALUE_TO_FACE = Object.fromEntries(FACE_VALUES.map((v, i) => [v, i]))
 
-// Rotation to bring face[i] to point UP (+Y)
-const FACE_UP_QUATS = [
-  new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -Math.PI / 2)),  // +X up
-  new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0,  Math.PI / 2)),  // -X up
-  new THREE.Quaternion().identity(),                                           // +Y up
-  new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)),        // -Y up
-  new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)),   // +Z up
-  new THREE.Quaternion().setFromEuler(new THREE.Euler( Math.PI / 2, 0, 0)),   // -Z up
-]
+const FACE_UP_QUATS = (() => {
+  const E = THREE.Euler
+  const Q = THREE.Quaternion
+  return [
+    new Q().setFromEuler(new E(0, 0, -Math.PI / 2)),
+    new Q().setFromEuler(new E(0, 0,  Math.PI / 2)),
+    new Q(),
+    new Q().setFromEuler(new E(Math.PI, 0, 0)),
+    new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),
+    new Q().setFromEuler(new E( Math.PI / 2, 0, 0)),
+  ]
+})()
 
-const DIE_SIZE = 0.9
-const FLOOR_Y = -2
-const WALL_DIST = 4
+const DIE    = 0.85
+const FY     = -2.5   // floor Y
+const WX     = 3.6    // wall half-extent X
+const WZ     = 3.0    // wall half-extent Z
+const REST_Y = FY + DIE / 2 + 0.02
+const REST_Z = -1.2   // back of scene = "top" in camera view
+const SLOT_X = (i) => (i - 2) * 1.1   // fixed X per die index
 
-// Build a canvas texture for a die face
-function makeFaceTexture(value) {
-  const size = 256
-  const canvas = document.createElement('canvas')
-  canvas.width = size; canvas.height = size
-  const ctx = canvas.getContext('2d')
+const PIP = {
+  AS: [0,0,0, 0,1,0, 0,0,0],
+  '8': [1,1,1, 1,1,1, 1,1,1],
+  '7': [1,1,1, 0,1,0, 1,1,1],
+}
 
-  // Background
-  ctx.fillStyle = '#e5d9c3'
-  roundRect(ctx, 0, 0, size, size, size * 0.18)
-  ctx.fill()
-
-  const PIP_PATTERNS = {
-    'AS': [0,0,0, 0,1,0, 0,0,0],
-    '8':  [1,1,1, 1,1,1, 1,1,1],
-    '7':  [1,1,1, 0,1,0, 1,1,1],
-  }
-
-  if (value in PIP_PATTERNS) {
-    const red = value === 'AS' || value === '8'
-    ctx.fillStyle = red ? '#c0392b' : '#1a1a1a'
-    const pattern = PIP_PATTERNS[value]
-    const pipR = size * 0.065
-    const margin = size * 0.2
-    const step = (size - margin * 2) / 2
-    pattern.forEach((on, i) => {
+function makeTex(value) {
+  const S = 256
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = S
+  const ctx = cv.getContext('2d')
+  const r = S * 0.18
+  ctx.fillStyle = '#f5f2ee'
+  ctx.beginPath()
+  ctx.moveTo(r, 0); ctx.lineTo(S-r, 0); ctx.arcTo(S, 0, S, r, r)
+  ctx.lineTo(S, S-r); ctx.arcTo(S, S, S-r, S, r)
+  ctx.lineTo(r, S); ctx.arcTo(0, S, 0, S-r, r)
+  ctx.lineTo(0, r); ctx.arcTo(0, 0, r, 0, r)
+  ctx.closePath(); ctx.fill()
+  if (value in PIP) {
+    ctx.fillStyle = (value === 'AS' || value === '8') ? '#c0392b' : '#1a1a1a'
+    const pr = S*0.065, m = S*0.22, st = (S-m*2)/2
+    PIP[value].forEach((on, i) => {
       if (!on) return
-      const col = i % 3
-      const row = Math.floor(i / 3)
-      const x = margin + col * step
-      const y = margin + row * step
       ctx.beginPath()
-      ctx.arc(x, y, pipR, 0, Math.PI * 2)
+      ctx.arc(m+(i%3)*st, m+Math.floor(i/3)*st, pr, 0, Math.PI*2)
       ctx.fill()
     })
   } else {
-    const display = value === 'AS' ? 'A' : value
-    const red = value === 'K'
-    ctx.fillStyle = red ? '#c0392b' : '#1a1a1a'
-    ctx.font = `bold ${size * 0.55}px Georgia, serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(display, size / 2, size / 2)
+    ctx.fillStyle = value === 'K' ? '#c0392b' : '#1a1a1a'
+    ctx.font = `bold ${S*.55}px Georgia,serif`
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillText(value === 'AS' ? 'A' : value, S/2, S/2)
   }
-
-  return new THREE.CanvasTexture(canvas)
+  return new THREE.CanvasTexture(cv)
 }
 
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.arcTo(x + w, y, x + w, y + r, r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
-  ctx.lineTo(x + r, y + h)
-  ctx.arcTo(x, y + h, x, y + h - r, r)
-  ctx.lineTo(x, y + r)
-  ctx.arcTo(x, y, x + r, y, r)
-  ctx.closePath()
+function buildMats() {
+  return FACE_VALUES.map(v => new THREE.MeshStandardMaterial({ map: makeTex(v), roughness: 0.4 }))
 }
 
-// Build materials for all 6 faces of a die given final value
-function buildMaterials(finalValue) {
-  return FACE_VALUES.map(faceVal => {
-    const tex = makeFaceTexture(faceVal)
-    return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.0 })
-  })
-}
+const eio = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
+const mag = v => Math.sqrt(v.x**2 + v.y**2 + v.z**2)
 
-export default function DiceRollerScene({ values, onSettled }) {
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function DiceRollerScene({
+  values, rollingIndices, pendingDiscards = [],
+  interactive, onDieClick, onSettled,
+}) {
   const mountRef = useRef(null)
-  const stateRef = useRef(null)
-  const animFrameRef = useRef(null)
-  const settledRef = useRef(false)
+  const ctxRef   = useRef(null)
+  const propsRef = useRef({})
+  propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled }
 
-  const cleanup = useCallback(() => {
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
-    if (stateRef.current) {
-      const { renderer, world } = stateRef.current
-      renderer.dispose()
-      world.free()
-      stateRef.current = null
-    }
-    settledRef.current = false
-  }, [])
-
+  // ── Init Three.js scene (once) ──────────────────────────────────────────────
   useEffect(() => {
-    if (!values?.length || !mountRef.current) return
-    cleanup()
-
+    const mount = mountRef.current
+    if (!mount) return
     let alive = true
 
-    async function init() {
-      const RAPIER = await import('@dimforge/rapier3d-compat')
-      await RAPIER.init()
-      if (!alive || !mountRef.current) return
+    const W = mount.offsetWidth  || mount.parentElement?.offsetWidth  || 360
+    const H = mount.offsetHeight || mount.parentElement?.offsetHeight || 240
 
-      // --- Three.js setup ---
-      const el = mountRef.current
-      const W = el.offsetWidth || el.parentElement?.offsetWidth || 320
-      const H = el.offsetHeight || el.parentElement?.offsetHeight || 240
+    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    renderer.setSize(W, H)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setClearColor(0xebebeb)
+    mount.appendChild(renderer.domElement)
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
-      renderer.setSize(W, H)
-      renderer.setClearColor(0xebebeb)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-      renderer.shadowMap.enabled = true
-      mountRef.current.appendChild(renderer.domElement)
+    const scene  = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100)
+    camera.position.set(0, 7, 5.5)
+    camera.lookAt(0, FY + 1.5, 0)
 
-      const scene = new THREE.Scene()
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75))
+    const dir = new THREE.DirectionalLight(0xffffff, 1.2)
+    dir.position.set(4, 10, 6)
+    scene.add(dir)
 
-      const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100)
-      camera.position.set(0, 8, 6)
-      camera.lookAt(0, FLOOR_Y + 1, 0)
-
-      // Lighting
-      const ambient = new THREE.AmbientLight(0xffffff, 0.7)
-      scene.add(ambient)
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2)
-      dirLight.position.set(5, 10, 5)
-      dirLight.castShadow = true
-      scene.add(dirLight)
-
-      // --- Rapier setup ---
-      const gravity = { x: 0, y: -20, z: 0 }
-      const world = new RAPIER.World(gravity)
-
-      // Floor
-      const floorDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, FLOOR_Y, 0)
-      const floorBody = world.createRigidBody(floorDesc)
-      world.createCollider(RAPIER.ColliderDesc.cuboid(WALL_DIST, 0.1, WALL_DIST), floorBody)
-
-      // Walls (invisible, keep dice in view)
-      for (const [tx, tz] of [[WALL_DIST, 0], [-WALL_DIST, 0], [0, WALL_DIST], [0, -WALL_DIST]]) {
-        const wb = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(tx, FLOOR_Y + 2, tz))
-        world.createCollider(RAPIER.ColliderDesc.cuboid(0.1, 4, WALL_DIST), wb)
+    // 5 persistent die meshes
+    const dice = Array.from({ length: 5 }, (_, i) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(DIE, DIE, DIE),
+        buildMats()
+      )
+      mesh.userData.idx = i
+      mesh.visible = false
+      scene.add(mesh)
+      return {
+        mesh, body: null, value: null,
+        phase: 'hidden',  // hidden|rolling|facing|placing|idle
+        ts: 0,
+        fq: new THREE.Quaternion(), tq: new THREE.Quaternion(),
+        fp: new THREE.Vector3(),    tp: new THREE.Vector3(),
       }
+    })
 
-      // --- Dice ---
-      const diceData = values.map((value, idx) => {
-        const materials = buildMaterials(value)
-        const geo = new THREE.BoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE)
-        const mesh = new THREE.Mesh(geo, materials)
-        mesh.castShadow = true
-        mesh.receiveShadow = true
-        scene.add(mesh)
-
-        // Stagger starting positions
-        const spread = 1.5
-        const startX = (idx - (values.length - 1) / 2) * spread + (Math.random() - 0.5) * 0.5
-        const startZ = (Math.random() - 0.5) * 1.5
-
-        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-          .setTranslation(startX, FLOOR_Y + 6 + idx * 0.5, startZ)
-          .setLinvel(
-            (Math.random() - 0.5) * 4,
-            -2,
-            (Math.random() - 0.5) * 4
-          )
-          .setAngvel({
-            x: (Math.random() - 0.5) * 20,
-            y: (Math.random() - 0.5) * 20,
-            z: (Math.random() - 0.5) * 20
-          })
-
-        const body = world.createRigidBody(bodyDesc)
-        const collider = RAPIER.ColliderDesc.cuboid(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)
-          .setRestitution(0.4)
-          .setFriction(0.6)
-        world.createCollider(collider, body)
-
-        return { mesh, body, value, settled: false, tweening: false, tweenStart: null, tweenFrom: null }
-      })
-
-      stateRef.current = { renderer, scene, camera, world, diceData, RAPIER }
-
-      // --- Render loop ---
-      let lastTime = performance.now()
-      let allSettledAt = null
-      let tweenPhase = false
-
-      function tick(now) {
-        if (!alive) return
-        animFrameRef.current = requestAnimationFrame(tick)
-
-        const dt = Math.min((now - lastTime) / 1000, 0.05)
-        lastTime = now
-
-        if (!tweenPhase) {
-          world.timestep = dt
-          world.step()
-
-          // Sync mesh positions
-          diceData.forEach(d => {
-            const pos = d.body.translation()
-            const rot = d.body.rotation()
-            d.mesh.position.set(pos.x, pos.y, pos.z)
-            d.mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
-          })
-
-          // Check settled: all dice have low velocity
-          const allStopped = diceData.every(d => {
-            const lv = d.body.linvel()
-            const av = d.body.angvel()
-            const speed = Math.sqrt(lv.x**2 + lv.y**2 + lv.z**2)
-            const spin = Math.sqrt(av.x**2 + av.y**2 + av.z**2)
-            return speed < 0.3 && spin < 0.3
-          })
-
-          if (allStopped && !allSettledAt) allSettledAt = now
-          if (allSettledAt && now - allSettledAt > 300 && !tweenPhase) {
-            tweenPhase = true
-            // Start tween for each die to show correct face
-            diceData.forEach(d => {
-              const faceIdx = VALUE_TO_FACE[d.value]
-              d.tweenFrom = d.mesh.quaternion.clone()
-              d.tweenTarget = FACE_UP_QUATS[faceIdx].clone()
-              d.tweenStart = now
-            })
-          }
-        } else {
-          // Tween all dice to correct orientation
-          const TWEEN_DUR = 500
-          let allDone = true
-          diceData.forEach(d => {
-            if (!d.tweenStart) return
-            const t = Math.min((now - d.tweenStart) / TWEEN_DUR, 1)
-            const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t  // ease-in-out
-            d.mesh.quaternion.slerpQuaternions(d.tweenFrom, d.tweenTarget, ease)
-            if (t < 1) allDone = false
-          })
-
-          if (allDone && !settledRef.current) {
-            settledRef.current = true
-            renderer.render(scene, camera)
-            setTimeout(() => {
-              if (alive) onSettled?.()
-            }, 600)
-          }
-        }
-
-        renderer.render(scene, camera)
-      }
-
-      animFrameRef.current = requestAnimationFrame(tick)
+    const ctx = {
+      renderer, scene, camera, dice,
+      RAPIER: null, world: null,
+      pendingRoll: null, settleSince: null, animId: null,
     }
+    ctxRef.current = ctx
 
-    init()
+    // Click to discard
+    const ray = new THREE.Raycaster()
+    const m2  = new THREE.Vector2()
+    function onTap(e) {
+      if (!propsRef.current.interactive) return
+      const rect = renderer.domElement.getBoundingClientRect()
+      const cx = e.touches ? e.touches[0].clientX : e.clientX
+      const cy = e.touches ? e.touches[0].clientY : e.clientY
+      m2.x = ((cx - rect.left) / rect.width)  *  2 - 1
+      m2.y = ((cy - rect.top)  / rect.height) * -2 + 1
+      ray.setFromCamera(m2, camera)
+      const clickable = dice.filter(d => d.phase === 'idle' && d.mesh.visible).map(d => d.mesh)
+      const hits = ray.intersectObjects(clickable)
+      if (hits.length) propsRef.current.onDieClick?.(hits[0].object.userData.idx)
+    }
+    renderer.domElement.addEventListener('click', onTap)
+    renderer.domElement.addEventListener('touchend', onTap)
+
+    // Render loop
+    function tick(now) {
+      if (!alive) return
+      ctx.animId = requestAnimationFrame(tick)
+      step(ctx, now, propsRef)
+      renderer.render(scene, camera)
+    }
+    ctx.animId = requestAnimationFrame(tick)
+
+    // Async Rapier init
+    import('@dimforge/rapier3d-compat').then(async R => {
+      await R.init()
+      if (!alive) return
+      ctx.RAPIER = R
+      ctx.world  = makeWorld(R)
+      if (ctx.pendingRoll) {
+        doRoll(ctx, ...ctx.pendingRoll)
+        ctx.pendingRoll = null
+      }
+    })
 
     return () => {
       alive = false
-      cleanup()
-      if (mountRef.current) {
-        const canvas = mountRef.current.querySelector('canvas')
-        if (canvas) mountRef.current.removeChild(canvas)
-      }
+      cancelAnimationFrame(ctx.animId)
+      renderer.domElement.removeEventListener('click', onTap)
+      renderer.domElement.removeEventListener('touchend', onTap)
+      renderer.dispose()
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement)
     }
-  }, [values?.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Roll trigger ────────────────────────────────────────────────────────────
+  const rollKey = `${rollingIndices?.slice().sort().join(',')}_${values?.join(',')}`
+  useEffect(() => {
+    const ctx = ctxRef.current
+    if (!ctx || !values?.length || !rollingIndices?.length) return
+    if (ctx.RAPIER && ctx.world) doRoll(ctx, [...values], [...rollingIndices])
+    else ctx.pendingRoll = [[...values], [...rollingIndices]]
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollKey])
+
+  // ── Pending discards: show/hide ─────────────────────────────────────────────
+  useEffect(() => {
+    const ctx = ctxRef.current
+    if (!ctx) return
+    ctx.dice.forEach((d, i) => {
+      if (d.phase === 'idle') d.mesh.visible = !pendingDiscards.includes(i)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDiscards.join(',')])
 
   return <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
+}
+
+// ─── Scene helpers (no React state closures) ──────────────────────────────────
+
+function makeWorld(R) {
+  const w = new R.World({ x: 0, y: -20, z: 0 })
+  const fixed = (tx, ty, tz) => w.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(tx, ty, tz))
+  const box   = (b, hx, hy, hz) => w.createCollider(R.ColliderDesc.cuboid(hx, hy, hz).setRestitution(0.35).setFriction(0.7), b)
+  // floor
+  box(fixed(0, FY, 0), WX, 0.1, WZ)
+  // 4 walls
+  const wh = 4, wy = FY + wh
+  box(fixed( WX, wy, 0), 0.1, wh, WZ)
+  box(fixed(-WX, wy, 0), 0.1, wh, WZ)
+  box(fixed(0, wy,  WZ), WX, wh, 0.1)
+  box(fixed(0, wy, -WZ), WX, wh, 0.1)
+  return w
+}
+
+function doRoll(ctx, values, rollingIndices) {
+  const { RAPIER: R, world, dice } = ctx
+  ctx.settleSince = null
+
+  rollingIndices.forEach((i, slot) => {
+    // Remove old body
+    if (dice[i].body) { world.removeRigidBody(dice[i].body); dice[i].body = null }
+
+    dice[i].value = values[i]
+
+    const startX = (slot - (rollingIndices.length - 1) / 2) * 1.2 + (Math.random() - .5) * .4
+    const startZ = (Math.random() - .5) * 1.2
+    const startY = FY + 5.5 + slot * .6
+
+    const bd = R.RigidBodyDesc.dynamic()
+      .setTranslation(startX, startY, startZ)
+      .setLinvel((Math.random()-.5)*3, -2, (Math.random()-.5)*2)
+      .setAngvel({ x: (Math.random()-.5)*20, y: (Math.random()-.5)*20, z: (Math.random()-.5)*20 })
+
+    const body = world.createRigidBody(bd)
+    world.createCollider(
+      R.ColliderDesc.cuboid(DIE/2, DIE/2, DIE/2).setRestitution(0.35).setFriction(0.7),
+      body
+    )
+
+    dice[i].body  = body
+    dice[i].phase = 'rolling'
+    dice[i].mesh.visible = true
+    dice[i].mesh.position.set(startX, startY, startZ)
+  })
+}
+
+function step(ctx, now, propsRef) {
+  const { world, dice } = ctx
+  if (!world) return
+
+  const rolling = dice.filter(d => d.phase === 'rolling')
+
+  // ── Physics ─────────────────────────────────────────────────────────────────
+  if (rolling.length > 0) {
+    world.step()
+    rolling.forEach(d => {
+      const p = d.body.translation(), q = d.body.rotation()
+      d.mesh.position.set(p.x, p.y, p.z)
+      d.mesh.quaternion.set(q.x, q.y, q.z, q.w)
+    })
+
+    const slow = rolling.every(d => mag(d.body.linvel()) < .25 && mag(d.body.angvel()) < .25)
+    if (slow) {
+      if (!ctx.settleSince) ctx.settleSince = now
+      else if (now - ctx.settleSince > 400) {
+        ctx.settleSince = null
+        beginFace(ctx, now)
+      }
+    } else {
+      ctx.settleSince = null
+    }
+  }
+
+  // ── Face tween ───────────────────────────────────────────────────────────────
+  const facing = dice.filter(d => d.phase === 'facing')
+  if (facing.length > 0) {
+    const DUR = 420
+    let done = true
+    facing.forEach(d => {
+      const t = Math.min((now - d.ts) / DUR, 1)
+      d.mesh.quaternion.slerpQuaternions(d.fq, d.tq, eio(t))
+      if (t < 1) done = false
+    })
+    if (done) {
+      facing.forEach(d => { d.mesh.quaternion.copy(d.tq) })
+      beginPlace(ctx, now)
+    }
+  }
+
+  // ── Place tween ──────────────────────────────────────────────────────────────
+  const placing = dice.filter(d => d.phase === 'placing')
+  if (placing.length > 0) {
+    const DUR = 550
+    let done = true
+    placing.forEach(d => {
+      const t = Math.min((now - d.ts) / DUR, 1)
+      d.mesh.position.lerpVectors(d.fp, d.tp, eio(t))
+      if (t < 1) done = false
+      else { d.mesh.position.copy(d.tp); d.phase = 'idle' }
+    })
+    if (done) propsRef.current.onSettled?.()
+  }
+}
+
+function beginFace(ctx, now) {
+  ctx.dice.forEach(d => {
+    if (d.phase !== 'rolling') return
+    const fi = VALUE_TO_FACE[d.value] ?? 2
+    d.fq.copy(d.mesh.quaternion)
+    d.tq.copy(FACE_UP_QUATS[fi])
+    d.ts = now
+    d.phase = 'facing'
+    if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
+  })
+}
+
+function beginPlace(ctx, now) {
+  // Only newly settled dice need placing; idle (kept) dice stay where they are
+  ctx.dice.forEach((d, i) => {
+    if (d.phase !== 'facing') return
+    d.fp.copy(d.mesh.position)
+    d.tp.set(SLOT_X(i), REST_Y, REST_Z)
+    d.ts = now
+    d.phase = 'placing'
+  })
 }

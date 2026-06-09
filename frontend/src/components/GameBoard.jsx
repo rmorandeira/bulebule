@@ -38,7 +38,8 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [showAlaCaida, setShowAlaCaida] = useState(false)
   const [botDisplayedKept, setBotDisplayedKept] = useState([])
   const [timeLeft, setTimeLeft] = useState(null)
-  const [rollingDice, setRollingDice] = useState(null)  // valores 3D en vuelo
+  const [rollingIndices, setRollingIndices] = useState([])
+  const [sceneValues, setSceneValues] = useState(null)
   const prevDoneRef = useRef({})
   const botReadyTimerRef = useRef(null)
   const prevRollCountRef = useRef({})
@@ -55,16 +56,23 @@ export default function GameBoard({ room, myId, onLeave }) {
   // Reset al cambiar turno o ronda
   useEffect(() => {
     setPendingDiscards([])
+    setRollingIndices([])
+    setSceneValues(null)
   }, [room.roundNumber, room.currentPlayerIndex])
 
-  // Detectar nueva tirada y lanzar animación 3D
+  // Detectar nueva tirada → pasar rolling indices a la escena 3D
   useEffect(() => {
     const cp = room.players[room.currentPlayerIndex]
     if (!cp) return
     const prev = prevRollCountRef.current[cp.id] ?? 0
     const curr = cp.rollCount ?? 0
     if (curr > prev && cp.currentDice?.length) {
-      setRollingDice([...cp.currentDice])
+      const history = cp.rollDiscardHistory ?? []
+      const newRolling = history.length === 0
+        ? [0, 1, 2, 3, 4]
+        : history[history.length - 1]
+      setSceneValues([...cp.currentDice])
+      setRollingIndices([...newRolling])
     }
     prevRollCountRef.current[cp.id] = curr
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,10 +86,11 @@ export default function GameBoard({ room, myId, onLeave }) {
 
   const handleRoll = useCallback(() => {
     if (!canRoll) return
-    const batches = getRollBatches(me ?? {})
-    const allIndices = batches.flatMap(b => b.indices)
-    const keptIndices = allIndices.filter(i => !pendingDiscards.includes(i))
+    const keptIndices = [0,1,2,3,4].filter(i =>
+      me?.currentDice?.[i] != null && !pendingDiscards.includes(i)
+    )
     setPendingDiscards([])
+    setRollingIndices([])   // limpia hasta que llegue la respuesta del servidor
     socket.emit('roll', { keptIndices }, (res) => {
       if (!res?.ok && res?.error) alert(res.error)
     })
@@ -267,14 +276,19 @@ export default function GameBoard({ room, myId, onLeave }) {
           </div>
 
           <div className="dice-box">
-            {rollingDice && (
-              <DiceRollerScene values={rollingDice} onSettled={() => setRollingDice(null)} />
-            )}
+            <DiceRollerScene
+              values={sceneValues}
+              rollingIndices={rollingIndices}
+              pendingDiscards={pendingDiscards}
+              interactive={isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0}
+              onDieClick={toggleDiscard}
+              onSettled={() => setRollingIndices([])}
+            />
           </div>
 
           {(() => {
-            const interactive = isMyTurn && !me?.done && !mustPass && (displayPlayer?.rollCount ?? 0) > 0
             const rollNum = displayPlayer?.rollCount ?? 0
+            const isInteractive = isMyTurn && !me?.done && !mustPass && rollNum > 0
             return (
               <div className="game-hand">
                 <div className="game-hand__header">
@@ -287,25 +301,10 @@ export default function GameBoard({ room, myId, onLeave }) {
                     </span>
                   )}
                 </div>
-                <div className="game-hand__slots">
-                  {Array.from({ length: 5 }).map((_, idx) => {
-                    const value = displayPlayer?.currentDice?.[idx]
-                    return value ? (
-                      <Die
-                        key={idx}
-                        value={value}
-                        discarded={interactive && pendingDiscards.includes(idx)}
-                        onDiscard={interactive ? () => toggleDiscard(idx) : undefined}
-                      />
-                    ) : (
-                      <div key={idx} className="die-slot-empty" />
-                    )
-                  })}
-                </div>
                 <div className="game-hand__separator" />
                 {displayPlayer?.done && displayPlayer?.hand
                   ? <p className="hand-result">{displayPlayer.hand.desc}</p>
-                  : interactive
+                  : isInteractive
                     ? <p className="game-hand__hint">Toca un dado para descartarlo</p>
                     : rollNum === 0
                       ? <p className="game-hand__hint">Tira los dados para empezar</p>
