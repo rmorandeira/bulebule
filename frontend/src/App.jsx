@@ -79,7 +79,6 @@ export default function App() {
     }
     document.addEventListener('click',      onInteraction)
     document.addEventListener('touchstart', onInteraction)
-    scheduleStart()  // intento autoplay (desktop)
 
     return () => {
       clearTimeout(timer)
