@@ -1096,22 +1096,77 @@ body {
   gap: 6px;
 }
 
-/* ── Dice roller 3D overlay ──────────────────────────────── */
-.dice-roller-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* ── Dice box (3D scene container) ───────────────────────── */
+.dice-box {
+  margin: 12px 16px;
+  background: #ebebeb;
+  border-radius: 20px;
+  flex: 1;
+  min-height: 180px;
+  overflow: hidden;
+  position: relative;
 }
 
-.dice-roller-overlay > div {
-  width: min(420px, 100vw);
-  height: min(340px, 60vh);
-  border-radius: 20px;
-  overflow: hidden;
+/* ── Game hand (dice slots below dice-box) ───────────────── */
+.game-hand {
+  padding: 4px 16px 8px;
+  flex-shrink: 0;
+}
+
+.game-hand__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.game-hand__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.game-hand__tirada {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.game-hand__slots {
+  display: flex;
+  gap: 8px;
+}
+
+.game-hand__slots .die-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-hand__slots .die {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  font-size: clamp(14px, 5vw, 22px);
+}
+
+.die-slot-empty {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1.5px solid #d0d0d0;
+  background: transparent;
+}
+
+.game-hand__separator {
+  height: 1.5px;
+  background: var(--text);
+  margin: 10px 0 8px;
+}
+
+.game-hand__hint {
+  font-size: 13px;
+  color: var(--text-subtle);
+  text-align: center;
 }
 
 /* ── Turn timer ──────────────────────────────────────────── */
