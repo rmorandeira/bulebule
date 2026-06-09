@@ -203,6 +203,7 @@ function sanitize(room) {
       rollHistory: p.rollHistory,
       rollDiscardHistory: p.rollDiscardHistory ?? [],
       rollCount: p.rollCount,
+      rollSeed: p.rollSeed ?? null,
       done: p.done,
       hand: p.hand,
       wins: p.wins,
@@ -415,6 +416,7 @@ io.on('connection', (socket) => {
       player.currentDice = Array.from({ length: 5 }, rollDie);
     }
     player.rollCount += 1;
+    player.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
     player.pendingDiscards = [];
 
     cb?.({ ok: true });
@@ -422,7 +424,9 @@ io.on('connection', (socket) => {
     startTurnTimer(room);
   });
 
-  socket.on('report_faces', ({ faces } = {}, cb) => {
+  socket.on('report_faces', (data, rawCb) => {
+    const { faces } = (data && typeof data === 'object') ? data : {};
+    const cb = typeof rawCb === 'function' ? rawCb : null;
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
@@ -430,16 +434,23 @@ io.on('connection', (socket) => {
     const VALID = new Set(['AS', 'K', 'Q', 'J', '8', '7']);
     if (!Array.isArray(faces) || faces.length !== 5 || !faces.every(f => VALID.has(f))) return cb?.({ ok: false });
     player.currentDice = faces;
+    player.hand = evaluateHand(faces);
     cb?.({ ok: true });
     broadcast(room.code);
   });
 
-  socket.on('stand', (cb) => {
+  socket.on('stand', (data, rawCb) => {
+    const { faces } = (data && typeof data === 'object') ? data : {};
+    const cb = typeof rawCb === 'function' ? rawCb : null;
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
     if (player.id !== socket.id || player.done) return cb?.({ ok: false });
     if (player.rollCount === 0) return cb?.({ ok: false, error: 'Debes tirar al menos una vez' });
+    const VALID = new Set(['AS', 'K', 'Q', 'J', '8', '7']);
+    if (Array.isArray(faces) && faces.length === 5 && faces.every(f => VALID.has(f))) {
+      player.currentDice = faces;
+    }
     finishTurn(room, player);
     cb?.({ ok: true });
     broadcast(room.code);

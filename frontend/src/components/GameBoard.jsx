@@ -40,6 +40,8 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [timeLeft, setTimeLeft] = useState(null)
   const [rollingIndices, setRollingIndices] = useState([])
   const [sceneValues, setSceneValues] = useState(null)
+  const [rollSeed, setRollSeed] = useState(null)
+  const lastFacesRef = useRef(null)
   const prevDoneRef = useRef({})
   const botReadyTimerRef = useRef(null)
   const prevRollCountRef = useRef({})
@@ -58,21 +60,23 @@ export default function GameBoard({ room, myId, onLeave }) {
     setPendingDiscards([])
     setRollingIndices([])
     setSceneValues(null)
+    setRollSeed(null)
   }, [room.roundNumber, room.currentPlayerIndex])
 
-  // Detectar nueva tirada propia → pasar rolling indices a la escena 3D
+  // Detectar nueva tirada (cualquier jugador) → disparar animación 3D con semilla
   useEffect(() => {
     const cp = room.players[room.currentPlayerIndex]
     if (!cp) return
     const prev = prevRollCountRef.current[cp.id] ?? 0
     const curr = cp.rollCount ?? 0
-    if (curr > prev && cp.currentDice?.length && cp.id === myId) {
+    if (curr > prev && cp.currentDice?.length) {
       const history = cp.rollDiscardHistory ?? []
       const newRolling = history.length === 0
         ? [0, 1, 2, 3, 4]
         : history[history.length - 1]
       setSceneValues([...cp.currentDice])
       setRollingIndices([...newRolling])
+      setRollSeed(cp.rollSeed ?? Date.now())
     }
     prevRollCountRef.current[cp.id] = curr
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,7 +101,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   }, [canRoll, me, pendingDiscards])
 
   function handleStand() {
-    socket.emit('stand', (res) => {
+    socket.emit('stand', { faces: lastFacesRef.current }, (res) => {
       if (!res?.ok && res?.error) alert(res.error)
     })
   }
@@ -282,9 +286,11 @@ export default function GameBoard({ room, myId, onLeave }) {
               pendingDiscards={pendingDiscards}
               interactive={isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0}
               onDieClick={toggleDiscard}
+              seed={rollSeed}
               onSettled={(faces) => {
                 setRollingIndices([])
-                if (faces?.length === 5) socket.emit('report_faces', { faces })
+                if (faces?.length === 5) lastFacesRef.current = faces
+                if (isMyTurn && faces?.length === 5) socket.emit('report_faces', { faces })
               }}
             />
           </div>
@@ -307,8 +313,11 @@ export default function GameBoard({ room, myId, onLeave }) {
                 <div className="game-hand__separator" />
                 {displayPlayer?.done && displayPlayer?.hand
                   ? <p className="hand-result">{displayPlayer.hand.desc}</p>
-                  : isInteractive
-                    ? <p className="game-hand__hint">Toca un dado para descartarlo</p>
+                  : displayPlayer?.hand && rollNum > 0
+                    ? <>
+                        <p className="hand-result hand-result--live">{displayPlayer.hand.desc}</p>
+                        {isInteractive && <p className="game-hand__hint">Toca un dado para descartarlo</p>}
+                      </>
                     : rollNum === 0
                       ? <p className="game-hand__hint">Tira los dados para empezar</p>
                       : null

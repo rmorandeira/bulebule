@@ -19,19 +19,25 @@ const FACE_UP_QUATS = (() => {
   ]
 })()
 
-const DIE    = 0.85
+const DIE    = 1.05
 const FY     = -2.5   // floor Y
-const WX     = 3.6    // wall half-extent X
-const WZ     = 3.0    // wall half-extent Z
+const WX     = 4.2    // wall half-extent X
+const WZ     = 3.4    // wall half-extent Z
 const REST_Y   = FY + DIE / 2 + 0.02
-const REST_Z   = -1.2  // back of scene = "top" in camera view
-const DISCARD_Z = 1.85  // front of scene = "bottom" in camera view
-const SLOT_X = (i) => (i - 2) * 1.1   // fixed X per die index
+const ROW_BACK_Z  = -1.4   // 2 dice — back row (top in camera view)
+const ROW_FRONT_Z =  0.6   // 3 dice — front row (bottom in camera view)
+const DISCARD_Z   =  2.2   // discard zone (furthest forward)
+
+// Dice 0,1 → back row (2 dice centered); 2,3,4 → front row (3 dice)
+function slotPos(i) {
+  if (i < 2) return { x: (i - 0.5) * 1.55, z: ROW_BACK_Z }
+  return { x: (i - 3) * 1.55, z: ROW_FRONT_Z }
+}
 
 const PIP = {
   AS: [0,0,0, 0,1,0, 0,0,0],
-  '8': [1,1,1, 1,1,1, 1,1,1],
-  '7': [1,1,1, 0,1,0, 1,1,1],
+  '8': [1,1,1, 1,0,1, 1,1,1],  // 8 puntos rojos, centro vacío
+  '7': [1,1,1, 0,1,0, 1,1,1],  // 7 puntos rojos
 }
 
 function makeTex(value) {
@@ -51,7 +57,7 @@ function makeTex(value) {
   ctx.lineTo(0, r); ctx.arcTo(0, 0, r, 0, r)
   ctx.closePath(); ctx.fill()
   if (value in PIP) {
-    ctx.fillStyle = (value === 'AS' || value === '8') ? '#c0392b' : '#1a1a1a'
+    ctx.fillStyle = '#c0392b'
     const pr = S*0.065, m = S*0.22, st = (S-m*2)/2
     PIP[value].forEach((on, i) => {
       if (!on) return
@@ -75,6 +81,37 @@ function buildMats() {
 const eio = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
 const mag = v => Math.sqrt(v.x**2 + v.y**2 + v.z**2)
 
+// Deterministic PRNG — same seed → same sequence on every device
+function mulberry32(seed) {
+  let s = seed >>> 0
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+let _audioCtx = null
+function getAudio() {
+  if (!_audioCtx) try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch(e) {}
+  return _audioCtx
+}
+function playDiceHit(impact = 3) {
+  const ac = getAudio(); if (!ac) return
+  try {
+    if (ac.state === 'suspended') ac.resume()
+    const t0 = ac.currentTime, dur = 0.07
+    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, 1.5)
+    const src = ac.createBufferSource(); src.buffer = buf
+    const g = ac.createGain(); g.gain.setValueAtTime(Math.min(impact/8,1)*0.28, t0)
+    const f = ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=800+Math.random()*400; f.Q.value=1.2
+    src.connect(f); f.connect(g); g.connect(ac.destination); src.start(t0)
+  } catch(e) {}
+}
+
 const FACE_NORMALS = [
   new THREE.Vector3( 1,  0,  0),
   new THREE.Vector3(-1,  0,  0),
@@ -97,7 +134,7 @@ function getTopFace(mesh) {
 
 export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
-  interactive, onDieClick, onSettled,
+  interactive, onDieClick, onSettled, seed,
 }) {
   const mountRef = useRef(null)
   const ctxRef   = useRef(null)
@@ -120,9 +157,21 @@ export default function DiceRollerScene({
     mount.appendChild(renderer.domElement)
 
     const scene  = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100)
+    const camera = new THREE.PerspectiveCamera(52, W / H, 0.1, 100)
     camera.position.set(0, 7, 5.5)
     camera.lookAt(0, FY + 1.5, 0)
+
+    // Keep renderer + camera in sync with element size
+    const ro = new ResizeObserver(entries => {
+      const { width: rW, height: rH } = entries[0].contentRect
+      if (rW > 0 && rH > 0) {
+        renderer.setSize(rW, rH)
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        camera.aspect = rW / rH
+        camera.updateProjectionMatrix()
+      }
+    })
+    ro.observe(mount)
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.75))
     const dir = new THREE.DirectionalLight(0xffffff, 1.2)
@@ -156,6 +205,7 @@ export default function DiceRollerScene({
         moveActive: false, moveTs: 0,
         moveFrom: new THREE.Vector3(), moveTo: new THREE.Vector3(),
         exitFrom: new THREE.Vector3(), exitTs: 0,
+        prevVelY: 0, hitCooldown: 0,
       }
     })
 
@@ -202,13 +252,15 @@ export default function DiceRollerScene({
       ctx.RAPIER = R
       ctx.world  = makeWorld(R)
       if (ctx.pendingRoll) {
-        doRoll(ctx, ...ctx.pendingRoll)
+        const { values, rollingIndices, seed } = ctx.pendingRoll
+        doRoll(ctx, values, rollingIndices, seed)
         ctx.pendingRoll = null
       }
     })
 
     return () => {
       alive = false
+      ro.disconnect()
       cancelAnimationFrame(ctx.animId)
       renderer.domElement.removeEventListener('click', onTap)
       renderer.domElement.removeEventListener('touchend', onTap)
@@ -218,12 +270,13 @@ export default function DiceRollerScene({
   }, [])
 
   // ── Roll trigger ────────────────────────────────────────────────────────────
-  const rollKey = `${rollingIndices?.slice().sort().join(',')}_${values?.join(',')}`
+  const rollKey = `${seed ?? 0}_${rollingIndices?.slice().sort().join(',')}_${values?.join(',')}`
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx || !values?.length || !rollingIndices?.length) return
-    if (ctx.RAPIER && ctx.world) doRoll(ctx, [...values], [...rollingIndices])
-    else ctx.pendingRoll = [[...values], [...rollingIndices]]
+    const s = seed ?? Date.now()
+    if (ctx.RAPIER && ctx.world) doRoll(ctx, [...values], [...rollingIndices], s)
+    else ctx.pendingRoll = { values: [...values], rollingIndices: [...rollingIndices], seed: s }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollKey])
 
@@ -240,9 +293,10 @@ export default function DiceRollerScene({
         mat.transparent = discarded
         mat.opacity = discarded ? 0.5 : 1.0
       })
-      const targetZ = discarded ? DISCARD_Z : REST_Z
+      const { x, z: slotZ } = slotPos(i)
+      const targetZ = discarded ? DISCARD_Z : slotZ
       d.moveFrom.copy(d.mesh.position)
-      d.moveTo.set(SLOT_X(i), REST_Y, targetZ)
+      d.moveTo.set(x, REST_Y, targetZ)
       d.moveTs = now
       d.moveActive = true
     })
@@ -255,7 +309,7 @@ export default function DiceRollerScene({
 // ─── Scene helpers (no React state closures) ──────────────────────────────────
 
 function makeWorld(R) {
-  const w = new R.World({ x: 0, y: -20, z: 0 })
+  const w = new R.World({ x: 0, y: -28, z: 0 })
   const fixed = (tx, ty, tz) => w.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(tx, ty, tz))
   const box   = (b, hx, hy, hz) => w.createCollider(R.ColliderDesc.cuboid(hx, hy, hz).setRestitution(0.35).setFriction(0.7), b)
   // floor
@@ -269,7 +323,7 @@ function makeWorld(R) {
   return w
 }
 
-function doRoll(ctx, values, rollingIndices) {
+function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
   const { RAPIER: R, world, dice } = ctx
   ctx.settleSince = null
 
@@ -286,9 +340,11 @@ function doRoll(ctx, values, rollingIndices) {
       d.phase = 'exiting'
       d.moveActive = false
     })
-    ctx.rollAfterExit = { values, rollingIndices }
+    ctx.rollAfterExit = { values, rollingIndices, seed }
     return
   }
+
+  const rng = mulberry32(seed)
 
   rollingIndices.forEach((i, slot) => {
     // Remove old body
@@ -296,14 +352,19 @@ function doRoll(ctx, values, rollingIndices) {
 
     dice[i].value = values[i]
 
-    const startX = (slot - (rollingIndices.length - 1) / 2) * 1.2 + (Math.random() - .5) * .4
-    const startZ = (Math.random() - .5) * 1.2
-    const startY = FY + 5.5 + slot * .6
+    // Launch from bottom edge (front of scene) toward top (back of scene)
+    const startX = (slot - (rollingIndices.length - 1) / 2) * 1.1 + (rng() - .5) * 0.5
+    const startZ = 2.8 + (rng() - .5) * 0.4
+    const startY = FY + 0.7 + slot * 0.2
 
     const bd = R.RigidBodyDesc.dynamic()
       .setTranslation(startX, startY, startZ)
-      .setLinvel((Math.random()-.5)*3, -2, (Math.random()-.5)*2)
-      .setAngvel({ x: (Math.random()-.5)*20, y: (Math.random()-.5)*20, z: (Math.random()-.5)*20 })
+      .setLinvel(
+        (rng() - .5) * 3,
+        9 + rng() * 5,
+        -5 - rng() * 3
+      )
+      .setAngvel({ x: (rng()-.5)*30, y: (rng()-.5)*30, z: (rng()-.5)*30 })
 
     const body = world.createRigidBody(bd)
     world.createCollider(
@@ -334,12 +395,19 @@ function step(ctx, now, propsRef) {
       const p = d.body.translation(), q = d.body.rotation()
       d.mesh.position.set(p.x, p.y, p.z)
       d.mesh.quaternion.set(q.x, q.y, q.z, q.w)
+      // Bounce sound: velocity flipped from strongly negative to less negative
+      const vy = d.body.linvel().y
+      if (d.prevVelY < -2.5 && vy > d.prevVelY * 0.2 && now - d.hitCooldown > 80) {
+        playDiceHit(Math.abs(d.prevVelY))
+        d.hitCooldown = now
+      }
+      d.prevVelY = vy
     })
 
     const slow = rolling.every(d => mag(d.body.linvel()) < .25 && mag(d.body.angvel()) < .25)
     if (slow) {
       if (!ctx.settleSince) ctx.settleSince = now
-      else if (now - ctx.settleSince > 400) {
+      else if (now - ctx.settleSince > 200) {
         ctx.settleSince = null
         beginPlace(ctx, now)
       }
@@ -348,10 +416,10 @@ function step(ctx, now, propsRef) {
     }
   }
 
-  // ── Place tween ──────────────────────────────────────────────────────────────
+  // ── Animación de agrupación (placing tween) ──────────────────────────────────
   const placing = dice.filter(d => d.phase === 'placing')
   if (placing.length > 0) {
-    const DUR = 550
+    const DUR = 420
     let done = true
     placing.forEach(d => {
       const t = Math.min((now - d.ts) / DUR, 1)
@@ -366,7 +434,7 @@ function step(ctx, now, propsRef) {
   }
 
   // ── Move tween (discard / return) ────────────────────────────────────────────
-  const MOV_DUR = 380
+  const MOV_DUR = 260
   dice.forEach(d => {
     if (!d.moveActive || d.phase !== 'idle') return
     const t = Math.min((now - d.moveTs) / MOV_DUR, 1)
@@ -375,7 +443,7 @@ function step(ctx, now, propsRef) {
   })
 
   // ── Exit tween (discarded dice leave the board before new roll) ───────────────
-  const EXIT_DUR = 360
+  const EXIT_DUR = 240
   const exiting = dice.filter(d => d.phase === 'exiting')
   exiting.forEach(d => {
     const t = (now - d.exitTs) / EXIT_DUR
@@ -386,9 +454,9 @@ function step(ctx, now, propsRef) {
     if (t >= 1) { d.mesh.visible = false; d.phase = 'hidden' }
   })
   if (ctx.rollAfterExit && exiting.length > 0 && exiting.every(d => d.phase === 'hidden')) {
-    const { values, rollingIndices } = ctx.rollAfterExit
+    const { values, rollingIndices, seed } = ctx.rollAfterExit
     ctx.rollAfterExit = null
-    doRoll(ctx, values, rollingIndices)
+    doRoll(ctx, values, rollingIndices, seed)
   }
 
 }
@@ -409,11 +477,14 @@ function beginPlace(ctx, now) {
   ctx.dice.forEach((d, i) => {
     if (d.phase !== 'rolling') return
     if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
+    // Read physical top face — becomes the game value reported to server
+    d.value = getTopFace(d.mesh)
+    const { x, z } = slotPos(i)
     d.fp.copy(d.mesh.position)
-    d.tp.set(SLOT_X(i), REST_Y, REST_Z)
+    d.tp.set(x, REST_Y, z)
     d.ts = now
     d.phase = 'placing'
-    // rotation preserved as-is from physics
+    // physical rotation preserved as-is
   })
 }
 
