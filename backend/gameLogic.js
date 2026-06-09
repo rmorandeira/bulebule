@@ -21,18 +21,14 @@ function evaluateHand(dice) {
   const [[topKey, topCount]] = groups;
   const secondCount = groups[1]?.[1] ?? 0;
 
-  if (topCount === 5) return { rank: 8, name: 'Repóker',        desc: `Repóker de ${topKey}`,              topKey };
-  if (topCount === 4) return { rank: 7, name: 'Póker',          desc: `Póker de ${topKey}`,                topKey };
+  if (topCount === 5) return { rank: 7, name: 'Quintilla',      desc: `Quintilla de ${topKey}`,          topKey };
+  if (topCount === 4) return { rank: 6, name: 'Póker',          desc: `Póker de ${topKey}`,               topKey };
   if (topCount === 3 && secondCount === 2)
-                      return { rank: 6, name: 'Full',           desc: `Full de ${topKey}`,                 topKey };
+                      return { rank: 5, name: 'Full',           desc: `Full de ${topKey}`,                topKey };
 
   const uniqueRanks = [...new Set(dice.map(d => VALUE_RANK[d]))].sort((a, b) => a - b);
-  if (uniqueRanks.length === 5 && uniqueRanks[4] - uniqueRanks[0] === 4) {
-    const isMayor = uniqueRanks[4] === VALUE_RANK['AS']; // A-K-Q-J-10
-    return isMayor
-      ? { rank: 5, name: 'Escalera Mayor', desc: 'Escalera Mayor (A-K-Q-J-8)', topKey: null }
-      : { rank: 4, name: 'Escalera Menor', desc: 'Escalera Menor (K-Q-J-8-7)', topKey: null };
-  }
+  if (uniqueRanks.length === 5 && uniqueRanks[4] - uniqueRanks[0] === 4)
+                      return { rank: 4, name: 'Escalera',       desc: 'Escalera',                         topKey: null };
 
   if (topCount === 3) return { rank: 3, name: 'Trío',           desc: `Trío de ${topKey}`,                topKey };
 
