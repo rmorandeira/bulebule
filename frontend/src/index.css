@@ -1107,6 +1107,12 @@ body {
   position: relative;
 }
 
+.dice-box canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* ── Game hand (dice slots below dice-box) ───────────────── */
 .game-hand {
   padding: 4px 16px 8px;

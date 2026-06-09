@@ -120,11 +120,13 @@ export default function DiceRollerScene({ values, onSettled }) {
       if (!alive || !mountRef.current) return
 
       // --- Three.js setup ---
-      const W = mountRef.current.clientWidth
-      const H = mountRef.current.clientHeight
+      const el = mountRef.current
+      const W = el.offsetWidth || el.parentElement?.offsetWidth || 320
+      const H = el.offsetHeight || el.parentElement?.offsetHeight || 240
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
       renderer.setSize(W, H)
+      renderer.setClearColor(0xebebeb)
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
       renderer.shadowMap.enabled = true
       mountRef.current.appendChild(renderer.domElement)
@@ -279,5 +281,5 @@ export default function DiceRollerScene({ values, onSettled }) {
     }
   }, [values?.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
+  return <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
 }
