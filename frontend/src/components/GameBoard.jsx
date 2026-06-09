@@ -110,12 +110,13 @@ export default function GameBoard({ room, myId, onLeave }) {
     } catch {}
   }
 
-  // Detectar "a la caida": cualquier jugador que se plante con rollCount <= 1
+  // Detectar "a la caida": solo el PRIMER jugador de la ronda que se planta con 1 tirada
   const playerDoneKey = room.players.map(p => `${p.id}:${p.done}:${p.rollCount}`).join('|')
   useEffect(() => {
+    const noneWereDone = Object.values(prevDoneRef.current).every(done => !done)
     room.players.forEach(p => {
       const wasNotDone = !prevDoneRef.current[p.id]
-      if (p.done && wasNotDone && p.rollCount <= 1) {
+      if (p.done && wasNotDone && p.rollCount === 1 && noneWereDone) {
         setShowAlaCaida(true)
       }
     })
