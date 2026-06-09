@@ -159,8 +159,8 @@ export default function DiceRollerScene({
       m2.x = ((cx - rect.left) / rect.width)  *  2 - 1
       m2.y = ((cy - rect.top)  / rect.height) * -2 + 1
       ray.setFromCamera(m2, camera)
-      const clickable = dice.filter(d => d.phase === 'idle' && d.mesh.visible).map(d => d.mesh)
-      const hits = ray.intersectObjects(clickable)
+      const clickable = dice.filter(d => (d.phase === 'idle' || d.moveActive) && d.mesh.visible).map(d => d.mesh)
+      const hits = ray.intersectObjects(clickable, false)
       if (hits.length) propsRef.current.onDieClick?.(hits[0].object.userData.idx)
     }
     renderer.domElement.addEventListener('click', onTap)

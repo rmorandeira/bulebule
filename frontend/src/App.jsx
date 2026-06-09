@@ -10,6 +10,21 @@ function loadUser() {
   try { return JSON.parse(localStorage.getItem('bule_user')) } catch { return null }
 }
 
+const MUSIC_VOL      = 0.55
+const MUSIC_FADE_IN_DELAY = 1500  // coincide con CSS transition del overlay blanco
+
+function fadeVolume(audio, from, to, ms, onDone) {
+  audio.volume = Math.max(0, Math.min(1, from))
+  const t0 = performance.now()
+  const eio = t => t < .5 ? 2*t*t : -1 + (4 - 2*t) * t
+  ;(function tick() {
+    const t = Math.min((performance.now() - t0) / ms, 1)
+    audio.volume = Math.max(0, Math.min(1, from + (to - from) * eio(t)))
+    if (t < 1) requestAnimationFrame(tick)
+    else { audio.volume = Math.max(0, Math.min(1, to)); onDone?.() }
+  })()
+}
+
 async function setupPush(userId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
   try {
@@ -34,40 +49,58 @@ export default function App() {
     if (p) window.history.replaceState({}, '', '/')
     return p?.toUpperCase() || null
   })
-  const swRegistered = useRef(false)
-  const musicRef = useRef(null)
-  const musicWantsPlayRef = useRef(true)
+  const swRegistered    = useRef(false)
+  const musicRef        = useRef(null)
+  const wantsPlayRef    = useRef(true)
+  const hasBeenInGame   = useRef(false)
 
-  // Init música de fondo
+  // ── Música de fondo ─────────────────────────────────────────────────────────
   useEffect(() => {
     const audio = new Audio('/assets/rollo-de-dados.mp3')
-    audio.loop = true
-    audio.volume = 0.55
+    audio.loop   = true
+    audio.volume = 0
     musicRef.current = audio
+    const mountAt = performance.now()
+    let timer = null
 
-    function tryPlay() {
-      if (musicWantsPlayRef.current) audio.play().catch(() => {})
+    function scheduleStart() {
+      clearTimeout(timer)
+      const remaining = Math.max(0, MUSIC_FADE_IN_DELAY - (performance.now() - mountAt))
+      timer = setTimeout(() => {
+        if (!wantsPlayRef.current || !audio.paused) return
+        audio.play().then(() => fadeVolume(audio, 0, MUSIC_VOL, 900)).catch(() => {})
+      }, remaining)
     }
-    document.addEventListener('click', tryPlay, { once: true })
-    document.addEventListener('touchstart', tryPlay, { once: true })
+
+    function onInteraction() {
+      document.removeEventListener('click',      onInteraction)
+      document.removeEventListener('touchstart', onInteraction)
+      scheduleStart()
+    }
+    document.addEventListener('click',      onInteraction)
+    document.addEventListener('touchstart', onInteraction)
+    scheduleStart()  // intento autoplay (desktop)
 
     return () => {
+      clearTimeout(timer)
       audio.pause()
-      document.removeEventListener('click', tryPlay)
-      document.removeEventListener('touchstart', tryPlay)
+      document.removeEventListener('click',      onInteraction)
+      document.removeEventListener('touchstart', onInteraction)
     }
   }, [])
 
-  // Parar música al entrar en partida, reanudar al salir
+  // ── Fade out al iniciar partida · Fade in al terminar ───────────────────────
   const inGame = !!(room && room.phase !== 'lobby')
   useEffect(() => {
     const audio = musicRef.current
     if (!audio) return
-    musicWantsPlayRef.current = !inGame
     if (inGame) {
-      audio.pause()
-    } else {
-      audio.play().catch(() => {})
+      hasBeenInGame.current  = true
+      wantsPlayRef.current   = false
+      fadeVolume(audio, audio.volume || MUSIC_VOL, 0, 1300, () => { audio.pause(); audio.volume = 0 })
+    } else if (hasBeenInGame.current) {
+      wantsPlayRef.current = true
+      audio.play().then(() => fadeVolume(audio, 0, MUSIC_VOL, 1000)).catch(() => {})
     }
   }, [inGame])
 
