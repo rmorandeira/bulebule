@@ -2,30 +2,13 @@ import { useRef, useEffect } from 'react'
 
 const SWIPE_THRESHOLD = 40
 
-// 3×3 grid: 1 = dot present, 0 = empty cell
-const PIP_PATTERNS = {
-  'AS': [0,0,0, 0,1,0, 0,0,0],          // 1 pip  — rojo
-  '7':  [1,1,1, 0,1,0, 1,1,1],          // 7 pips — negro
-  '8':  [1,1,1, 1,1,1, 1,1,1],          // 8 pips — rojo (3×3 completo)
-}
-const RED_VALUES = new Set(['AS', '8', 'K'])
-
-function DieFace({ value }) {
-  if (value in PIP_PATTERNS) {
-    const red = RED_VALUES.has(value)
-    return (
-      <div className="die-face-pips">
-        {PIP_PATTERNS[value].map((on, i) =>
-          on ? <div key={i} className={red ? 'pip pip--red' : 'pip'} /> : <div key={i} />
-        )}
-      </div>
-    )
-  }
-  return (
-    <span className={RED_VALUES.has(value) ? 'die-letter die-letter--red' : 'die-letter'}>
-      {value}
-    </span>
-  )
+const DIE_CLASS = {
+  'AS': 'die--as',
+  'K':  'die--k',
+  'Q':  'die--q',
+  'J':  'die--j',
+  '10': 'die--10',
+  '9':  'die--9',
 }
 
 export default function Die({ value, onDiscard, discarded = false, small = false, animDelay = null }) {
@@ -40,9 +23,7 @@ export default function Die({ value, onDiscard, discarded = false, small = false
 
     let startY = null
 
-    function onTouchStart(e) {
-      startY = e.touches[0].clientY
-    }
+    function onTouchStart(e) { startY = e.touches[0].clientY }
 
     function onTouchMove(e) {
       if (startY === null || !onDiscardRef.current) return
@@ -70,8 +51,11 @@ export default function Die({ value, onDiscard, discarded = false, small = false
   const wrapperCls = ['die-wrapper', discarded && 'die-wrapper--collapsing', animDelay !== null ? 'die-wrapper--animated' : ''].filter(Boolean).join(' ')
   const wrapperStyle = animDelay !== null ? { animationDelay: `${animDelay}ms` } : {}
 
+  const displayValue = value === 'AS' ? 'A' : value
+
   const cls = [
     'die',
+    DIE_CLASS[value],
     small && 'die--small',
     onDiscard && !discarded && 'die--interactive',
     discarded && 'die--discarding',
@@ -84,9 +68,9 @@ export default function Die({ value, onDiscard, discarded = false, small = false
         className={cls}
         onClick={!discarded ? onDiscard ?? undefined : undefined}
         disabled={!onDiscard || discarded}
-        aria-label={`Dado ${value}${discarded ? ' (descartado)' : ''}`}
+        aria-label={`Dado ${displayValue}${discarded ? ' (descartado)' : ''}`}
       >
-        <DieFace value={value} />
+        <span className="die-letter">{displayValue}</span>
       </button>
     </div>
   )

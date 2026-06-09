@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react'
 import socket from '../socket'
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
+const MAX_ROUNDS_OPTIONS = [3, 5, 7, 10, 0]
+const ROUNDS_LABEL = { 0: '∞' }
 
 export default function CreateRoom({ playerName, user, onBack }) {
   const [vsBot, setVsBot] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
+  const [maxRounds, setMaxRounds] = useState(5)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -46,6 +49,7 @@ export default function CreateRoom({ playerName, user, onBack }) {
       roomName: roomName.trim(),
       maxPlayers: vsBot ? 2 : maxPlayers,
       vsBot,
+      maxRounds,
     }, (res) => {
       setLoading(false)
       if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
@@ -105,6 +109,19 @@ export default function CreateRoom({ playerName, user, onBack }) {
           onChange={e => { setRoomName(e.target.value); setError('') }}
           onKeyDown={e => e.key === 'Enter' && create()}
         />
+
+        <label className="form-label">Rondas</label>
+        <div className="max-players-selector">
+          {MAX_ROUNDS_OPTIONS.map(n => (
+            <button
+              key={n}
+              className={`max-players-btn ${maxRounds === n ? 'max-players-btn--active' : ''}`}
+              onClick={() => setMaxRounds(n)}
+            >
+              {ROUNDS_LABEL[n] ?? n}
+            </button>
+          ))}
+        </div>
 
         {!vsBot && (
           <>

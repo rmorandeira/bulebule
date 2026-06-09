@@ -33,7 +33,8 @@ const io = new Server(server, {
 
 const rooms = {};
 
-const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 };
+const { VALUE_RANK } = require('./gameLogic');
+const TURN_TIMEOUT = 30_000;
 const BOT_ID = '__bot__';
 const BOT_NAME = 'Bot';
 
@@ -89,6 +90,11 @@ function botShouldStand(hand, rollCount, maxRolls) {
   return false;
 }
 
+// Bot phases driven by frontend signals:
+// 'rolled'  – bot just rolled, waiting for frontend to emit bot_ready after animation
+// 'picking' – bot decided to keep some dice, frontend shows selection then emits bot_ready
+// null      – bot not waiting
+
 function botAct(code) {
   const room = rooms[code];
   if (!room || room.phase !== 'playing') return;
@@ -97,31 +103,80 @@ function botAct(code) {
 
   const maxAllowed = room.maxRolls ?? 3;
 
+  if (room.botPhase === 'picking') {
+    // Frontend finished showing selection — do the re-roll now
+    const keptIndices = room.botKeptIndices || [];
+    bot.rollHistory.push([...bot.currentDice]);
+    bot.currentDice = bot.currentDice.map((d, i) => keptIndices.includes(i) ? d : rollDie());
+    bot.rollCount++;
+    room.botPhase = 'rolled';
+    room.botKeptIndices = [];
+    broadcast(code);
+    return;
+  }
+
   if (bot.rollCount > 0) {
     const hand = evaluateHand(bot.currentDice);
     if (botShouldStand(hand, bot.rollCount, maxAllowed)) {
+      room.botPhase = null;
+      room.botKeptIndices = [];
       finishTurn(room, bot);
       broadcast(code);
       return;
     }
-    // Roll again keeping best dice
-    const keptIndices = botPickKept(bot.currentDice);
-    bot.rollHistory.push([...bot.currentDice]);
-    bot.currentDice = bot.currentDice.map((d, i) => keptIndices.includes(i) ? d : rollDie());
-    bot.rollCount++;
+    // Show selection to frontend, then wait for bot_ready to do re-roll
+    room.botKeptIndices = botPickKept(bot.currentDice);
+    room.botPhase = 'picking';
     broadcast(code);
-    setTimeout(() => botAct(code), 1400);
-  } else {
-    // First roll
-    bot.currentDice = Array.from({ length: 5 }, rollDie);
-    bot.rollCount = 1;
-    broadcast(code);
-    setTimeout(() => botAct(code), 1400);
+    return;
   }
+
+  // First roll
+  bot.currentDice = Array.from({ length: 5 }, rollDie);
+  bot.rollCount = 1;
+  room.botPhase = 'rolled';
+  room.botKeptIndices = [];
+  broadcast(code);
 }
 
 function runBotTurn(code) {
-  setTimeout(() => botAct(code), 1200);
+  // Small delay to let room state propagate before first action
+  setTimeout(() => botAct(code), 300);
+}
+
+function clearTurnTimer(room) {
+  if (room.turnTimerId) {
+    clearTimeout(room.turnTimerId);
+    room.turnTimerId = null;
+  }
+}
+
+function startTurnTimer(room) {
+  clearTurnTimer(room);
+  const p = room.players[room.currentPlayerIndex];
+  if (!p || p.isBot || p.done || room.phase !== 'playing') return;
+
+  room.turnDeadline = Date.now() + TURN_TIMEOUT;
+  const capturedIndex = room.currentPlayerIndex;
+  const code = room.code;
+
+  room.turnTimerId = setTimeout(() => {
+    const r = rooms[code];
+    if (!r || r.phase !== 'playing' || r.currentPlayerIndex !== capturedIndex) return;
+    const player = r.players[r.currentPlayerIndex];
+    if (!player || player.done || player.isBot) return;
+
+    if (player.rollCount === 0) {
+      player.currentDice = Array.from({ length: 5 }, rollDie);
+      player.rollCount = 1;
+      r.turnDeadline = null;
+      broadcast(code);
+      startTurnTimer(r);
+    } else {
+      finishTurn(r, player);
+      broadcast(code);
+    }
+  }, TURN_TIMEOUT);
 }
 
 function sanitize(room) {
@@ -136,6 +191,10 @@ function sanitize(room) {
     currentPlayerIndex: room.currentPlayerIndex,
     maxRolls: room.maxRolls,
     roundWinnerId: room.roundWinnerId,
+    botPhase: room.botPhase ?? null,
+    botKeptIndices: room.botKeptIndices ?? [],
+    turnDeadline: room.turnDeadline ?? null,
+    maxRounds: room.maxRounds ?? 0,
     players: room.players.map(p => ({
       id: p.id,
       name: p.name,
@@ -177,6 +236,9 @@ function startRound(room) {
   room.currentPlayerIndex = 0;
   room.maxRolls = null;
   room.roundWinnerId = null;
+  room.botPhase = null;
+  room.botKeptIndices = [];
+  room.turnDeadline = null;
   room.roundNumber = (room.roundNumber ?? 0) + 1;
   for (const p of room.players) {
     p.currentDice = [];
@@ -187,9 +249,11 @@ function startRound(room) {
     p.hand = null;
     p.pendingDiscards = [];
   }
+  startTurnTimer(room);
 }
 
 function finishTurn(room, player) {
+  clearTurnTimer(room);
   player.done = true;
   player.hand = evaluateHand(player.currentDice);
   if (room.currentPlayerIndex === 0) {
@@ -198,19 +262,26 @@ function finishTurn(room, player) {
   const next = room.players.findIndex((p, i) => i > room.currentPlayerIndex && !p.done);
   if (next !== -1) {
     room.currentPlayerIndex = next;
+    startTurnTimer(room);
   } else {
     endRound(room);
   }
 }
 
 function endRound(room) {
-  room.phase = 'results';
   let winner = room.players[0];
   for (const p of room.players) {
     if (compareHands(p.hand, winner.hand) > 0) winner = p;
   }
   winner.wins += 1;
   room.roundWinnerId = winner.id;
+
+  const maxRounds = room.maxRounds ?? 0;
+  if (maxRounds > 0 && room.roundNumber >= maxRounds) {
+    room.phase = 'finished';
+  } else {
+    room.phase = 'results';
+  }
 }
 
 io.on('connection', (socket) => {
@@ -219,7 +290,7 @@ io.on('connection', (socket) => {
     cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList) });
   });
 
-  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false }, cb) => {
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 5 }, cb) => {
     if (!playerName?.trim() || !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     let code;
     do { code = genCode(); } while (rooms[code]);
@@ -229,12 +300,14 @@ io.on('connection', (socket) => {
       name: roomName.trim(),
       maxPlayers: vsBot ? 2 : Math.min(Math.max(2, parseInt(maxPlayers) || 6), 10),
       vsBot,
+      maxRounds: Math.max(0, parseInt(maxRounds) || 0),
       hostId: socket.id,
       phase: 'lobby',
       roundNumber: 0,
       currentPlayerIndex: 0,
       maxRolls: null,
       roundWinnerId: null,
+      turnDeadline: null,
       players: [makePlayer(socket.id, playerName.trim())],
     };
 
@@ -286,6 +359,7 @@ io.on('connection', (socket) => {
     const room = rooms[code];
     if (!room) return cb?.({ ok: false });
 
+    clearTurnTimer(room);
     room.players = room.players.filter(p => p.id !== socket.id);
     socket.leave(code);
     socket.data.roomCode = null;
@@ -345,6 +419,7 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true });
     broadcast(room.code);
+    startTurnTimer(room);
   });
 
   socket.on('stand', (cb) => {
@@ -364,9 +439,30 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('bot_ready', (cb) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || room.phase !== 'playing') return cb?.({ ok: false });
+    const bot = room.players[room.currentPlayerIndex];
+    if (!bot?.isBot) return cb?.({ ok: false });
+    cb?.({ ok: true });
+    botAct(code);
+  });
+
   socket.on('next_round', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.hostId !== socket.id || room.phase !== 'results') return cb?.({ ok: false });
+    startRound(room);
+    cb?.({ ok: true });
+    broadcast(room.code);
+  });
+
+  socket.on('rematch', (cb) => {
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.hostId !== socket.id || room.phase !== 'finished') return cb?.({ ok: false });
+    // Reset wins and start fresh
+    for (const p of room.players) p.wins = 0;
+    room.roundNumber = 0;
     startRound(room);
     cb?.({ ok: true });
     broadcast(room.code);

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import Die from './Die'
 import DiceBoxScene from './DiceBoxScene'
-import { playDiceRoll } from '../sounds'
+import AlaCaidaToast from './AlaCaidaToast'
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 const needsMotionPermission = () =>
@@ -13,23 +13,28 @@ const ROLL_NAMES = ['uno', 'dos', 'tres', 'cuatro', 'cinco']
 
 export default function GameBoard({ room, myId, onLeave }) {
   const [keptIndices, setKeptIndices] = useState([])
-  const [rolledIndices, setRolledIndices] = useState(null)
   const [rolling, setRolling] = useState(false)
+  const [diceAnimating, setDiceAnimating] = useState(false)
   const [shakeEnabled, setShakeEnabled] = useState(false)
+  const [showAlaCaida, setShowAlaCaida] = useState(false)
+  const [botDisplayedKept, setBotDisplayedKept] = useState([])
+  const [timeLeft, setTimeLeft] = useState(null)
   const prevRollStateRef = useRef({ playerIdx: -1, rollCount: 0 })
+  const prevDoneRef = useRef({})
+  const botReadyTimerRef = useRef(null)
 
   const currentPlayer = room.players[room.currentPlayerIndex]
   const isMyTurn = currentPlayer?.id === myId
   const me = room.players.find(p => p.id === myId)
   const maxAllowed = room.maxRolls ?? 3
   const mustPass = isMyTurn && !me?.done && (me?.rollCount ?? 0) >= maxAllowed
-  const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed && !rolling
+  const allDiceKept = isMyTurn && (me?.rollCount ?? 0) > 0 && keptIndices.length >= (me?.currentDice?.length ?? 5)
+  const canRoll = isMyTurn && !me?.done && (me?.rollCount ?? 0) < maxAllowed && !rolling && !allDiceKept
   const diceInteractive = isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0
 
   // Reset al cambiar de turno o ronda
   useEffect(() => {
     setKeptIndices([])
-    setRolledIndices(null)
     setRolling(false)
   }, [room.roundNumber, room.currentPlayerIndex])
 
@@ -55,21 +60,16 @@ export default function GameBoard({ room, myId, onLeave }) {
   }
 
   const handleRoll = useCallback(() => {
-    playDiceRoll()
-    const diceCount = me?.currentDice?.length ?? 5
-    const isFirstRoll = (me?.rollCount ?? 0) === 0
-    const newRolledIndices = isFirstRoll
-      ? null
-      : Array.from({ length: diceCount }, (_, i) => i).filter(i => !keptIndices.includes(i))
-    setRolledIndices(newRolledIndices)
+    const currentKept = keptIndices
+    setKeptIndices([])
     setRolling(true)
-    socket.emit('roll', { keptIndices }, (res) => {
+    socket.emit('roll', { keptIndices: currentKept }, (res) => {
       if (!res?.ok) {
         setRolling(false)
         if (res?.error) alert(res.error)
       }
     })
-  }, [keptIndices, me?.currentDice?.length, me?.rollCount])
+  }, [keptIndices])
 
   function handleStand() {
     socket.emit('stand', (res) => {
@@ -110,6 +110,68 @@ export default function GameBoard({ room, myId, onLeave }) {
     } catch {}
   }
 
+  // Detectar "a la caida": cualquier jugador que se plante con rollCount <= 1
+  const playerDoneKey = room.players.map(p => `${p.id}:${p.done}:${p.rollCount}`).join('|')
+  useEffect(() => {
+    room.players.forEach(p => {
+      const wasNotDone = !prevDoneRef.current[p.id]
+      if (p.done && wasNotDone && p.rollCount <= 1) {
+        setShowAlaCaida(true)
+      }
+    })
+    const next = {}
+    room.players.forEach(p => { next[p.id] = p.done })
+    prevDoneRef.current = next
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerDoneKey])
+
+  // Bot timing: emit bot_ready once animations finish + 100ms
+  const botPhase = room.botPhase
+  useEffect(() => {
+    clearTimeout(botReadyTimerRef.current)
+    setBotDisplayedKept([])
+
+    if (!botPhase) return
+
+    if (botPhase === 'rolled') {
+      if (diceAnimating || showAlaCaida) return  // wait — effect will re-run when these change
+      botReadyTimerRef.current = setTimeout(() => {
+        socket.emit('bot_ready')
+      }, 100)
+      return () => clearTimeout(botReadyTimerRef.current)
+    }
+
+    if (botPhase === 'picking') {
+      const indices = room.botKeptIndices ?? []
+      let i = 0
+      const showNext = () => {
+        if (i < indices.length) {
+          setBotDisplayedKept(prev => [...prev, indices[i]])
+          i++
+          botReadyTimerRef.current = setTimeout(showNext, 100)
+        } else {
+          botReadyTimerRef.current = setTimeout(() => {
+            socket.emit('bot_ready')
+          }, 100)
+        }
+      }
+      botReadyTimerRef.current = setTimeout(showNext, 100)
+      return () => clearTimeout(botReadyTimerRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [botPhase, diceAnimating, showAlaCaida])
+
+  // Turn countdown
+  useEffect(() => {
+    if (!room.turnDeadline || !isMyTurn) { setTimeLeft(null); return }
+    const update = () => setTimeLeft(Math.max(0, Math.ceil((room.turnDeadline - Date.now()) / 1000)))
+    update()
+    const id = setInterval(update, 500)
+    return () => clearInterval(id)
+  }, [room.turnDeadline, isMyTurn])
+
+  function handleRematch() { socket.emit('rematch') }
+
   const displayPlayer = isMyTurn ? me : currentPlayer
   const totalDice = displayPlayer?.currentDice?.length || 5
   const nextRollName = ROLL_NAMES[me?.rollCount ?? 0]
@@ -119,11 +181,39 @@ export default function GameBoard({ room, myId, onLeave }) {
 
       <nav className="navbar">
         <button className="navbar__exit" onClick={handleLeave}>← Salir</button>
-        <span className="navbar__round">Ronda {room.roundNumber}</span>
+        <span className="navbar__round">
+          Ronda {room.roundNumber}{room.maxRounds > 0 ? ` / ${room.maxRounds}` : ''}
+        </span>
       </nav>
 
-      {/* ── Resultados ── */}
-      {room.phase === 'results' ? (() => {
+      {/* ── Fin de partida ── */}
+      {room.phase === 'finished' ? (() => {
+        const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
+        const champion = sorted[0]
+        return (
+          <>
+            <div className="results__winner">
+              <p className="results__winner-label">Campeón de la partida</p>
+              <h2 className="results__name">{champion?.name}</h2>
+              <p className="results__hand">{champion?.wins} victorias</p>
+            </div>
+            <div className="results__scores">
+              <p className="results__scores-title">Clasificación final</p>
+              {sorted.map((p, i) => (
+                <div key={p.id} className="results__score-row">
+                  <span className="results__pos">{i + 1}.</span>
+                  <span className="results__sname">{p.name}</span>
+                  <span className="results__wins">{p.wins} {p.wins === 1 ? 'victoria' : 'victorias'}</span>
+                </div>
+              ))}
+            </div>
+            {room.hostId === myId
+              ? <button className="btn btn--primary btn--full" onClick={handleRematch}>Revancha</button>
+              : <p className="waiting-label">Esperando al host...</p>
+            }
+          </>
+        )
+      })() : room.phase === 'results' ? (() => {
         const winner = room.players.find(p => p.id === room.roundWinnerId)
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
         return (
@@ -197,11 +287,12 @@ export default function GameBoard({ room, myId, onLeave }) {
           {/* Tapete 3D — siempre visible (se inicializa antes del primer roll) */}
           <DiceBoxScene
             dice={displayPlayer?.currentDice ?? []}
-            rolledIndices={rolledIndices}
             keptIndices={isMyTurn ? keptIndices : []}
             interactive={diceInteractive}
+            rolling={rolling}
             onKeep={handleKeep}
-            onSettled={() => setRolling(false)}
+            onRollStart={() => setDiceAnimating(true)}
+            onSettled={() => { setRolling(false); setDiceAnimating(false) }}
           />
 
           {/* Tu jugada */}
@@ -239,6 +330,17 @@ export default function GameBoard({ room, myId, onLeave }) {
             </div>
           )}
 
+          {!isMyTurn && currentPlayer?.isBot && room.botPhase === 'picking' && botDisplayedKept.length > 0 && (
+            <div className="bot-selecting">
+              <span className="bot-selecting__label">Bot guarda:</span>
+              <div className="bot-selecting__dice">
+                {botDisplayedKept.map(i => (
+                  <Die key={i} value={currentPlayer.currentDice[i]} small />
+                ))}
+              </div>
+            </div>
+          )}
+
           {displayPlayer?.done && displayPlayer?.hand && (
             <div className="hand-result">{displayPlayer.hand.desc}</div>
           )}
@@ -248,6 +350,11 @@ export default function GameBoard({ room, myId, onLeave }) {
         <div className="actions">
           {isMyTurn && !me?.done && (
             <>
+              {timeLeft !== null && (
+                <div className={`turn-timer ${timeLeft <= 10 ? 'turn-timer--urgent' : ''}`}>
+                  {timeLeft}s
+                </div>
+              )}
               {mustPass ? (
                 <div className="actions__row">
                   <button className="btn btn--primary btn--full" onClick={handleStand}>Pasar turno</button>
@@ -281,6 +388,10 @@ export default function GameBoard({ room, myId, onLeave }) {
           )}
         </div>
       </>
+      )}
+
+      {showAlaCaida && (
+        <AlaCaidaToast onDone={() => setShowAlaCaida(false)} />
       )}
     </div>
   )
