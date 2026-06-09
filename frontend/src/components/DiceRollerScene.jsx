@@ -22,8 +22,9 @@ const DIE    = 0.85
 const FY     = -2.5   // floor Y
 const WX     = 3.6    // wall half-extent X
 const WZ     = 3.0    // wall half-extent Z
-const REST_Y = FY + DIE / 2 + 0.02
-const REST_Z = -1.2   // back of scene = "top" in camera view
+const REST_Y   = FY + DIE / 2 + 0.02
+const REST_Z   = -1.2  // back of scene = "top" in camera view
+const DISCARD_Z = 1.85  // front of scene = "bottom" in camera view
 const SLOT_X = (i) => (i - 2) * 1.1   // fixed X per die index
 
 const PIP = {
@@ -79,10 +80,11 @@ export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
   interactive, onDieClick, onSettled,
 }) {
-  const mountRef = useRef(null)
-  const ctxRef   = useRef(null)
-  const propsRef = useRef({})
-  propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled }
+  const mountRef  = useRef(null)
+  const labelsRef = useRef(null)
+  const ctxRef    = useRef(null)
+  const propsRef  = useRef({})
+  propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled, labelsEl: labelsRef.current }
 
   // ── Init Three.js scene (once) ──────────────────────────────────────────────
   useEffect(() => {
@@ -133,6 +135,8 @@ export default function DiceRollerScene({
         ts: 0,
         fq: new THREE.Quaternion(), tq: new THREE.Quaternion(),
         fp: new THREE.Vector3(),    tp: new THREE.Vector3(),
+        moveActive: false, moveTs: 0,
+        moveFrom: new THREE.Vector3(), moveTo: new THREE.Vector3(),
       }
     })
 
@@ -202,23 +206,44 @@ export default function DiceRollerScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollKey])
 
-  // ── Pending discards: mark with red outline + reduced opacity ───────────────
+  // ── Pending discards: borde rojo + mover al fondo (o devolver) ─────────────
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx) return
+    const now = performance.now()
     ctx.dice.forEach((d, i) => {
       if (d.phase !== 'idle') return
       const discarded = pendingDiscards.includes(i)
       d.outline.visible = discarded
-      d.mesh.material.forEach(mat => {
-        mat.transparent = discarded
-        mat.opacity = discarded ? 0.35 : 1.0
-      })
+      const targetZ = discarded ? DISCARD_Z : REST_Z
+      d.moveFrom.copy(d.mesh.position)
+      d.moveTo.set(SLOT_X(i), REST_Y, targetZ)
+      d.moveTs = now
+      d.moveActive = true
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiscards.join(',')])
 
-  return <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
+  return (
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
+      <div ref={labelsRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        {[0,1,2,3,4].map(i => (
+          <div key={i} style={{
+            display: 'none',
+            position: 'absolute',
+            transform: 'translateX(-50%)',
+            color: '#e63946',
+            fontWeight: 800,
+            fontSize: '9px',
+            letterSpacing: '2px',
+            textShadow: '0 1px 3px rgba(0,0,0,0.55)',
+            whiteSpace: 'nowrap',
+          }}>DESCARTE</div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 // ─── Scene helpers (no React state closures) ──────────────────────────────────
@@ -265,6 +290,7 @@ function doRoll(ctx, values, rollingIndices) {
 
     dice[i].body  = body
     dice[i].phase = 'rolling'
+    dice[i].moveActive = false
     dice[i].mesh.visible = true
     dice[i].mesh.position.set(startX, startY, startZ)
     dice[i].outline.visible = false
@@ -328,6 +354,18 @@ function step(ctx, now, propsRef) {
     })
     if (done) propsRef.current.onSettled?.()
   }
+
+  // ── Move tween (discard / return) ────────────────────────────────────────────
+  const MOV_DUR = 380
+  dice.forEach(d => {
+    if (!d.moveActive || d.phase !== 'idle') return
+    const t = Math.min((now - d.moveTs) / MOV_DUR, 1)
+    d.mesh.position.lerpVectors(d.moveFrom, d.moveTo, eio(t))
+    if (t >= 1) { d.mesh.position.copy(d.moveTo); d.moveActive = false }
+  })
+
+  // ── DESCARTE labels ──────────────────────────────────────────────────────────
+  updateLabels(ctx, propsRef.current)
 }
 
 function beginFace(ctx, now) {
@@ -351,4 +389,35 @@ function beginPlace(ctx, now) {
     d.ts = now
     d.phase = 'placing'
   })
+}
+
+function updateLabels(ctx, props) {
+  const container = props.labelsEl
+  if (!container) return
+  const { dice, camera, renderer } = ctx
+  const pending = props.pendingDiscards ?? []
+  const rect = renderer.domElement.getBoundingClientRect()
+
+  for (let i = 0; i < 5; i++) {
+    const label = container.children[i]
+    if (!label) continue
+    const d = dice[i]
+
+    if (!pending.includes(i) || d.phase !== 'idle') {
+      label.style.display = 'none'
+      continue
+    }
+
+    // Project position just below the die
+    const pos = d.mesh.position.clone()
+    pos.y -= DIE * 0.85
+    pos.project(camera)
+
+    const x = (pos.x * 0.5 + 0.5) * rect.width
+    const y = (-pos.y * 0.5 + 0.5) * rect.height
+
+    label.style.display = 'block'
+    label.style.left = `${x}px`
+    label.style.top  = `${y}px`
+  }
 }
