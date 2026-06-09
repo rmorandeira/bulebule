@@ -35,6 +35,41 @@ export default function App() {
     return p?.toUpperCase() || null
   })
   const swRegistered = useRef(false)
+  const musicRef = useRef(null)
+  const musicWantsPlayRef = useRef(true)
+
+  // Init música de fondo
+  useEffect(() => {
+    const audio = new Audio('/assets/rollo-de-dados.mp3')
+    audio.loop = true
+    audio.volume = 0.55
+    musicRef.current = audio
+
+    function tryPlay() {
+      if (musicWantsPlayRef.current) audio.play().catch(() => {})
+    }
+    document.addEventListener('click', tryPlay, { once: true })
+    document.addEventListener('touchstart', tryPlay, { once: true })
+
+    return () => {
+      audio.pause()
+      document.removeEventListener('click', tryPlay)
+      document.removeEventListener('touchstart', tryPlay)
+    }
+  }, [])
+
+  // Parar música al entrar en partida, reanudar al salir
+  const inGame = !!(room && room.phase !== 'lobby')
+  useEffect(() => {
+    const audio = musicRef.current
+    if (!audio) return
+    musicWantsPlayRef.current = !inGame
+    if (inGame) {
+      audio.pause()
+    } else {
+      audio.play().catch(() => {})
+    }
+  }, [inGame])
 
   // Register service worker once
   useEffect(() => {
