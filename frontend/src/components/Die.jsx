@@ -7,8 +7,8 @@ const DIE_CLASS = {
   'K':  'die--k',
   'Q':  'die--q',
   'J':  'die--j',
-  '10': 'die--10',
-  '9':  'die--9',
+  '8':  'die--8',
+  '7':  'die--7',
 }
 
 export default function Die({ value, onDiscard, discarded = false, small = false, animDelay = null }) {

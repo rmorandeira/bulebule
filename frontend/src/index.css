@@ -107,8 +107,8 @@ body {
 .die--k   { --die-color: #c0392b; }  /* K — rojo */
 .die--q   { --die-color: #27ae60; }  /* Q — verde */
 .die--j   { --die-color: #2574a9; }  /* J — azul */
-.die--10  { --die-color: #1a1a1a; }  /* 10 — negro */
-.die--9   { --die-color: #7f8c8d; }  /* 9 — gris */
+.die--8   { --die-color: #1a1a1a; }  /* 8 — negro */
+.die--7   { --die-color: #7f8c8d; }  /* 7 — gris */
 
 
 .die--interactive:active {

@@ -1,5 +1,5 @@
-const DICE_VALUES = ['AS', 'K', 'Q', 'J', '10', '9'];
-const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '10': 2, '9': 1 };
+const DICE_VALUES = ['AS', 'K', 'Q', 'J', '8', '7'];
+const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 };
 
 function rollDie() {
   return DICE_VALUES[Math.floor(Math.random() * DICE_VALUES.length)];
@@ -30,8 +30,8 @@ function evaluateHand(dice) {
   if (uniqueRanks.length === 5 && uniqueRanks[4] - uniqueRanks[0] === 4) {
     const isMayor = uniqueRanks[4] === VALUE_RANK['AS']; // A-K-Q-J-10
     return isMayor
-      ? { rank: 5, name: 'Escalera Mayor', desc: 'Escalera Mayor (A-K-Q-J-10)', topKey: null }
-      : { rank: 4, name: 'Escalera Menor', desc: 'Escalera Menor (K-Q-J-10-9)', topKey: null };
+      ? { rank: 5, name: 'Escalera Mayor', desc: 'Escalera Mayor (A-K-Q-J-8)', topKey: null }
+      : { rank: 4, name: 'Escalera Menor', desc: 'Escalera Menor (K-Q-J-8-7)', topKey: null };
   }
 
   if (topCount === 3) return { rank: 3, name: 'Trío',           desc: `Trío de ${topKey}`,                topKey };
