@@ -95,20 +95,32 @@ body {
 
 /* ── Die faces ───────────────────────────────────────────── */
 .die-letter {
-  font-size: 2em;
-  font-weight: 800;
+  font-size: 1.9em;
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
   line-height: 1;
-  color: var(--die-color, var(--die-text));
+  color: var(--die-text);
   pointer-events: none;
 }
 
-/* Per-value colors */
-.die--as  { --die-color: #b8860b; }  /* A — dorado */
-.die--k   { --die-color: #c0392b; }  /* K — rojo */
-.die--q   { --die-color: #27ae60; }  /* Q — verde */
-.die--j   { --die-color: #2574a9; }  /* J — azul */
-.die--8   { --die-color: #1a1a1a; }  /* 8 — negro */
-.die--7   { --die-color: #7f8c8d; }  /* 7 — gris */
+.die-letter--red { color: #c0392b; }
+
+.die-face-pips {
+  position: absolute;
+  inset: 16%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 12%;
+  pointer-events: none;
+}
+
+.pip {
+  background: var(--die-text);
+  border-radius: 50%;
+}
+
+.pip--red { background: #c0392b; }
 
 
 .die--interactive:active {

@@ -2,13 +2,30 @@ import { useRef, useEffect } from 'react'
 
 const SWIPE_THRESHOLD = 40
 
-const DIE_CLASS = {
-  'AS': 'die--as',
-  'K':  'die--k',
-  'Q':  'die--q',
-  'J':  'die--j',
-  '8':  'die--8',
-  '7':  'die--7',
+const PIP_PATTERNS = {
+  'AS': [0,0,0, 0,1,0, 0,0,0],  // 1 pip centro — rojo
+  '8':  [1,1,1, 1,1,1, 1,1,1],  // 9 pips lleno — rojo
+  '7':  [1,1,1, 0,1,0, 1,1,1],  // 7 pips — negro
+}
+
+function DieFace({ value }) {
+  if (value in PIP_PATTERNS) {
+    const red = value === 'AS' || value === '8'
+    return (
+      <div className="die-face-pips">
+        {PIP_PATTERNS[value].map((on, i) =>
+          on ? <div key={i} className={red ? 'pip pip--red' : 'pip'} /> : <div key={i} />
+        )}
+      </div>
+    )
+  }
+  const display = value === 'AS' ? 'A' : value
+  const red = value === 'K'
+  return (
+    <span className={red ? 'die-letter die-letter--red' : 'die-letter'}>
+      {display}
+    </span>
+  )
 }
 
 export default function Die({ value, onDiscard, discarded = false, small = false, animDelay = null }) {
@@ -51,11 +68,8 @@ export default function Die({ value, onDiscard, discarded = false, small = false
   const wrapperCls = ['die-wrapper', discarded && 'die-wrapper--collapsing', animDelay !== null ? 'die-wrapper--animated' : ''].filter(Boolean).join(' ')
   const wrapperStyle = animDelay !== null ? { animationDelay: `${animDelay}ms` } : {}
 
-  const displayValue = value === 'AS' ? 'A' : value
-
   const cls = [
     'die',
-    DIE_CLASS[value],
     small && 'die--small',
     onDiscard && !discarded && 'die--interactive',
     discarded && 'die--discarding',
@@ -68,9 +82,9 @@ export default function Die({ value, onDiscard, discarded = false, small = false
         className={cls}
         onClick={!discarded ? onDiscard ?? undefined : undefined}
         disabled={!onDiscard || discarded}
-        aria-label={`Dado ${displayValue}${discarded ? ' (descartado)' : ''}`}
+        aria-label={`Dado ${value}${discarded ? ' (descartado)' : ''}`}
       >
-        <span className="die-letter">{displayValue}</span>
+        <DieFace value={value} />
       </button>
     </div>
   )
