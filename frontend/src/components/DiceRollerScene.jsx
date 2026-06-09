@@ -152,6 +152,7 @@ export default function DiceRollerScene({
     const m2  = new THREE.Vector2()
     function onTap(e) {
       if (!propsRef.current.interactive) return
+      if (e.cancelable) e.preventDefault()  // evita que touchend dispare también click
       const rect = renderer.domElement.getBoundingClientRect()
       const touch = e.changedTouches?.[0] ?? e.touches?.[0]
       const cx = touch ? touch.clientX : e.clientX
@@ -163,8 +164,8 @@ export default function DiceRollerScene({
       const hits = ray.intersectObjects(clickable, false)
       if (hits.length) propsRef.current.onDieClick?.(hits[0].object.userData.idx)
     }
-    renderer.domElement.addEventListener('click', onTap)
-    renderer.domElement.addEventListener('touchend', onTap)
+    renderer.domElement.addEventListener('click',    onTap)
+    renderer.domElement.addEventListener('touchend', onTap, { passive: false })
 
     // Render loop
     function tick(now) {
