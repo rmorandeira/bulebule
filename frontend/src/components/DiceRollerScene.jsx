@@ -9,12 +9,12 @@ const FACE_UP_QUATS = (() => {
   const E = THREE.Euler
   const Q = THREE.Quaternion
   return [
-    new Q().setFromEuler(new E(0, 0, -Math.PI / 2)),
-    new Q().setFromEuler(new E(0, 0,  Math.PI / 2)),
-    new Q(),
-    new Q().setFromEuler(new E(Math.PI, 0, 0)),
-    new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),
-    new Q().setFromEuler(new E( Math.PI / 2, 0, 0)),
+    new Q().setFromEuler(new E(-Math.PI / 2, 0,  Math.PI / 2)),  // +X face (K)  → +Y world, text legible
+    new Q().setFromEuler(new E(-Math.PI / 2, 0, -Math.PI / 2)),  // -X face (Q)  → +Y world, text legible
+    new Q(),                                            // +Y face (AS) → +Y world
+    new Q().setFromEuler(new E(Math.PI, 0, 0)),        // -Y face (7)  → +Y world
+    new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),  // +Z face (8)  → +Y world
+    new Q().setFromEuler(new E( Math.PI / 2, 0, 0)),  // -Z face (J)  → +Y world
   ]
 })()
 
@@ -37,6 +37,9 @@ function makeTex(value) {
   const cv = document.createElement('canvas')
   cv.width = cv.height = S
   const ctx = cv.getContext('2d')
+  // Fill full canvas so corners match the die face color (no black edges)
+  ctx.fillStyle = '#f5f2ee'
+  ctx.fillRect(0, 0, S, S)
   const r = S * 0.18
   ctx.fillStyle = '#f5f2ee'
   ctx.beginPath()
@@ -115,8 +118,17 @@ export default function DiceRollerScene({
       mesh.userData.idx = i
       mesh.visible = false
       scene.add(mesh)
+
+      // Red outline shown when die is marked for discard
+      const outline = new THREE.Mesh(
+        new THREE.BoxGeometry(DIE * 1.18, DIE * 1.18, DIE * 1.18),
+        new THREE.MeshBasicMaterial({ color: 0xe63946, side: THREE.BackSide })
+      )
+      outline.visible = false
+      mesh.add(outline)
+
       return {
-        mesh, body: null, value: null,
+        mesh, outline, body: null, value: null,
         phase: 'hidden',  // hidden|rolling|facing|placing|idle
         ts: 0,
         fq: new THREE.Quaternion(), tq: new THREE.Quaternion(),
@@ -190,12 +202,18 @@ export default function DiceRollerScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollKey])
 
-  // ── Pending discards: show/hide ─────────────────────────────────────────────
+  // ── Pending discards: mark with red outline + reduced opacity ───────────────
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx) return
     ctx.dice.forEach((d, i) => {
-      if (d.phase === 'idle') d.mesh.visible = !pendingDiscards.includes(i)
+      if (d.phase !== 'idle') return
+      const discarded = pendingDiscards.includes(i)
+      d.outline.visible = discarded
+      d.mesh.material.forEach(mat => {
+        mat.transparent = discarded
+        mat.opacity = discarded ? 0.35 : 1.0
+      })
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiscards.join(',')])
@@ -249,6 +267,8 @@ function doRoll(ctx, values, rollingIndices) {
     dice[i].phase = 'rolling'
     dice[i].mesh.visible = true
     dice[i].mesh.position.set(startX, startY, startZ)
+    dice[i].outline.visible = false
+    dice[i].mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
   })
 }
 

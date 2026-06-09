@@ -14,11 +14,17 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
   const [joiningCode, setJoiningCode] = useState(null)
   const [connected, setConnected] = useState(socket.connected)
   const [animPhase, setAnimPhase] = useState('splash')
+  const [bgVisible, setBgVisible] = useState(false)
 
   useEffect(() => {
     const t1 = setTimeout(() => setAnimPhase('logo-center'), 350)
     const t2 = setTimeout(() => setAnimPhase('logo-top'), 2000)
     return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setBgVisible(true))
+    return () => cancelAnimationFrame(raf)
   }, [])
 
   useEffect(() => {
@@ -66,6 +72,9 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
       <div className="home__bg-wrapper">
         <div className="home__bg" />
       </div>
+
+      {/* Overlay blanco para fade-in inicial */}
+      <div className={`home__fade-overlay${bgVisible ? ' home__fade-overlay--done' : ''}`} />
 
       {/* Logo BULE BULE — animado splash → center → top */}
       <img

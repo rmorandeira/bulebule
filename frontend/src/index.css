@@ -1340,6 +1340,20 @@ body {
   transform: translateZ(0);
 }
 
+/* Overlay blanco para fade-in de la imagen de fondo */
+.home__fade-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #fff;
+  opacity: 1;
+  transition: opacity 1.5s ease;
+  pointer-events: none;
+}
+.home__fade-overlay--done {
+  opacity: 0;
+}
+
 /* ── Logo BULE BULE — 3 fases de animación ─────────────────── */
 .home__logo {
   position: absolute;
