@@ -57,6 +57,7 @@ export default function GameBoard({ room, myId, onLeave }) {
     prevPhaseRef.current = room.phase
     if (prev === 'playing' && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
       setPalilloRotoVisible(true)
+      new Audio('/assets/romper_palillo.mp3').play().catch(() => {})
     }
     if (room.phase === 'playing') setPalilloRotoVisible(false)
   }, [room.phase, room.roundLoserId, room.gameLoserId])
