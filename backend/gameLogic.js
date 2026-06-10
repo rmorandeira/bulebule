@@ -5,12 +5,6 @@ function rollDie() {
   return DICE_VALUES[Math.floor(Math.random() * DICE_VALUES.length)];
 }
 
-function rollDice(kept = []) {
-  const result = [...kept];
-  while (result.length < 5) result.push(rollDie());
-  return result;
-}
-
 function evaluateHand(dice) {
   const counts = {};
   for (const d of dice) counts[d] = (counts[d] || 0) + 1;
@@ -54,4 +48,4 @@ function compareHands(h1, h2) {
   return 0;
 }
 
-module.exports = { rollDie, rollDice, evaluateHand, compareHands, VALUE_RANK };
+module.exports = { rollDie, evaluateHand, compareHands, VALUE_RANK };

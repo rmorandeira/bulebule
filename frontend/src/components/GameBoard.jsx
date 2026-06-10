@@ -11,27 +11,6 @@ const needsMotionPermission = () =>
   typeof DeviceMotionEvent !== 'undefined' &&
   typeof DeviceMotionEvent.requestPermission === 'function'
 
-// Divide los dados actuales en grupos por tirada
-function getRollBatches(player) {
-  const { currentDice, rollDiscardHistory } = player
-  if (!currentDice?.length) return []
-
-  const batches = []
-  let batchIndices = Array.from({ length: currentDice.length }, (_, i) => i)
-
-  for (let n = 0; n < (rollDiscardHistory?.length ?? 0); n++) {
-    const discarded = rollDiscardHistory[n]
-    const kept = batchIndices.filter(i => !discarded.includes(i))
-    if (kept.length > 0) batches.push({ rollNum: n + 1, indices: kept })
-    batchIndices = discarded
-  }
-
-  if (batchIndices.length > 0)
-    batches.push({ rollNum: (rollDiscardHistory?.length ?? 0) + 1, indices: batchIndices })
-
-  return batches
-}
-
 export default function GameBoard({ room, myId, onLeave }) {
   const [pendingDiscards, setPendingDiscards] = useState([])
   const [shakeEnabled, setShakeEnabled] = useState(false)
