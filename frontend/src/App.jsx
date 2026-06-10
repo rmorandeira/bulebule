@@ -80,6 +80,19 @@ export default function App() {
     setMusicOn(next)
   }
 
+  // ── Sonido global de botones ─────────────────────────────────────────────────
+  useEffect(() => {
+    const snd = new Audio('/assets/button_press.mp3')
+    function onButtonClick(e) {
+      const btn = e.target.closest('button')
+      if (!btn || btn.textContent.trim() === 'Tirar dados') return
+      snd.currentTime = 0
+      snd.play().catch(() => {})
+    }
+    document.addEventListener('click', onButtonClick)
+    return () => document.removeEventListener('click', onButtonClick)
+  }, [])
+
   // Register service worker once
   useEffect(() => {
     if (!swRegistered.current && 'serviceWorker' in navigator) {
