@@ -46,10 +46,10 @@ function makeTex(value) {
   cv.width = cv.height = S
   const ctx = cv.getContext('2d')
   // Fill full canvas so corners match the die face color (no black edges)
-  ctx.fillStyle = '#f5f2ee'
+  ctx.fillStyle = '#FCF8D3'
   ctx.fillRect(0, 0, S, S)
   const r = S * 0.18
-  ctx.fillStyle = '#f5f2ee'
+  ctx.fillStyle = '#FCF8D3'
   ctx.beginPath()
   ctx.moveTo(r, 0); ctx.lineTo(S-r, 0); ctx.arcTo(S, 0, S, r, r)
   ctx.lineTo(S, S-r); ctx.arcTo(S, S, S-r, S, r)
