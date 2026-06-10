@@ -37,7 +37,7 @@ function slotPos(i) {
 const PIP = {
   AS: [0,0,0, 0,1,0, 0,0,0],
   '8': [1,1,1, 1,0,1, 1,1,1],  // 8 puntos rojos, centro vacío
-  '7': [1,1,1, 0,1,0, 1,1,1],  // 7 puntos rojos
+  '7': [1,0,1, 1,0,1, 1,0,1],  // 6 puntos, dos columnas
 }
 
 function makeTex(value) {
