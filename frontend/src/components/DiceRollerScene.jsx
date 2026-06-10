@@ -36,7 +36,7 @@ function slotPos(i) {
 
 const PIP = {
   AS: [0,0,0, 0,1,0, 0,0,0],
-  '8': [1,1,1, 1,0,1, 1,1,1],  // 8 puntos rojos: 3+2+3
+  '8': [1,1,1, 0,1,1, 1,1,1],  // 8 puntos rojos: 3+2+3, fila central centrada
   '7': [1,1,1, 0,1,0, 1,1,1],  // 7 puntos negros
 }
 
@@ -61,8 +61,11 @@ function makeTex(value) {
     const pr = S*0.065, m = S*0.22, st = (S-m*2)/2
     PIP[value].forEach((on, i) => {
       if (!on) return
+      let cx = m + (i%3)*st
+      // Cara del 8: los dos pips de la fila central van centrados entre columnas
+      if (value === '8' && Math.floor(i/3) === 1) cx -= st/2
       ctx.beginPath()
-      ctx.arc(m+(i%3)*st, m+Math.floor(i/3)*st, pr, 0, Math.PI*2)
+      ctx.arc(cx, m+Math.floor(i/3)*st, pr, 0, Math.PI*2)
       ctx.fill()
     })
   } else {
