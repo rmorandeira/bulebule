@@ -95,24 +95,14 @@ function mulberry32(seed) {
   }
 }
 
-let _audioCtx = null
-function getAudio() {
-  if (!_audioCtx) try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch(e) {}
-  return _audioCtx
-}
+const _diceSounds = ['/assets/dado1.mp3', '/assets/dado2.mp3', '/assets/dado3.mp3'].map(s => new Audio(s))
+let _diceSoundIdx = 0
 function playDiceHit(impact = 3) {
-  const ac = getAudio(); if (!ac) return
-  try {
-    if (ac.state === 'suspended') ac.resume()
-    const t0 = ac.currentTime, dur = 0.07
-    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, 1.5)
-    const src = ac.createBufferSource(); src.buffer = buf
-    const g = ac.createGain(); g.gain.setValueAtTime(Math.min(impact/8,1)*0.28, t0)
-    const f = ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=800+Math.random()*400; f.Q.value=1.2
-    src.connect(f); f.connect(g); g.connect(ac.destination); src.start(t0)
-  } catch(e) {}
+  const a = _diceSounds[_diceSoundIdx % 3]
+  _diceSoundIdx++
+  a.currentTime = 0
+  a.volume = Math.min(impact / 10, 1) * 0.75
+  a.play().catch(() => {})
 }
 
 const FACE_NORMALS = [
