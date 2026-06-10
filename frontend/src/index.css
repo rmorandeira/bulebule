@@ -136,6 +136,41 @@ body {
 
 .btn--full { width: 100%; }
 
+/* ── Animación "jugador siguiente" ───────────────────────── */
+.next-player-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.next-player-img {
+  width: 340px;
+  max-width: 85vw;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-110vw);
+}
+
+@keyframes next-player-btn-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.next-player-continue {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  animation: next-player-btn-in 0.25s ease-out 0.45s both;
+}
+
 /* ── Modal de confirmación ───────────────────────────────── */
 .modal-overlay {
   position: fixed;

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import Die from './Die'
 import AlaCaidaToast from './AlaCaidaToast'
+import AnimacionNextPlayer from './AnimacionNextPlayer'
 import DiceRollerScene from './DiceRollerScene'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
@@ -22,7 +23,19 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [rollSeed, setRollSeed] = useState(null)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
+  const [showNextPlayer, setShowNextPlayer] = useState(false)
   const allowUnloadRef = useRef(false)
+  const prevTurnRef = useRef({ round: room.roundNumber, idx: room.currentPlayerIndex })
+
+  // animacion_next_player: solo en cambio de jugador dentro de la misma ronda
+  useEffect(() => {
+    const prev = prevTurnRef.current
+    if (room.phase === 'playing' && room.roundNumber === prev.round && room.currentPlayerIndex !== prev.idx) {
+      setShowNextPlayer(true)
+    }
+    if (room.phase !== 'playing') setShowNextPlayer(false)
+    prevTurnRef.current = { round: room.roundNumber, idx: room.currentPlayerIndex }
+  }, [room.phase, room.roundNumber, room.currentPlayerIndex])
   const lastFacesRef = useRef(null)
   const prevDoneRef = useRef({})
   const botReadyTimerRef = useRef(null)
@@ -445,6 +458,8 @@ export default function GameBoard({ room, myId, onLeave }) {
       )}
 
       {showAlaCaida && <AlaCaidaToast onDone={() => setShowAlaCaida(false)} />}
+
+      {showNextPlayer && <AnimacionNextPlayer onDone={() => setShowNextPlayer(false)} />}
 
       {leaveIntent && (
         <div className="modal-overlay">
