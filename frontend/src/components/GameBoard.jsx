@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import Die from './Die'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
+import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 import DiceRollerScene from './DiceRollerScene'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
@@ -43,6 +44,18 @@ export default function GameBoard({ room, myId, onLeave }) {
     if (awaitingContinue) setNextPlayerVisible(true)
     if (room.phase !== 'playing') setNextPlayerVisible(false)
   }, [awaitingContinue, room.phase])
+
+  // Overlay "palillo roto" al terminar la ronda: marca quién ha perdido
+  const [palilloRotoVisible, setPalilloRotoVisible] = useState(false)
+  const prevPhaseRef = useRef(room.phase)
+  useEffect(() => {
+    const prev = prevPhaseRef.current
+    if (prev === 'playing' && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
+      setPalilloRotoVisible(true)
+    }
+    if (room.phase === 'playing') setPalilloRotoVisible(false)
+    prevPhaseRef.current = room.phase
+  }, [room.phase])
   const allowUnloadRef = useRef(false)
   const lastFacesRef = useRef(null)
   const botReadyTimerRef = useRef(null)
@@ -323,7 +336,7 @@ export default function GameBoard({ room, myId, onLeave }) {
             ))}
             <div className="results__hands">
               {room.players.map(p => (
-                <div key={p.id} className={`results__row ${p.id === room.roundWinnerId ? 'results__row--winner' : ''}`}>
+                <div key={p.id} className={`results__row ${p.id === room.roundWinnerId ? 'results__row--winner' : ''} ${p.id === room.roundLoserId ? 'results__row--loser' : ''}`}>
                   <span className="results__player">{p.name}</span>
                   <div className="results__dice">
                     {p.currentDice?.map((v, i) => <Die key={i} value={v} small />)}
@@ -475,6 +488,10 @@ export default function GameBoard({ room, myId, onLeave }) {
           onContinue={() => socket.emit('continue_turn')}
           onDone={() => setNextPlayerVisible(false)}
         />
+      )}
+
+      {palilloRotoVisible && (
+        <AnimacionPalilloRoto room={room} onDone={() => setPalilloRotoVisible(false)} />
       )}
 
       {leaveIntent && (

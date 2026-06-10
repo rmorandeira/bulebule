@@ -169,6 +169,70 @@ body {
 .tag--capilla { background: #fdecea; color: #c0392b; }
 .tag--liberado { background: #e8f6ec; color: #1e8e4e; }
 
+/* Overlay "palillo roto" al final de la ronda */
+.palillo-roto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.palillo-roto__sticks {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.palillo-roto__seg {
+  width: 14px;
+  height: 68px;
+  border-radius: 7px;
+  background: #c8a165;
+  box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.12);
+}
+
+.palillo-roto__seg--roto {
+  background: #e3e3e3;
+  transform: rotate(20deg) translateY(4px);
+  box-shadow: none;
+}
+
+@keyframes palillo-break-anim {
+  0%   { background: #c8a165; transform: rotate(0); }
+  30%  { transform: rotate(-8deg); }
+  55%  { transform: rotate(26deg) translateY(5px); }
+  100% { background: #e3e3e3; transform: rotate(20deg) translateY(4px); box-shadow: none; }
+}
+
+.palillo-roto__seg--just {
+  animation: palillo-break-anim 0.5s ease-in 0.65s both;
+}
+
+.palillo-roto__name {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.palillo-roto__text {
+  font-size: 20px;
+}
+
+.palillo-roto__capilla {
+  font-size: 18px;
+  font-weight: 800;
+  color: #c0392b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.results__row--loser {
+  background: #fdecea;
+  border-radius: 8px;
+}
+
 .results__palillo {
   text-align: center;
   font-size: 15px;
