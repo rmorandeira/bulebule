@@ -7,6 +7,10 @@ import DiceRollerScene from './DiceRollerScene'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
+function playDiscardSound() {
+  new Audio('/assets/cogerdado.mp3').play().catch(() => {})
+}
+
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
 // Vidas: palillo con 3 roturas; sin palillo → en capilla; repóker → liberado
@@ -105,9 +109,11 @@ export default function GameBoard({ room, myId, onLeave }) {
   }, [room.currentPlayerIndex, room.players[room.currentPlayerIndex]?.rollCount])
 
   function toggleDiscard(index) {
-    setPendingDiscards(prev =>
-      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
-    )
+    setPendingDiscards(prev => {
+      if (prev.includes(index)) return prev.filter(i => i !== index)
+      playDiscardSound()
+      return [...prev, index]
+    })
   }
 
   const handleRoll = useCallback(() => {
@@ -243,6 +249,7 @@ export default function GameBoard({ room, myId, onLeave }) {
         if (i < discards.length) {
           const idx = discards[i++]
           setBotDiscards(prev => [...prev, idx])
+          playDiscardSound()
           botReadyTimerRef.current = setTimeout(pickNext, 300)
         } else {
           botReadyTimerRef.current = setTimeout(emitBotReady, 300)
