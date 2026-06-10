@@ -50,12 +50,12 @@ export default function GameBoard({ room, myId, onLeave }) {
   const prevPhaseRef = useRef(room.phase)
   useEffect(() => {
     const prev = prevPhaseRef.current
+    prevPhaseRef.current = room.phase
     if (prev === 'playing' && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
       setPalilloRotoVisible(true)
     }
     if (room.phase === 'playing') setPalilloRotoVisible(false)
-    prevPhaseRef.current = room.phase
-  }, [room.phase])
+  }, [room.phase, room.roundLoserId, room.gameLoserId])
   const allowUnloadRef = useRef(false)
   const lastFacesRef = useRef(null)
   const botReadyTimerRef = useRef(null)

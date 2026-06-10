@@ -301,8 +301,7 @@ function startRound(room) {
     p.hand = null;
     p.pendingDiscards = [];
   }
-  startTurnTimer(room);
-  if (room.players[room.currentPlayerIndex]?.isBot) runBotTurn(room.code);
+  awaitContinue(room);
 }
 
 function finishTurn(room, player) {
