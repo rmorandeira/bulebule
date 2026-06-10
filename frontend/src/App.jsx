@@ -35,8 +35,11 @@ export default function App() {
     if (p) window.history.replaceState({}, '', '/')
     return p?.toUpperCase() || null
   })
+  const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
   const swRegistered = useRef(false)
   const musicRef     = useRef(null)
+  const musicOnRef   = useRef(musicOn)
+  musicOnRef.current = musicOn
 
   // ── Música de fondo ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -46,7 +49,7 @@ export default function App() {
     musicRef.current = audio
 
     function tryPlay() {
-      audio.play().catch(() => {})
+      if (musicOnRef.current) audio.play().catch(() => {})
     }
     // Arranca en el primer gesto (política de autoplay del navegador)
     document.addEventListener('click',      tryPlay, { once: true })
@@ -59,14 +62,23 @@ export default function App() {
     }
   }, [])
 
-  // ── Para al entrar en partida, reanuda al salir ──────────────────────────────
+  // ── Para al entrar en partida o al silenciar, reanuda al salir ───────────────
   const inGame = !!(room && room.phase !== 'lobby')
   useEffect(() => {
     const audio = musicRef.current
     if (!audio) return
-    if (inGame) audio.pause()
-    else        audio.play().catch(() => {})
-  }, [inGame])
+    if (inGame || !musicOn) audio.pause()
+    else                    audio.play().catch(() => {})
+  }, [inGame, musicOn])
+
+  function toggleMusic() {
+    // Ref actualizado en síncrono: el listener global tryPlay del primer
+    // gesto puede dispararse justo después de este mismo click
+    const next = !musicOnRef.current
+    musicOnRef.current = next
+    localStorage.setItem('bule_music', next ? 'on' : 'off')
+    setMusicOn(next)
+  }
 
   // Register service worker once
   useEffect(() => {
@@ -201,6 +213,8 @@ export default function App() {
   return (
     <RoomList
       user={user}
+      musicOn={musicOn}
+      onToggleMusic={toggleMusic}
       playerName={playerName}
       onNameChange={setPlayerName}
       onLogin={handleLogin}
