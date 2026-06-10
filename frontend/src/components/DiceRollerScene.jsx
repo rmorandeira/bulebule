@@ -149,6 +149,8 @@ export default function DiceRollerScene({
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setClearColor(0xebebeb)
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
     mount.appendChild(renderer.domElement)
 
     const scene  = new THREE.Scene()
@@ -171,7 +173,27 @@ export default function DiceRollerScene({
     scene.add(new THREE.AmbientLight(0xffffff, 0.75))
     const dir = new THREE.DirectionalLight(0xffffff, 1.2)
     dir.position.set(4, 10, 6)
+    dir.castShadow = true
+    dir.shadow.mapSize.width  = 1024
+    dir.shadow.mapSize.height = 1024
+    dir.shadow.camera.near = 1
+    dir.shadow.camera.far  = 30
+    dir.shadow.camera.left   = -8
+    dir.shadow.camera.right  =  8
+    dir.shadow.camera.top    =  8
+    dir.shadow.camera.bottom = -8
+    dir.shadow.bias = -0.002
     scene.add(dir)
+
+    // Floor plane — only receives shadows (not visible as a flat color, blends with bg)
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(WX * 2, WZ * 2),
+      new THREE.ShadowMaterial({ opacity: 0.25 })
+    )
+    floor.rotation.x = -Math.PI / 2
+    floor.position.y = FY + 0.01
+    floor.receiveShadow = true
+    scene.add(floor)
 
     // 5 persistent die meshes
     const dice = Array.from({ length: 5 }, (_, i) => {
@@ -181,6 +203,8 @@ export default function DiceRollerScene({
       )
       mesh.userData.idx = i
       mesh.visible = false
+      mesh.castShadow = true
+      mesh.receiveShadow = true
       scene.add(mesh)
 
       // Red outline shown when die is marked for discard
