@@ -35,6 +35,7 @@ const rooms = {};
 
 const { VALUE_RANK } = require('./gameLogic');
 const TURN_TIMEOUT = 30_000;
+const CONTINUE_TIMEOUT = 30_000;
 const BOT_ID = '__bot__';
 const BOT_NAME = 'Bot';
 
@@ -155,6 +156,37 @@ function clearTurnTimer(room) {
   }
 }
 
+function clearContinueTimer(room) {
+  if (room.continueTimerId) {
+    clearTimeout(room.continueTimerId);
+    room.continueTimerId = null;
+  }
+}
+
+// Pausa entre jugadores: el siguiente (bot o humano) no empieza hasta que
+// alguien pulse Continuar o expire el contador de 30s
+function awaitContinue(room) {
+  clearContinueTimer(room);
+  room.awaitingContinue = true;
+  room.continueDeadline = Date.now() + CONTINUE_TIMEOUT;
+  const code = room.code;
+  room.continueTimerId = setTimeout(() => {
+    const r = rooms[code];
+    if (!r || r.phase !== 'playing' || !r.awaitingContinue) return;
+    proceedTurn(r);
+    broadcast(code);
+  }, CONTINUE_TIMEOUT);
+}
+
+function proceedTurn(room) {
+  clearContinueTimer(room);
+  room.awaitingContinue = false;
+  room.continueDeadline = null;
+  const p = room.players[room.currentPlayerIndex];
+  if (p?.isBot) runBotTurn(room.code);
+  else startTurnTimer(room);
+}
+
 function startTurnTimer(room) {
   clearTurnTimer(room);
   const p = room.players[room.currentPlayerIndex];
@@ -199,6 +231,8 @@ function sanitize(room) {
     botPhase: room.botPhase ?? null,
     botKeptIndices: room.botKeptIndices ?? [],
     turnDeadline: room.turnDeadline ?? null,
+    awaitingContinue: room.awaitingContinue ?? false,
+    continueDeadline: room.continueDeadline ?? null,
     maxRounds: room.maxRounds ?? 0,
     players: room.players.map(p => ({
       id: p.id,
@@ -248,6 +282,9 @@ function startRound(room) {
   room.botPhase = null;
   room.botKeptIndices = [];
   room.turnDeadline = null;
+  clearContinueTimer(room);
+  room.awaitingContinue = false;
+  room.continueDeadline = null;
   room.roundNumber = (room.roundNumber ?? 0) + 1;
   for (const p of room.players) {
     p.currentDice = [];
@@ -278,8 +315,7 @@ function finishTurn(room, player) {
   }
   if (next !== -1) {
     room.currentPlayerIndex = next;
-    startTurnTimer(room);
-    if (room.players[next].isBot) runBotTurn(room.code);
+    awaitContinue(room);
   } else {
     endRound(room);
   }
@@ -476,6 +512,14 @@ io.on('connection', (socket) => {
       player.currentDice = faces;
     }
     finishTurn(room, player);
+    cb?.({ ok: true });
+    broadcast(room.code);
+  });
+
+  socket.on('continue_turn', (cb) => {
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.phase !== 'playing' || !room.awaitingContinue) return cb?.({ ok: false });
+    proceedTurn(room);
     cb?.({ ok: true });
     broadcast(room.code);
   });

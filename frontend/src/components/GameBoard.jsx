@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import Die from './Die'
-import AlaCaidaToast from './AlaCaidaToast'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
 import DiceRollerScene from './DiceRollerScene'
 
@@ -15,7 +14,6 @@ const needsMotionPermission = () =>
 export default function GameBoard({ room, myId, onLeave }) {
   const [pendingDiscards, setPendingDiscards] = useState([])
   const [shakeEnabled, setShakeEnabled] = useState(false)
-  const [showAlaCaida, setShowAlaCaida] = useState(false)
   const [botDiscards, setBotDiscards] = useState([])
   const [timeLeft, setTimeLeft] = useState(null)
   const [rollingIndices, setRollingIndices] = useState([])
@@ -23,24 +21,19 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [rollSeed, setRollSeed] = useState(null)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
-  const [showNextPlayer, setShowNextPlayer] = useState(false)
-  const allowUnloadRef = useRef(false)
-  const prevTurnRef = useRef({ round: room.roundNumber, idx: room.currentPlayerIndex })
+  const [nextPlayerVisible, setNextPlayerVisible] = useState(false)
 
-  // animacion_next_player: solo en cambio de jugador dentro de la misma ronda
+  // animacion_next_player: el servidor pausa el turno (awaitingContinue) hasta
+  // que alguien pulsa Continuar o expira su contador de 30s
+  const awaitingContinue = room.phase === 'playing' && room.awaitingContinue
   useEffect(() => {
-    const prev = prevTurnRef.current
-    if (room.phase === 'playing' && room.roundNumber === prev.round && room.currentPlayerIndex !== prev.idx) {
-      setShowNextPlayer(true)
-    }
-    if (room.phase !== 'playing') setShowNextPlayer(false)
-    prevTurnRef.current = { round: room.roundNumber, idx: room.currentPlayerIndex }
-  }, [room.phase, room.roundNumber, room.currentPlayerIndex])
+    if (awaitingContinue) setNextPlayerVisible(true)
+    if (room.phase !== 'playing') setNextPlayerVisible(false)
+  }, [awaitingContinue, room.phase])
+  const allowUnloadRef = useRef(false)
   const lastFacesRef = useRef(null)
-  const prevDoneRef = useRef({})
   const botReadyTimerRef = useRef(null)
   const botReadySentRef = useRef(false)
-  const botSettledRef = useRef(false)
   const prevBotPhaseRef = useRef(null)
   const prevRollCountRef = useRef({})
 
@@ -190,20 +183,6 @@ export default function GameBoard({ room, myId, onLeave }) {
     } catch {}
   }
 
-  // Detectar "a la caída"
-  const playerDoneKey = room.players.map(p => `${p.id}:${p.done}:${p.rollCount}`).join('|')
-  useEffect(() => {
-    const noneWereDone = Object.values(prevDoneRef.current).every(done => !done)
-    room.players.forEach(p => {
-      const wasNotDone = !prevDoneRef.current[p.id]
-      if (p.done && wasNotDone && p.rollCount === 1 && noneWereDone) setShowAlaCaida(true)
-    })
-    const next = {}
-    room.players.forEach(p => { next[p.id] = p.done })
-    prevDoneRef.current = next
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerDoneKey])
-
   // Bot: tras tirar espera a que los dados caigan y se paren (onSettled de la
   // escena 3D); después marca sus descartes de uno en uno cada 300ms y relanza.
   const botPhase = room.botPhase
@@ -213,7 +192,6 @@ export default function GameBoard({ room, myId, onLeave }) {
     if (botPhase !== prevBotPhaseRef.current) {
       prevBotPhaseRef.current = botPhase
       botReadySentRef.current = false
-      botSettledRef.current = false
       setBotDiscards([])
     }
     if (!botPhase) return
@@ -225,14 +203,9 @@ export default function GameBoard({ room, myId, onLeave }) {
     }
 
     if (botPhase === 'rolled') {
-      if (showAlaCaida) return
-      if (botSettledRef.current) {
-        // Los dados ya se pararon mientras se mostraba el toast
-        emitBotReady()
-      } else {
-        // Fallback por si la animación nunca llega a dispararse
-        botReadyTimerRef.current = setTimeout(emitBotReady, 8000)
-      }
+      // Fallback por si la animación nunca llega a dispararse (el camino
+      // normal es onSettled de la escena 3D)
+      botReadyTimerRef.current = setTimeout(emitBotReady, 8000)
       return () => clearTimeout(botReadyTimerRef.current)
     }
 
@@ -253,7 +226,7 @@ export default function GameBoard({ room, myId, onLeave }) {
       return () => clearTimeout(botReadyTimerRef.current)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [botPhase, showAlaCaida])
+  }, [botPhase])
 
   // Countdown timer
   useEffect(() => {
@@ -377,9 +350,8 @@ export default function GameBoard({ room, myId, onLeave }) {
                 if (isMyTurn && faces?.length === 5) socket.emit('report_faces', { faces })
                 // Bot: los dados ya han caído y están parados → puede decidir
                 if (currentPlayer?.isBot && room.botPhase === 'rolled') {
-                  botSettledRef.current = true
                   if (faces?.length === 5) socket.emit('report_faces', { faces })
-                  if (!showAlaCaida && !botReadySentRef.current) {
+                  if (!botReadySentRef.current) {
                     botReadySentRef.current = true
                     clearTimeout(botReadyTimerRef.current)
                     socket.emit('bot_ready')
@@ -457,9 +429,14 @@ export default function GameBoard({ room, myId, onLeave }) {
         </>
       )}
 
-      {showAlaCaida && <AlaCaidaToast onDone={() => setShowAlaCaida(false)} />}
-
-      {showNextPlayer && <AnimacionNextPlayer onDone={() => setShowNextPlayer(false)} />}
+      {nextPlayerVisible && (
+        <AnimacionNextPlayer
+          room={room}
+          closing={!awaitingContinue}
+          onContinue={() => socket.emit('continue_turn')}
+          onDone={() => setNextPlayerVisible(false)}
+        />
+      )}
 
       {leaveIntent && (
         <div className="modal-overlay">

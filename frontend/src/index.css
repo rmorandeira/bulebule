@@ -137,6 +137,11 @@ body {
 .btn--full { width: 100%; }
 
 /* ── Animación "jugador siguiente" ───────────────────────── */
+@keyframes next-player-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 .next-player-overlay {
   position: fixed;
   inset: 0;
@@ -148,13 +153,24 @@ body {
   background: rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  animation: next-player-fade-in 0.25s ease-out;
+  transition: opacity 0.25s ease-in;
+}
+
+.next-player-overlay--closing { opacity: 0; }
+
+.next-player-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  width: 100%;
+  padding: 0 24px;
 }
 
 .next-player-img {
   width: 340px;
   max-width: 85vw;
-  position: absolute;
-  left: 50%;
   transform: translateX(-110vw);
 }
 
@@ -163,13 +179,61 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.next-player-continue {
+.next-player-hand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  max-width: 380px;
+  animation: next-player-btn-in 0.25s ease-out 0.45s both;
+}
+
+.next-player-hand__title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.next-player-hand__dice {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.next-player-hand__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  font-size: 22px;
+}
+
+.next-player-hand__name { font-weight: 800; }
+.next-player-hand__rolls { font-weight: 400; }
+
+.next-player-footer {
   position: absolute;
   left: 24px;
   right: 24px;
   bottom: calc(40px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   animation: next-player-btn-in 0.25s ease-out 0.45s both;
 }
+
+.next-player-counter {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
+}
+
+.next-player-counter--urgent { color: #c0392b; }
+
+.next-player-continue { width: 100%; }
 
 /* ── Modal de confirmación ───────────────────────────────── */
 .modal-overlay {
