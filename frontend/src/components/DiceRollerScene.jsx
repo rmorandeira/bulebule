@@ -105,6 +105,8 @@ function playDiceHit(impact = 3) {
   a.play().catch(() => {})
 }
 
+const _eliminarAudio = new Audio('/assets/eliminar_dados.mp3')
+
 const FACE_NORMALS = [
   new THREE.Vector3( 1,  0,  0),
   new THREE.Vector3(-1,  0,  0),
@@ -205,7 +207,7 @@ export default function DiceRollerScene({
     const ctx = {
       renderer, scene, camera, dice,
       RAPIER: null, world: null,
-      pendingRoll: null, rollAfterExit: null, settleSince: null, animId: null,
+      pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null,
     }
     ctxRef.current = ctx
 
@@ -267,27 +269,7 @@ export default function DiceRollerScene({
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx || !values?.length || !rollingIndices?.length) return
-    const s = seed ?? Date.now()
-
-    let cancelled = false
-    const launch = () => {
-      if (cancelled) return
-      if (ctx.RAPIER && ctx.world) doRoll(ctx, [...values], [...rollingIndices], s)
-      else ctx.pendingRoll = { values: [...values], rollingIndices: [...rollingIndices], seed: s }
-    }
-
-    const a = new Audio('/assets/cubilete.mp3')
-    const fallback = setTimeout(launch, 4000)
-    const onEnd = () => { clearTimeout(fallback); launch() }
-    a.addEventListener('ended', onEnd, { once: true })
-    a.addEventListener('error', onEnd, { once: true })
-    a.play().catch(onEnd)
-
-    return () => {
-      cancelled = true
-      clearTimeout(fallback)
-      a.pause()
-    }
+    rollWithSounds(ctx, [...values], [...rollingIndices], seed ?? Date.now())
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollKey])
 
@@ -337,23 +319,6 @@ function makeWorld(R) {
 function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
   const { RAPIER: R, world, dice } = ctx
   ctx.settleSince = null
-
-  // If any dice to re-roll are currently on the board, exit them first
-  const needExit = rollingIndices.filter(i =>
-    dice[i].mesh.visible && (dice[i].phase === 'idle' || dice[i].moveActive)
-  )
-  if (needExit.length > 0) {
-    const now = performance.now()
-    needExit.forEach(i => {
-      const d = dice[i]
-      d.exitFrom.copy(d.mesh.position)
-      d.exitTs = now
-      d.phase = 'exiting'
-      d.moveActive = false
-    })
-    ctx.rollAfterExit = { values, rollingIndices, seed }
-    return
-  }
 
   const rng = mulberry32(seed)
 
@@ -456,21 +421,26 @@ function step(ctx, now, propsRef) {
     if (t >= 1) { d.mesh.position.copy(d.moveTo); d.moveActive = false }
   })
 
-  // ── Exit tween (discarded dice leave the board before new roll) ───────────────
-  const EXIT_DUR = 240
+  // ── Exit tween (discarded dice fade out before new roll) ─────────────────────
   const exiting = dice.filter(d => d.phase === 'exiting')
   exiting.forEach(d => {
-    const t = (now - d.exitTs) / EXIT_DUR
+    const dur = d.exitDur ?? 600
+    const t = (now - d.exitTs) / dur
     const c = Math.min(t, 1)
     d.mesh.position.x = d.exitFrom.x
-    d.mesh.position.y = d.exitFrom.y - c * c * 7
-    d.mesh.position.z = d.exitFrom.z + c * 1.5
-    if (t >= 1) { d.mesh.visible = false; d.phase = 'hidden' }
+    d.mesh.position.y = d.exitFrom.y - c * c * 2
+    d.mesh.position.z = d.exitFrom.z + c * 0.4
+    d.mesh.material.forEach(mat => { mat.opacity = 1 - c })
+    if (t >= 1) {
+      d.mesh.visible = false
+      d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
+      d.phase = 'hidden'
+    }
   })
-  if (ctx.rollAfterExit && exiting.length > 0 && exiting.every(d => d.phase === 'hidden')) {
-    const { values, rollingIndices, seed } = ctx.rollAfterExit
-    ctx.rollAfterExit = null
-    doRoll(ctx, values, rollingIndices, seed)
+  if (ctx.onExitDone && exiting.length > 0 && exiting.every(d => d.phase === 'hidden')) {
+    const cb = ctx.onExitDone
+    ctx.onExitDone = null
+    cb()
   }
 
 }
@@ -501,5 +471,55 @@ function beginPlace(ctx, now) {
     d.ts = now
     d.phase = 'placing'
   })
+}
+
+function rollWithSounds(ctx, values, rollingIndices, seed) {
+  ctx.rollId = (ctx.rollId ?? 0) + 1
+  const myId = ctx.rollId
+
+  const launchPhysics = () => {
+    if (ctx.rollId !== myId) return
+    if (ctx.RAPIER && ctx.world) doRoll(ctx, values, rollingIndices, seed)
+    else ctx.pendingRoll = { values, rollingIndices, seed }
+  }
+
+  const playCubilete = () => {
+    if (ctx.rollId !== myId) return
+    const a = new Audio('/assets/cubilete.mp3')
+    let done = false
+    const go = () => { if (!done) { done = true; launchPhysics() } }
+    const t = setTimeout(go, 4000)
+    a.addEventListener('ended', () => { clearTimeout(t); go() }, { once: true })
+    a.addEventListener('error', () => { clearTimeout(t); go() }, { once: true })
+    a.play().catch(go)
+  }
+
+  const needExit = rollingIndices.filter(i => {
+    const d = ctx.dice[i]
+    return d && d.mesh.visible && (d.phase === 'idle' || d.moveActive)
+  })
+
+  if (needExit.length > 0) {
+    _eliminarAudio.currentTime = 0
+    _eliminarAudio.play().catch(() => {})
+    const elimDur = (isFinite(_eliminarAudio.duration) && _eliminarAudio.duration > 0.05)
+      ? _eliminarAudio.duration * 1000
+      : 800
+
+    const now = performance.now()
+    needExit.forEach(i => {
+      const d = ctx.dice[i]
+      d.exitFrom.copy(d.mesh.position)
+      d.exitTs = now
+      d.exitDur = elimDur
+      d.phase = 'exiting'
+      d.moveActive = false
+      d.mesh.material.forEach(mat => { mat.transparent = true })
+    })
+    ctx.onExitDone = playCubilete
+    return
+  }
+
+  playCubilete()
 }
 
