@@ -13,6 +13,20 @@ function compareHands(h1, h2) {
   return 0
 }
 
+function PalilloMini({ player }) {
+  if (!player) return null
+  if (player.liberado) return <span className="tag tag--liberado" style={{ fontSize: 10 }}>Lib</span>
+  if ((player.breaks ?? 0) >= 3) return <span className="tag tag--capilla" style={{ fontSize: 10 }}>Cap</span>
+  const breaks = player.breaks ?? 0
+  return (
+    <span className="palillo">
+      {[0, 1, 2].map(i => (
+        <span key={i} className={i < 3 - breaks ? 'palillo__seg' : 'palillo__seg palillo__seg--roto'} />
+      ))}
+    </span>
+  )
+}
+
 const style = `
 @keyframes animacion_next_player_in {
   from { transform: translateX(-110vw); }
@@ -24,10 +38,7 @@ const style = `
 }
 `
 
-// Velado de la partida + "JUGADOR SIGUIENTE" entrando de izquierda al centro,
-// con la jugada a superar y un contador de 30s. El turno siguiente no empieza
-// hasta pulsar Continuar (o agotarse el contador, que continúa solo).
-export default function AnimacionNextPlayer({ room, closing, onContinue, onDone }) {
+export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinue, onDone }) {
   const [exitPhase, setExitPhase] = useState(null) // null | 'out' | 'fade'
   const [secondsLeft, setSecondsLeft] = useState(null)
 
@@ -42,6 +53,8 @@ export default function AnimacionNextPlayer({ room, closing, onContinue, onDone 
     const id = setInterval(update, 500)
     return () => clearInterval(id)
   }, [room.continueDeadline])
+
+  const currentPlayer = room.players[room.currentPlayerIndex]
 
   // Jugada a superar: la mejor mano de los jugadores ya plantados
   let toBeat = null
@@ -59,8 +72,8 @@ export default function AnimacionNextPlayer({ room, closing, onContinue, onDone 
         <div className="next-player-content">
           <img
             className="next-player-img"
-            src="/assets/jugador-siguiente.png"
-            alt="Jugador siguiente"
+            src={isMyTurn ? '/assets/jugador-siguiente.png' : '/assets/turno-de.png'}
+            alt={isMyTurn ? 'És tu turno' : 'És el turno de...'}
             style={{
               animation: exitPhase
                 ? `animacion_next_player_out 450ms ease-in forwards`
@@ -68,6 +81,12 @@ export default function AnimacionNextPlayer({ room, closing, onContinue, onDone 
             }}
             onAnimationEnd={() => { if (exitPhase === 'out') setExitPhase('fade') }}
           />
+          {!exitPhase && currentPlayer && (
+            <div className="next-player-name-pill">
+              <span className="next-player-name-pill__name">{currentPlayer.name}</span>
+              <PalilloMini player={currentPlayer} />
+            </div>
+          )}
           {!exitPhase && toBeat && (
             <div className="next-player-hand">
               <p className="next-player-hand__title">Jugada a superar</p>

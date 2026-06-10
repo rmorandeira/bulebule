@@ -290,6 +290,23 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+.next-player-name-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50px;
+  padding: 10px 22px;
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  animation: next-player-btn-in 0.25s ease-out 0.45s both;
+}
+
+.next-player-name-pill__name {
+  color: var(--text);
+}
+
 .next-player-hand {
   display: flex;
   flex-direction: column;

@@ -484,6 +484,7 @@ export default function GameBoard({ room, myId, onLeave }) {
       {nextPlayerVisible && (
         <AnimacionNextPlayer
           room={room}
+          isMyTurn={isMyTurn}
           closing={!awaitingContinue}
           onContinue={() => socket.emit('continue_turn')}
           onDone={() => setNextPlayerVisible(false)}
