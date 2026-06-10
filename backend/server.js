@@ -165,17 +165,21 @@ function clearContinueTimer(room) {
 
 // Pausa entre jugadores: el siguiente (bot o humano) no empieza hasta que
 // alguien pulse Continuar o expire el contador de 30s
+const BOT_CONTINUE_TIMEOUT = 3_000;
+
 function awaitContinue(room) {
   clearContinueTimer(room);
   room.awaitingContinue = true;
-  room.continueDeadline = Date.now() + CONTINUE_TIMEOUT;
+  const nextPlayer = room.players[room.currentPlayerIndex];
+  const timeout = nextPlayer?.isBot ? BOT_CONTINUE_TIMEOUT : CONTINUE_TIMEOUT;
+  room.continueDeadline = Date.now() + timeout;
   const code = room.code;
   room.continueTimerId = setTimeout(() => {
     const r = rooms[code];
     if (!r || r.phase !== 'playing' || !r.awaitingContinue) return;
     proceedTurn(r);
     broadcast(code);
-  }, CONTINUE_TIMEOUT);
+  }, timeout);
 }
 
 function proceedTurn(room) {

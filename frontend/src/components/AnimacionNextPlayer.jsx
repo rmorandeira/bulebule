@@ -102,7 +102,7 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
             </div>
           )}
         </div>
-        {!exitPhase && (
+        {!exitPhase && isMyTurn && (
           <div className="next-player-footer">
             {secondsLeft !== null && (
               <span className={`next-player-counter${secondsLeft <= 10 ? ' next-player-counter--urgent' : ''}`}>
