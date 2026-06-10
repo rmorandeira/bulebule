@@ -136,6 +136,53 @@ body {
 
 .btn--full { width: 100%; }
 
+/* ── Palillos (vidas) ────────────────────────────────────── */
+.palillo {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.palillo__seg {
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: #c8a165;
+}
+
+.palillo__seg--roto {
+  background: #e3e3e3;
+  transform: rotate(20deg);
+}
+
+.tag {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.tag--capilla { background: #fdecea; color: #c0392b; }
+.tag--liberado { background: #e8f6ec; color: #1e8e4e; }
+
+.results__palillo {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #c0392b;
+}
+
+.results__liberado {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e8e4e;
+}
+
 /* ── Animación "jugador siguiente" ───────────────────────── */
 @keyframes next-player-fade-in {
   from { opacity: 0; }

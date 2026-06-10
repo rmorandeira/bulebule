@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import socket from '../socket'
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
-const MAX_ROUNDS_OPTIONS = [3, 5, 7, 10, 0]
+const MAX_ROUNDS_OPTIONS = [0, 3, 5, 7, 10]
 const ROUNDS_LABEL = { 0: '∞' }
 
 export default function CreateRoom({ playerName, user, onBack }) {
   const [vsBot, setVsBot] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
-  const [maxRounds, setMaxRounds] = useState(5)
+  const [maxRounds, setMaxRounds] = useState(0) // sin límite por defecto
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 

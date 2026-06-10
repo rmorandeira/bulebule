@@ -45,7 +45,7 @@ function genCode() {
 }
 
 function makePlayer(id, name) {
-  return { id, name, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [] };
+  return { id, name, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false };
 }
 
 function makeBotPlayer() {
@@ -228,6 +228,9 @@ function sanitize(room) {
     currentPlayerIndex: room.currentPlayerIndex,
     maxRolls: room.maxRolls,
     roundWinnerId: room.roundWinnerId,
+    roundLoserId: room.roundLoserId ?? null,
+    gameLoserId: room.gameLoserId ?? null,
+    endReason: room.endReason ?? null,
     botPhase: room.botPhase ?? null,
     botKeptIndices: room.botKeptIndices ?? [],
     turnDeadline: room.turnDeadline ?? null,
@@ -246,6 +249,8 @@ function sanitize(room) {
       done: p.done,
       hand: p.hand,
       wins: p.wins,
+      breaks: p.breaks ?? 0,
+      liberado: p.liberado ?? false,
       pendingDiscards: p.pendingDiscards ?? [],
     })),
   };
@@ -286,12 +291,13 @@ function startRound(room) {
   room.awaitingContinue = false;
   room.continueDeadline = null;
   room.roundNumber = (room.roundNumber ?? 0) + 1;
+  room.roundLoserId = null;
   for (const p of room.players) {
     p.currentDice = [];
     p.rollHistory = [];
     p.rollDiscardHistory = [];
     p.rollCount = 0;
-    p.done = false;
+    p.done = !!p.liberado; // los liberados ya no juegan
     p.hand = null;
     p.pendingDiscards = [];
   }
@@ -303,6 +309,8 @@ function finishTurn(room, player) {
   clearTurnTimer(room);
   player.done = true;
   player.hand = evaluateHand(player.currentDice);
+  // Repóker (quintilla): el jugador se libera y deja de jugar la partida
+  if (player.hand.rank === 7) player.liberado = true;
   if (room.currentPlayerIndex === (room.startingPlayerIndex ?? 0)) {
     room.maxRolls = player.rollCount;
   }
@@ -322,21 +330,38 @@ function finishTurn(room, player) {
 }
 
 function endRound(room) {
-  let winner = room.players[0];
-  let loser = room.players[0];
-  for (const p of room.players) {
+  // Solo cuentan los que han jugado la ronda (los liberados no tienen mano)
+  const participants = room.players.filter(p => p.hand);
+  let winner = participants[0];
+  let loser = participants[0];
+  for (const p of participants) {
     if (compareHands(p.hand, winner.hand) > 0) winner = p;
     if (compareHands(p.hand, loser.hand) < 0) loser = p;
   }
   winner.wins += 1;
   room.roundWinnerId = winner.id;
-  if (loser.id === winner.id && room.players.length > 1) {
-    loser = room.players.find(p => p.id !== winner.id);
+  if (loser.id === winner.id && participants.length > 1) {
+    loser = participants.find(p => p.id !== winner.id);
   }
+  room.roundLoserId = loser.id;
   room.nextStarterId = loser.id;
 
+  // Sistema de palillos: el perdedor rompe su palillo (hasta 3 veces).
+  // Sin palillo está "en capilla"; si pierde en capilla, pierde la partida.
+  if (loser.breaks >= 3) {
+    room.gameLoserId = loser.id;
+    room.endReason = 'capilla';
+    room.phase = 'finished';
+    return;
+  }
+  loser.breaks += 1;
+
+  // Con límite de rondas: al alcanzarlo, el peor clasificado pierde la partida
   const maxRounds = room.maxRounds ?? 0;
   if (maxRounds > 0 && room.roundNumber >= maxRounds) {
+    const worst = [...room.players].sort((a, b) => a.wins - b.wins || b.breaks - a.breaks)[0];
+    room.gameLoserId = worst.id;
+    room.endReason = 'rounds';
     room.phase = 'finished';
   } else {
     room.phase = 'results';
@@ -349,7 +374,7 @@ io.on('connection', (socket) => {
     cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList) });
   });
 
-  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 5 }, cb) => {
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0 }, cb) => {
     if (!playerName?.trim() || !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     let code;
     do { code = genCode(); } while (rooms[code]);
@@ -545,10 +570,13 @@ io.on('connection', (socket) => {
   socket.on('rematch', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.hostId !== socket.id || room.phase !== 'finished') return cb?.({ ok: false });
-    // Reset wins and start fresh — el perdedor de la partida abre la revancha
-    const loser = room.players.reduce((l, p) => (p.wins < l.wins ? p : l), room.players[0]);
+    // Reset wins y palillos — el perdedor de la partida abre la revancha
+    const loser = room.players.find(p => p.id === room.gameLoserId)
+      ?? room.players.reduce((l, p) => (p.wins < l.wins ? p : l), room.players[0]);
     room.nextStarterId = loser.id;
-    for (const p of room.players) p.wins = 0;
+    room.gameLoserId = null;
+    room.endReason = null;
+    for (const p of room.players) { p.wins = 0; p.breaks = 0; p.liberado = false; }
     room.roundNumber = 0;
     startRound(room);
     cb?.({ ok: true });

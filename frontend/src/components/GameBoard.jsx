@@ -7,6 +7,19 @@ import DiceRollerScene from './DiceRollerScene'
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+// Vidas: palillo con 3 roturas; sin palillo → en capilla; repóker → liberado
+function PalilloState({ player }) {
+  if (player.liberado) return <span className="tag tag--liberado">Liberado</span>
+  if (player.breaks >= 3) return <span className="tag tag--capilla">En capilla</span>
+  return (
+    <span className="palillo" aria-label={`Palillo: ${3 - player.breaks} de 3`}>
+      {[0, 1, 2].map(i => (
+        <span key={i} className={i < 3 - player.breaks ? 'palillo__seg' : 'palillo__seg palillo__seg--roto'} />
+      ))}
+    </span>
+  )
+}
 const needsMotionPermission = () =>
   typeof DeviceMotionEvent !== 'undefined' &&
   typeof DeviceMotionEvent.requestPermission === 'function'
@@ -251,13 +264,26 @@ export default function GameBoard({ room, myId, onLeave }) {
       {/* Fin de partida */}
       {room.phase === 'finished' ? (() => {
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
+        const gameLoser = room.players.find(p => p.id === room.gameLoserId)
         return (
           <>
-            <div className="results__winner">
-              <p className="results__winner-label">Campeón de la partida</p>
-              <h2 className="results__name">{sorted[0]?.name}</h2>
-              <p className="results__hand">{sorted[0]?.wins} victorias</p>
-            </div>
+            {gameLoser ? (
+              <div className="results__winner">
+                <p className="results__winner-label">Pierde la partida</p>
+                <h2 className="results__name">{gameLoser.name}</h2>
+                <p className="results__hand">
+                  {room.endReason === 'rounds'
+                    ? 'El peor clasificado al límite de rondas'
+                    : 'Ha perdido estando en capilla'}
+                </p>
+              </div>
+            ) : (
+              <div className="results__winner">
+                <p className="results__winner-label">Campeón de la partida</p>
+                <h2 className="results__name">{sorted[0]?.name}</h2>
+                <p className="results__hand">{sorted[0]?.wins} victorias</p>
+              </div>
+            )}
             <div className="results__scores">
               <p className="results__scores-title">Clasificación final</p>
               {sorted.map((p, i) => (
@@ -283,6 +309,18 @@ export default function GameBoard({ room, myId, onLeave }) {
               <h2 className="results__name">{winner?.name}</h2>
               <p className="results__hand">{winner?.hand?.desc}</p>
             </div>
+            {(() => {
+              const rl = room.players.find(p => p.id === room.roundLoserId)
+              if (!rl) return null
+              return (
+                <p className="results__palillo">
+                  {rl.name} rompe un palillo{rl.breaks >= 3 ? ' — ¡queda en capilla!' : ''}
+                </p>
+              )
+            })()}
+            {room.players.filter(p => p.liberado && p.hand?.rank === 7).map(p => (
+              <p key={p.id} className="results__liberado">{p.name} se libera con repóker</p>
+            ))}
             <div className="results__hands">
               {room.players.map(p => (
                 <div key={p.id} className={`results__row ${p.id === room.roundWinnerId ? 'results__row--winner' : ''}`}>
@@ -322,6 +360,7 @@ export default function GameBoard({ room, myId, onLeave }) {
                 <div key={p.id} className={`scoreboard__row ${p.id === currentPlayer?.id ? 'scoreboard__row--active' : ''}`}>
                   <span className="scoreboard__pos">{i + 1}.</span>
                   <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                  <PalilloState player={p} />
                   {dice.length > 0 && (
                     <div className="scoreboard__dice">
                       {dice.map((v, j) => <Die key={j} value={v} small />)}
