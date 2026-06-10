@@ -43,7 +43,7 @@ export default function App() {
 
   // ── Música de fondo ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const audio = new Audio('/assets/rollo-de-dados.mp3')
+    const audio = new Audio('/assets/bule-escaleira.mp3')
     audio.loop   = true
     audio.volume = 0.55
     musicRef.current = audio
