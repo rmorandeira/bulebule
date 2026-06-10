@@ -268,8 +268,26 @@ export default function DiceRollerScene({
     const ctx = ctxRef.current
     if (!ctx || !values?.length || !rollingIndices?.length) return
     const s = seed ?? Date.now()
-    if (ctx.RAPIER && ctx.world) doRoll(ctx, [...values], [...rollingIndices], s)
-    else ctx.pendingRoll = { values: [...values], rollingIndices: [...rollingIndices], seed: s }
+
+    let cancelled = false
+    const launch = () => {
+      if (cancelled) return
+      if (ctx.RAPIER && ctx.world) doRoll(ctx, [...values], [...rollingIndices], s)
+      else ctx.pendingRoll = { values: [...values], rollingIndices: [...rollingIndices], seed: s }
+    }
+
+    const a = new Audio('/assets/cubilete.mp3')
+    const fallback = setTimeout(launch, 4000)
+    const onEnd = () => { clearTimeout(fallback); launch() }
+    a.addEventListener('ended', onEnd, { once: true })
+    a.addEventListener('error', onEnd, { once: true })
+    a.play().catch(onEnd)
+
+    return () => {
+      cancelled = true
+      clearTimeout(fallback)
+      a.pause()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollKey])
 
