@@ -296,6 +296,24 @@ export default function DiceRollerScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiscards.join(',')])
 
+  // ── Limpiar dados cuando se reinicia el turno (values → null) ────────────────
+  useEffect(() => {
+    if (values?.length) return
+    const ctx = ctxRef.current
+    if (!ctx) return
+    ctx.dice.forEach(d => {
+      if (d.body) { ctx.world?.removeRigidBody(d.body); d.body = null }
+      d.mesh.visible = false
+      d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
+      d.outline.visible = false
+      d.phase = 'hidden'
+      d.moveActive = false
+    })
+    ctx.settleSince = null
+    ctx.onExitDone = null
+    ctx.pendingRoll = null
+  }, [values])
+
   return <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
 }
 
