@@ -36,8 +36,8 @@ function slotPos(i) {
 
 const PIP = {
   AS: [0,0,0, 0,1,0, 0,0,0],
-  '8': [1,1,1, 1,0,1, 1,1,1],  // 8 puntos rojos, centro vacío
-  '7': [1,0,1, 1,0,1, 1,0,1],  // 6 puntos, dos columnas
+  '8': [1,1,1, 1,0,1, 1,1,1],  // 8 puntos rojos: 3+2+3
+  '7': [1,1,1, 0,1,0, 1,1,1],  // 7 puntos negros
 }
 
 function makeTex(value) {
@@ -57,7 +57,7 @@ function makeTex(value) {
   ctx.lineTo(0, r); ctx.arcTo(0, 0, r, 0, r)
   ctx.closePath(); ctx.fill()
   if (value in PIP) {
-    ctx.fillStyle = '#c0392b'
+    ctx.fillStyle = value === '7' ? '#1a1a1a' : '#c0392b'
     const pr = S*0.065, m = S*0.22, st = (S-m*2)/2
     PIP[value].forEach((on, i) => {
       if (!on) return
@@ -353,22 +353,25 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
     dice[i].value = values[i]
 
     // Launch from bottom edge (front of scene) toward top (back of scene)
-    const startX = (slot - (rollingIndices.length - 1) / 2) * 1.1 + (rng() - .5) * 0.5
-    const startZ = 2.8 + (rng() - .5) * 0.4
-    const startY = FY + 0.7 + slot * 0.2
+    // Wide X spread reduces stacking probability
+    const startX = (slot - (rollingIndices.length - 1) / 2) * 1.6 + (rng() - .5) * 0.4
+    const startZ = 2.8 + (rng() - .5) * 0.3
+    const startY = FY + 0.7 + slot * 0.15
 
     const bd = R.RigidBodyDesc.dynamic()
       .setTranslation(startX, startY, startZ)
+      .setLinearDamping(0.4)
+      .setAngularDamping(0.4)
       .setLinvel(
-        (rng() - .5) * 3,
-        9 + rng() * 5,
+        (rng() - .5) * 2,
+        9 + rng() * 4,
         -5 - rng() * 3
       )
-      .setAngvel({ x: (rng()-.5)*30, y: (rng()-.5)*30, z: (rng()-.5)*30 })
+      .setAngvel({ x: (rng()-.5)*25, y: (rng()-.5)*25, z: (rng()-.5)*25 })
 
     const body = world.createRigidBody(bd)
     world.createCollider(
-      R.ColliderDesc.cuboid(DIE/2, DIE/2, DIE/2).setRestitution(0.35).setFriction(0.7),
+      R.ColliderDesc.cuboid(DIE/2, DIE/2, DIE/2).setRestitution(0.2).setFriction(0.9),
       body
     )
 
@@ -477,14 +480,15 @@ function beginPlace(ctx, now) {
   ctx.dice.forEach((d, i) => {
     if (d.phase !== 'rolling') return
     if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
-    // Read physical top face — becomes the game value reported to server
+    // Read physical top face before snapping Y
     d.value = getTopFace(d.mesh)
     const { x, z } = slotPos(i)
+    // Always snap to floor — prevents stacked dice appearing elevated
+    d.mesh.position.y = REST_Y
     d.fp.copy(d.mesh.position)
     d.tp.set(x, REST_Y, z)
     d.ts = now
     d.phase = 'placing'
-    // physical rotation preserved as-is
   })
 }
 

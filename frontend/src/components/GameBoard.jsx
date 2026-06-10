@@ -36,14 +36,20 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [pendingDiscards, setPendingDiscards] = useState([])
   const [shakeEnabled, setShakeEnabled] = useState(false)
   const [showAlaCaida, setShowAlaCaida] = useState(false)
-  const [botDisplayedKept, setBotDisplayedKept] = useState([])
+  const [botDiscards, setBotDiscards] = useState([])
   const [timeLeft, setTimeLeft] = useState(null)
   const [rollingIndices, setRollingIndices] = useState([])
   const [sceneValues, setSceneValues] = useState(null)
   const [rollSeed, setRollSeed] = useState(null)
+  const [scoreboardDice, setScoreboardDice] = useState({})
+  const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
+  const allowUnloadRef = useRef(false)
   const lastFacesRef = useRef(null)
   const prevDoneRef = useRef({})
   const botReadyTimerRef = useRef(null)
+  const botReadySentRef = useRef(false)
+  const botSettledRef = useRef(false)
+  const prevBotPhaseRef = useRef(null)
   const prevRollCountRef = useRef({})
 
   const me = room.players.find(p => p.id === myId)
@@ -62,6 +68,11 @@ export default function GameBoard({ room, myId, onLeave }) {
     setSceneValues(null)
     setRollSeed(null)
   }, [room.roundNumber, room.currentPlayerIndex])
+
+  // Reset dados del marcador al empezar nueva ronda
+  useEffect(() => {
+    setScoreboardDice({})
+  }, [room.roundNumber])
 
   // Detectar nueva tirada (cualquier jugador) → disparar animación 3D con semilla
   useEffect(() => {
@@ -108,7 +119,58 @@ export default function GameBoard({ room, myId, onLeave }) {
 
   function handleNextRound() { socket.emit('next_round') }
   function handleRematch() { socket.emit('rematch') }
-  function handleLeave() { socket.emit('leave_room'); onLeave() }
+
+  function confirmLeave() {
+    allowUnloadRef.current = true
+    socket.emit('leave_room')
+    if (leaveIntent === 'refresh') {
+      // Pequeño margen para que leave_room llegue antes de recargar
+      setTimeout(() => window.location.reload(), 150)
+    } else {
+      onLeave()
+    }
+  }
+
+  // Aviso nativo si se recarga/cierra desde el propio navegador
+  useEffect(() => {
+    function onBeforeUnload(e) {
+      if (allowUnloadRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
+
+  // Pull-to-refresh en móvil → modal de confirmación (el nativo está
+  // desactivado con overscroll-behavior-y en index.css)
+  useEffect(() => {
+    let startX = null, startY = null, triggered = false
+    function onTouchStart(e) {
+      if (window.scrollY > 0) { startY = null; return }
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+      triggered = false
+    }
+    function onTouchMove(e) {
+      if (startY === null || triggered) return
+      const dy = e.touches[0].clientY - startY
+      const dx = Math.abs(e.touches[0].clientX - startX)
+      if (dy > 90 && dy > dx * 2 && window.scrollY <= 0) {
+        triggered = true
+        setLeaveIntent('refresh')
+      }
+    }
+    function onTouchEnd() { startY = null }
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchmove', onTouchMove, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [])
 
   // Shake to roll
   useEffect(() => {
@@ -150,31 +212,52 @@ export default function GameBoard({ room, myId, onLeave }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerDoneKey])
 
-  // Bot timing (sin 3D: esperas fijas)
+  // Bot: tras tirar espera a que los dados caigan y se paren (onSettled de la
+  // escena 3D); después marca sus descartes de uno en uno cada 300ms y relanza.
   const botPhase = room.botPhase
   useEffect(() => {
     clearTimeout(botReadyTimerRef.current)
-    setBotDisplayedKept([])
+
+    if (botPhase !== prevBotPhaseRef.current) {
+      prevBotPhaseRef.current = botPhase
+      botReadySentRef.current = false
+      botSettledRef.current = false
+      setBotDiscards([])
+    }
     if (!botPhase) return
+
+    const emitBotReady = () => {
+      if (botReadySentRef.current) return
+      botReadySentRef.current = true
+      socket.emit('bot_ready')
+    }
 
     if (botPhase === 'rolled') {
       if (showAlaCaida) return
-      botReadyTimerRef.current = setTimeout(() => socket.emit('bot_ready'), 800)
+      if (botSettledRef.current) {
+        // Los dados ya se pararon mientras se mostraba el toast
+        emitBotReady()
+      } else {
+        // Fallback por si la animación nunca llega a dispararse
+        botReadyTimerRef.current = setTimeout(emitBotReady, 8000)
+      }
       return () => clearTimeout(botReadyTimerRef.current)
     }
 
     if (botPhase === 'picking') {
-      const indices = room.botKeptIndices ?? []
+      const kept = room.botKeptIndices ?? []
+      const discards = [0, 1, 2, 3, 4].filter(i => !kept.includes(i))
       let i = 0
-      const showNext = () => {
-        if (i < indices.length) {
-          setBotDisplayedKept(prev => [...prev, indices[i++]])
-          botReadyTimerRef.current = setTimeout(showNext, 200)
+      const pickNext = () => {
+        if (i < discards.length) {
+          const idx = discards[i++]
+          setBotDiscards(prev => [...prev, idx])
+          botReadyTimerRef.current = setTimeout(pickNext, 300)
         } else {
-          botReadyTimerRef.current = setTimeout(() => socket.emit('bot_ready'), 200)
+          botReadyTimerRef.current = setTimeout(emitBotReady, 300)
         }
       }
-      botReadyTimerRef.current = setTimeout(showNext, 200)
+      botReadyTimerRef.current = setTimeout(pickNext, 300)
       return () => clearTimeout(botReadyTimerRef.current)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,7 +277,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   return (
     <div className="screen game">
       <nav className="navbar">
-        <button className="navbar__exit" onClick={handleLeave}>← Salir</button>
+        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')}>← Salir</button>
         <span className="navbar__round">
           Ronda {room.roundNumber}{room.maxRounds > 0 ? ` / ${room.maxRounds}` : ''}
         </span>
@@ -265,32 +348,51 @@ export default function GameBoard({ room, myId, onLeave }) {
         <>
           <div className="scoreboard">
             <p className="scoreboard__title">Clasificación</p>
-            {[...room.players].sort((a, b) => b.wins - a.wins).map((p, i) => (
-              <div key={p.id} className={`scoreboard__row ${p.id === currentPlayer?.id ? 'scoreboard__row--active' : ''}`}>
-                <span className="scoreboard__pos">{i + 1}.</span>
-                <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
-                {p.currentDice?.length > 0 && (
-                  <div className="scoreboard__dice">
-                    {p.currentDice.map((v, j) => <Die key={j} value={v} small />)}
-                  </div>
-                )}
-                <span className="scoreboard__wins">{p.wins}</span>
-              </div>
-            ))}
+            {[...room.players].sort((a, b) => b.wins - a.wins).map((p, i) => {
+              const isRolling = rollingIndices.length > 0 && p.id === currentPlayer?.id
+              const dice = isRolling
+                ? (scoreboardDice[p.id] ?? [])
+                : (scoreboardDice[p.id] ?? p.currentDice ?? [])
+              return (
+                <div key={p.id} className={`scoreboard__row ${p.id === currentPlayer?.id ? 'scoreboard__row--active' : ''}`}>
+                  <span className="scoreboard__pos">{i + 1}.</span>
+                  <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                  {dice.length > 0 && (
+                    <div className="scoreboard__dice">
+                      {dice.map((v, j) => <Die key={j} value={v} small />)}
+                    </div>
+                  )}
+                  <span className="scoreboard__wins">{p.wins}</span>
+                </div>
+              )
+            })}
           </div>
 
           <div className="dice-box">
             <DiceRollerScene
               values={sceneValues}
               rollingIndices={rollingIndices}
-              pendingDiscards={pendingDiscards}
+              pendingDiscards={isMyTurn ? pendingDiscards : botDiscards}
               interactive={isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0}
               onDieClick={toggleDiscard}
               seed={rollSeed}
               onSettled={(faces) => {
                 setRollingIndices([])
-                if (faces?.length === 5) lastFacesRef.current = faces
+                if (faces?.length === 5) {
+                  lastFacesRef.current = faces
+                  setScoreboardDice(prev => ({ ...prev, [currentPlayer?.id]: faces }))
+                }
                 if (isMyTurn && faces?.length === 5) socket.emit('report_faces', { faces })
+                // Bot: los dados ya han caído y están parados → puede decidir
+                if (currentPlayer?.isBot && room.botPhase === 'rolled') {
+                  botSettledRef.current = true
+                  if (faces?.length === 5) socket.emit('report_faces', { faces })
+                  if (!showAlaCaida && !botReadySentRef.current) {
+                    botReadySentRef.current = true
+                    clearTimeout(botReadyTimerRef.current)
+                    socket.emit('bot_ready')
+                  }
+                }
               }}
             />
           </div>
@@ -364,6 +466,19 @@ export default function GameBoard({ room, myId, onLeave }) {
       )}
 
       {showAlaCaida && <AlaCaidaToast onDone={() => setShowAlaCaida(false)} />}
+
+      {leaveIntent && (
+        <div className="modal-overlay">
+          <div className="modal" role="alertdialog" aria-modal="true">
+            <h2 className="modal__title">Abandonar la partida</h2>
+            <p className="modal__text">¿Estás seguro de que quieres abandonar la partida?</p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setLeaveIntent(null)}>Continuar</button>
+              <button className="btn btn--primary" onClick={confirmLeave}>Abandonar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

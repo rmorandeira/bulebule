@@ -106,9 +106,12 @@ function botAct(code) {
   if (room.botPhase === 'picking') {
     // Frontend finished showing selection — do the re-roll now
     const keptIndices = room.botKeptIndices || [];
+    const discarded = bot.currentDice.map((_, i) => i).filter(i => !keptIndices.includes(i));
     bot.rollHistory.push([...bot.currentDice]);
+    bot.rollDiscardHistory.push(discarded);
     bot.currentDice = bot.currentDice.map((d, i) => keptIndices.includes(i) ? d : rollDie());
     bot.rollCount++;
+    bot.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
     room.botPhase = 'rolled';
     room.botKeptIndices = [];
     broadcast(code);
@@ -134,6 +137,7 @@ function botAct(code) {
   // First roll
   bot.currentDice = Array.from({ length: 5 }, rollDie);
   bot.rollCount = 1;
+  bot.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
   room.botPhase = 'rolled';
   room.botKeptIndices = [];
   broadcast(code);
@@ -169,6 +173,7 @@ function startTurnTimer(room) {
     if (player.rollCount === 0) {
       player.currentDice = Array.from({ length: 5 }, rollDie);
       player.rollCount = 1;
+      player.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
       r.turnDeadline = null;
       broadcast(code);
       startTurnTimer(r);
@@ -234,7 +239,10 @@ function broadcastRoomList() {
 
 function startRound(room) {
   room.phase = 'playing';
-  room.currentPlayerIndex = 0;
+  // El perdedor de la ronda anterior abre la siguiente
+  const starterIdx = room.players.findIndex(p => p.id === room.nextStarterId);
+  room.startingPlayerIndex = starterIdx !== -1 ? starterIdx : 0;
+  room.currentPlayerIndex = room.startingPlayerIndex;
   room.maxRolls = null;
   room.roundWinnerId = null;
   room.botPhase = null;
@@ -251,19 +259,27 @@ function startRound(room) {
     p.pendingDiscards = [];
   }
   startTurnTimer(room);
+  if (room.players[room.currentPlayerIndex]?.isBot) runBotTurn(room.code);
 }
 
 function finishTurn(room, player) {
   clearTurnTimer(room);
   player.done = true;
   player.hand = evaluateHand(player.currentDice);
-  if (room.currentPlayerIndex === 0) {
+  if (room.currentPlayerIndex === (room.startingPlayerIndex ?? 0)) {
     room.maxRolls = player.rollCount;
   }
-  const next = room.players.findIndex((p, i) => i > room.currentPlayerIndex && !p.done);
+  // Orden circular: el que abre la ronda puede no ser el índice 0
+  const n = room.players.length;
+  let next = -1;
+  for (let step = 1; step < n; step++) {
+    const idx = (room.currentPlayerIndex + step) % n;
+    if (!room.players[idx].done) { next = idx; break; }
+  }
   if (next !== -1) {
     room.currentPlayerIndex = next;
     startTurnTimer(room);
+    if (room.players[next].isBot) runBotTurn(room.code);
   } else {
     endRound(room);
   }
@@ -271,11 +287,17 @@ function finishTurn(room, player) {
 
 function endRound(room) {
   let winner = room.players[0];
+  let loser = room.players[0];
   for (const p of room.players) {
     if (compareHands(p.hand, winner.hand) > 0) winner = p;
+    if (compareHands(p.hand, loser.hand) < 0) loser = p;
   }
   winner.wins += 1;
   room.roundWinnerId = winner.id;
+  if (loser.id === winner.id && room.players.length > 1) {
+    loser = room.players.find(p => p.id !== winner.id);
+  }
+  room.nextStarterId = loser.id;
 
   const maxRounds = room.maxRounds ?? 0;
   if (maxRounds > 0 && room.roundNumber >= maxRounds) {
@@ -430,7 +452,9 @@ io.on('connection', (socket) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
-    if (player.id !== socket.id || player.done || player.rollCount === 0) return cb?.({ ok: false });
+    // En salas vsBot el cliente del humano reporta también las caras físicas del bot
+    const canReport = player.id === socket.id || (room.vsBot && player.isBot);
+    if (!canReport || player.done || player.rollCount === 0) return cb?.({ ok: false });
     const VALID = new Set(['AS', 'K', 'Q', 'J', '8', '7']);
     if (!Array.isArray(faces) || faces.length !== 5 || !faces.every(f => VALID.has(f))) return cb?.({ ok: false });
     player.currentDice = faces;
@@ -454,12 +478,6 @@ io.on('connection', (socket) => {
     finishTurn(room, player);
     cb?.({ ok: true });
     broadcast(room.code);
-
-    // Trigger bot if it's now its turn
-    const next = room.players[room.currentPlayerIndex];
-    if (next?.isBot && !next.done && room.phase === 'playing') {
-      runBotTurn(room.code);
-    }
   });
 
   socket.on('bot_ready', (cb) => {
@@ -483,7 +501,9 @@ io.on('connection', (socket) => {
   socket.on('rematch', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.hostId !== socket.id || room.phase !== 'finished') return cb?.({ ok: false });
-    // Reset wins and start fresh
+    // Reset wins and start fresh — el perdedor de la partida abre la revancha
+    const loser = room.players.reduce((l, p) => (p.wins < l.wins ? p : l), room.players[0]);
+    room.nextStarterId = loser.id;
     for (const p of room.players) p.wins = 0;
     room.roundNumber = 0;
     startRound(room);

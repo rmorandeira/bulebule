@@ -4,7 +4,7 @@ const SWIPE_THRESHOLD = 40
 
 const PIP_PATTERNS = {
   'AS': [0,0,0, 0,1,0, 0,0,0],  // 1 pip centro — rojo
-  '8':  [1,1,1, 1,1,1, 1,1,1],  // 9 pips lleno — rojo
+  '8':  [1,1,1, 0,1,1, 1,1,1],  // 8 pips — rojo
   '7':  [1,1,1, 0,1,0, 1,1,1],  // 7 pips — negro
 }
 

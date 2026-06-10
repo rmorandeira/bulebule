@@ -17,6 +17,11 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body {
+  /* Desactiva el pull-to-refresh nativo; en partida lo gestiona un modal propio */
+  overscroll-behavior-y: none;
+}
+
 body {
   font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
   background: #f0ede8;
@@ -122,6 +127,12 @@ body {
 
 .pip--red { background: #c0392b; }
 
+/* Cara del 8: centra los dos pips de la fila central (media columna + medio gap a la izquierda) */
+.die-face-pips:has(> .pip:nth-child(6)) > .pip:nth-child(5),
+.die-face-pips:has(> .pip:nth-child(6)) > .pip:nth-child(6) {
+  transform: translateX(-73.7%);
+}
+
 
 .die--interactive:active {
   transform: scale(0.93);
@@ -168,6 +179,51 @@ body {
 }
 
 .btn--full { width: 100%; }
+
+/* ── Modal de confirmación ───────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(225, 225, 225, 0.92);
+  border-radius: 24px;
+  padding: 40px 24px 28px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.modal__title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 26px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+
+.modal__text {
+  font-size: 17px;
+  line-height: 1.4;
+  margin-bottom: 32px;
+}
+
+.modal__actions {
+  display: flex;
+  gap: 12px;
+}
+
+.modal__actions .btn { flex: 1; }
 
 /* ── Input ───────────────────────────────────────────────── */
 .input {
