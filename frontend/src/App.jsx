@@ -36,12 +36,13 @@ export default function App() {
     return p?.toUpperCase() || null
   })
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
-  const swRegistered = useRef(false)
-  const musicRef     = useRef(null)
-  const musicOnRef   = useRef(musicOn)
-  musicOnRef.current = musicOn
+  const swRegistered  = useRef(false)
+  const musicRef      = useRef(null)
+  const gameMusicRef  = useRef(null)
+  const musicOnRef    = useRef(musicOn)
+  musicOnRef.current  = musicOn
 
-  // ── Música de fondo ─────────────────────────────────────────────────────────
+  // ── Música de lobby ──────────────────────────────────────────────────────────
   useEffect(() => {
     const audio = new Audio('/assets/bule-escaleira.mp3')
     audio.loop   = true
@@ -51,7 +52,6 @@ export default function App() {
     function tryPlay() {
       if (musicOnRef.current) audio.play().catch(() => {})
     }
-    // Arranca en el primer gesto (política de autoplay del navegador)
     document.addEventListener('click',      tryPlay, { once: true })
     document.addEventListener('touchstart', tryPlay, { once: true })
 
@@ -62,13 +62,25 @@ export default function App() {
     }
   }, [])
 
-  // ── Para al entrar en partida o al silenciar, reanuda al salir ───────────────
+  // ── Música de partida ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const audio = new Audio('/assets/dice-lemonlight.mp3')
+    audio.loop   = true
+    audio.volume = 0.2
+    gameMusicRef.current = audio
+    return () => { audio.pause() }
+  }, [])
+
+  // ── Lobby: para en partida o al silenciar; partida: para en lobby o al silenciar
   const inGame = !!(room && room.phase !== 'lobby')
   useEffect(() => {
-    const audio = musicRef.current
-    if (!audio) return
-    if (inGame || !musicOn) audio.pause()
-    else                    audio.play().catch(() => {})
+    const lobby = musicRef.current
+    const game  = gameMusicRef.current
+    if (!lobby || !game) return
+    if (inGame || !musicOn) lobby.pause()
+    else                    lobby.play().catch(() => {})
+    if (!inGame || !musicOn) game.pause()
+    else                     game.play().catch(() => {})
   }, [inGame, musicOn])
 
   function toggleMusic() {
