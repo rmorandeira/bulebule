@@ -231,7 +231,7 @@ export default function DiceRollerScene({
     const ctx = {
       renderer, scene, camera, dice,
       RAPIER: null, world: null,
-      pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null,
+      pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null, tempBodies: [],
     }
     ctxRef.current = ctx
 
@@ -345,6 +345,7 @@ export default function DiceRollerScene({
 
 function makeWorld(R) {
   const w = new R.World({ x: 0, y: -28, z: 0 })
+  w.timestep = w.timestep * 1.15
   const fixed = (tx, ty, tz) => w.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(tx, ty, tz))
   const box   = (b, hx, hy, hz) => w.createCollider(R.ColliderDesc.cuboid(hx, hy, hz).setRestitution(0.35).setFriction(0.7), b)
   // floor
@@ -361,6 +362,17 @@ function makeWorld(R) {
 function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
   const { RAPIER: R, world, dice } = ctx
   ctx.settleSince = null
+
+  // Fixed ghost colliders for idle dice so incoming dice bounce off them
+  ctx.tempBodies.forEach(b => world.removeRigidBody(b))
+  ctx.tempBodies = []
+  dice.forEach((d, i) => {
+    if (d.phase !== 'idle' || rollingIndices.includes(i)) return
+    const p = d.mesh.position
+    const body = world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(p.x, p.y, p.z))
+    world.createCollider(R.ColliderDesc.cuboid(DIE / 2, DIE / 2, DIE / 2).setRestitution(0.1).setFriction(0.9), body)
+    ctx.tempBodies.push(body)
+  })
 
   const rng = mulberry32(seed)
 
@@ -500,6 +512,8 @@ function beginFace(ctx, now) {
 }
 
 function beginPlace(ctx, now) {
+  ctx.tempBodies.forEach(b => ctx.world.removeRigidBody(b))
+  ctx.tempBodies = []
   ctx.dice.forEach((d, i) => {
     if (d.phase !== 'rolling') return
     if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
