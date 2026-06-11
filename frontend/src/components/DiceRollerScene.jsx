@@ -392,12 +392,13 @@ function makeWorld(R) {
   const box   = (b, hx, hy, hz) => w.createCollider(R.ColliderDesc.cuboid(hx, hy, hz).setRestitution(0.35).setFriction(0.7), b)
   // floor
   box(fixed(0, FY, 0), WX, 0.1, WZ)
-  // 4 walls
+  // 4 walls + ceiling — fully enclosed box so dice can never escape
   const wh = 4, wy = FY + wh
   box(fixed( WX, wy, 0), 0.1, wh, WZ)
   box(fixed(-WX, wy, 0), 0.1, wh, WZ)
   box(fixed(0, wy,  WZ), WX, wh, 0.1)
   box(fixed(0, wy, -WZ), WX, wh, 0.1)
+  box(fixed(0, FY + wh * 2, 0), WX, 0.1, WZ)  // ceiling
   return w
 }
 
@@ -427,7 +428,7 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
     // Launch from bottom edge (front of scene) toward top (back of scene)
     // Wide X spread reduces stacking probability
     const startX = (slot - (rollingIndices.length - 1) / 2) * 1.6 + (rng() - .5) * 0.4
-    const startZ = 2.8 + (rng() - .5) * 0.3
+    const startZ = WZ - DIE - 0.5 - rng() * 0.4   // always inside front wall
     const startY = FY + 0.7 + slot * 0.15
 
     const bd = R.RigidBodyDesc.dynamic()
