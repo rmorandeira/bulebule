@@ -44,9 +44,9 @@ function makeToonGradient() {
   const cv = document.createElement('canvas')
   cv.width = 4; cv.height = 1
   const c = cv.getContext('2d')
-  c.fillStyle = '#4A3000'; c.fillRect(0, 0, 1, 1)   // shadow
-  c.fillStyle = '#8C6010'; c.fillRect(1, 0, 1, 1)   // mid-dark
-  c.fillStyle = '#D0A040'; c.fillRect(2, 0, 1, 1)   // mid-light
+  c.fillStyle = '#383838'; c.fillRect(0, 0, 1, 1)   // shadow
+  c.fillStyle = '#888888'; c.fillRect(1, 0, 1, 1)   // mid-dark
+  c.fillStyle = '#D4D4D4'; c.fillRect(2, 0, 1, 1)   // mid-light
   c.fillStyle = '#FFFFFF'; c.fillRect(3, 0, 1, 1)   // lit
   const tex = new THREE.CanvasTexture(cv)
   tex.magFilter = THREE.NearestFilter
@@ -73,7 +73,7 @@ function makeTex(value) {
   const ctx = cv.getContext('2d')
 
   // Amber base — fills full canvas so rounded-box corners blend
-  ctx.fillStyle = '#CC8C14'
+  ctx.fillStyle = '#E4D9C3'
   ctx.fillRect(0, 0, S, S)
 
   const isRed = RED_FACES.has(value)
@@ -233,7 +233,7 @@ export default function DiceRollerScene({
       // Cell-shading outline — black by default, red when marked for discard
       const outline = new THREE.Mesh(
         new RoundedBoxGeometry(DIE * 1.11, DIE * 1.11, DIE * 1.11, 4, DIE * 0.14),
-        new THREE.MeshBasicMaterial({ color: 0x1a0a00, side: THREE.BackSide })
+        new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide })
       )
       outline.visible = true
       mesh.add(outline)
@@ -351,7 +351,7 @@ export default function DiceRollerScene({
     ctx.dice.forEach((d, i) => {
       if (d.phase !== 'idle') return
       const discarded = pendingDiscards.includes(i)
-      d.outline.material.color.set(discarded ? 0xe63946 : 0x1a0a00)
+      d.outline.material.color.set(discarded ? 0xe63946 : 0x000000)
       d.mesh.material.forEach(mat => {
         mat.transparent = discarded
         mat.opacity = discarded ? 0.5 : 1.0
@@ -384,7 +384,7 @@ export default function DiceRollerScene({
       if (d.body) { ctx.world?.removeRigidBody(d.body); d.body = null }
       d.mesh.visible = false
       d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
-      d.outline.material.color.set(0x1a0a00)
+      d.outline.material.color.set(0x000000)
       d.outline.material.transparent = false
       d.outline.material.opacity = 1.0
       d.phase = 'hidden'
@@ -467,7 +467,7 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
     dice[i].moveActive = false
     dice[i].mesh.visible = true
     dice[i].mesh.position.set(startX, startY, startZ)
-    dice[i].outline.material.color.set(0x1a0a00)
+    dice[i].outline.material.color.set(0x000000)
     dice[i].outline.material.transparent = false
     dice[i].outline.material.opacity = 1.0
     dice[i].mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
@@ -556,7 +556,7 @@ function step(ctx, now, propsRef) {
       d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
       d.outline.material.transparent = false
       d.outline.material.opacity = 1.0
-      d.outline.material.color.set(0x1a0a00)
+      d.outline.material.color.set(0x000000)
       d.phase = 'hidden'
     }
   })
