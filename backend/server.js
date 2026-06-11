@@ -276,7 +276,7 @@ function broadcast(code) {
 }
 
 function broadcastRoomList() {
-  const list = Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList);
+  const list = Object.values(rooms).filter(r => !r.vsBot && !r.isPrivate).map(sanitizeForList);
   io.emit('rooms_list', list);
 }
 
@@ -397,10 +397,10 @@ function endRound(room) {
 io.on('connection', (socket) => {
 
   socket.on('list_rooms', (cb) => {
-    cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList) });
+    cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot && !r.isPrivate).map(sanitizeForList) });
   });
 
-  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0 }, cb) => {
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false }, cb) => {
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     if (!vsBot && !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     let code;
@@ -411,6 +411,7 @@ io.on('connection', (socket) => {
       name: roomName.trim(),
       maxPlayers: vsBot ? Math.min(Math.max(2, parseInt(maxPlayers) || 2), 5) : Math.min(Math.max(2, parseInt(maxPlayers) || 6), 10),
       vsBot,
+      isPrivate: !!isPrivate,
       maxRounds: Math.max(0, parseInt(maxRounds) || 0),
       hostId: socket.id,
       phase: 'lobby',
