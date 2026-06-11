@@ -328,6 +328,26 @@ export default function DiceRollerScene({
     const ctx = ctxRef.current
     if (!ctx) return
     const now = performance.now()
+
+    // Zoom out when any discard active so all dice are visible; in when cleared
+    if (pendingDiscards.length > 0) {
+      ctx.camTween = {
+        fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
+        toPos: new THREE.Vector3(0, 7, 5.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+        ts: now, dur: 400,
+      }
+    } else {
+      ctx.camTween = {
+        fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
+        toPos: new THREE.Vector3(0, 4.2, 3.2), toLook: new THREE.Vector3(0, -1.5, -0.2),
+        ts: now, dur: 500,
+      }
+    }
+
+    // Discarded dice: arrange centered, evenly spaced — no overlaps
+    const discardedIdle = pendingDiscards.filter(i => ctx.dice[i]?.phase === 'idle')
+    const nDiscard = discardedIdle.length
+
     ctx.dice.forEach((d, i) => {
       if (d.phase !== 'idle') return
       const discarded = pendingDiscards.includes(i)
@@ -337,9 +357,13 @@ export default function DiceRollerScene({
         mat.opacity = discarded ? 0.5 : 1.0
       })
       const { x, z: slotZ } = slotPos(i)
-      const targetZ = discarded ? DISCARD_Z : slotZ
       d.moveFrom.copy(d.mesh.position)
-      d.moveTo.set(x, REST_Y, targetZ)
+      if (discarded) {
+        const slot = discardedIdle.indexOf(i)
+        d.moveTo.set((slot - (nDiscard - 1) / 2) * 1.78, REST_Y, DISCARD_Z)
+      } else {
+        d.moveTo.set(x, REST_Y, slotZ)
+      }
       d.moveTs = now
       d.moveActive = true
     })
