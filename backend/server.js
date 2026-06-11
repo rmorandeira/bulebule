@@ -308,14 +308,45 @@ function startRound(room) {
   awaitContinue(room);
 }
 
+function applyRoundLoss(room, loser) {
+  room.roundLoserId = loser.id;
+  room.nextStarterId = loser.id;
+  if (loser.breaks >= 3) {
+    room.gameLoserId = loser.id;
+    room.endReason = 'capilla';
+    room.phase = 'finished';
+    return;
+  }
+  loser.breaks += 1;
+  const maxRounds = room.maxRounds ?? 0;
+  if (maxRounds > 0 && room.roundNumber >= maxRounds) {
+    const worst = [...room.players].sort((a, b) => a.wins - b.wins || b.breaks - a.breaks)[0];
+    room.gameLoserId = worst.id;
+    room.endReason = 'rounds';
+    room.phase = 'finished';
+  } else {
+    room.phase = 'results';
+  }
+}
+
 function finishTurn(room, player) {
   clearTurnTimer(room);
   player.done = true;
   player.hand = evaluateHand(player.currentDice);
-  // Repóker (quintilla): el jugador se libera y deja de jugar la partida
-  if (player.hand.rank === 7) player.liberado = true;
+  if (player.hand.rank === 7) {
+    player.liberado = true;
+    player.hand = null; // el liberado no compite por el peor puesto
+  }
   if (room.currentPlayerIndex === (room.startingPlayerIndex ?? 0)) {
     room.maxRolls = player.rollCount;
+  }
+  // Si acaba de liberarse, comprobar si queda ≤1 jugador sin jugar → fin automático
+  if (player.liberado) {
+    const pending = room.players.filter(p => !p.done && !p.liberado);
+    if (pending.length <= 1) {
+      endRound(room);
+      return;
+    }
   }
   // Orden circular: el que abre la ronda puede no ser el índice 0
   const n = room.players.length;
@@ -333,8 +364,22 @@ function finishTurn(room, player) {
 }
 
 function endRound(room) {
-  // Solo cuentan los que han jugado la ronda (los liberados no tienen mano)
+  // Solo participan en ganador/perdedor los no-liberados que jugaron la ronda
   const participants = room.players.filter(p => p.hand);
+  const liberadoWinner = room.players.find(p => p.liberado);
+
+  if (participants.length === 0) {
+    // Caso auto-pérdida: el jugador no-liberado pierde sin haber jugado
+    const autoLoser = room.players.find(p => !p.liberado);
+    if (!autoLoser) return; // no debería ocurrir
+    if (liberadoWinner) {
+      liberadoWinner.wins += 1;
+      room.roundWinnerId = liberadoWinner.id;
+    }
+    applyRoundLoss(room, autoLoser);
+    return;
+  }
+
   let winner = participants[0];
   let loser = participants[0];
   for (const p of participants) {
@@ -346,29 +391,7 @@ function endRound(room) {
   if (loser.id === winner.id && participants.length > 1) {
     loser = participants.find(p => p.id !== winner.id);
   }
-  room.roundLoserId = loser.id;
-  room.nextStarterId = loser.id;
-
-  // Sistema de palillos: el perdedor rompe su palillo (hasta 3 veces).
-  // Sin palillo está "en capilla"; si pierde en capilla, pierde la partida.
-  if (loser.breaks >= 3) {
-    room.gameLoserId = loser.id;
-    room.endReason = 'capilla';
-    room.phase = 'finished';
-    return;
-  }
-  loser.breaks += 1;
-
-  // Con límite de rondas: al alcanzarlo, el peor clasificado pierde la partida
-  const maxRounds = room.maxRounds ?? 0;
-  if (maxRounds > 0 && room.roundNumber >= maxRounds) {
-    const worst = [...room.players].sort((a, b) => a.wins - b.wins || b.breaks - a.breaks)[0];
-    room.gameLoserId = worst.id;
-    room.endReason = 'rounds';
-    room.phase = 'finished';
-  } else {
-    room.phase = 'results';
-  }
+  applyRoundLoss(room, loser);
 }
 
 io.on('connection', (socket) => {
