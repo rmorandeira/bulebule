@@ -392,13 +392,12 @@ function makeWorld(R) {
   const box   = (b, hx, hy, hz) => w.createCollider(R.ColliderDesc.cuboid(hx, hy, hz).setRestitution(0.35).setFriction(0.7), b)
   // floor
   box(fixed(0, FY, 0), WX, 0.1, WZ)
-  // 4 walls + ceiling — fully enclosed box so dice can never escape
+  // 4 walls
   const wh = 4, wy = FY + wh
   box(fixed( WX, wy, 0), 0.1, wh, WZ)
   box(fixed(-WX, wy, 0), 0.1, wh, WZ)
   box(fixed(0, wy,  WZ), WX, wh, 0.1)
   box(fixed(0, wy, -WZ), WX, wh, 0.1)
-  box(fixed(0, FY + wh * 2, 0), WX, 0.1, WZ)  // ceiling
   return w
 }
 
@@ -428,7 +427,7 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
     // Launch from bottom edge (front of scene) toward top (back of scene)
     // Wide X spread reduces stacking probability
     const startX = (slot - (rollingIndices.length - 1) / 2) * 1.6 + (rng() - .5) * 0.4
-    const startZ = WZ - DIE - 0.5 - rng() * 0.4   // always inside front wall
+    const startZ = 2.8 + (rng() - .5) * 0.3
     const startY = FY + 0.7 + slot * 0.15
 
     const bd = R.RigidBodyDesc.dynamic()
@@ -514,15 +513,9 @@ function step(ctx, now, propsRef) {
     let done = true
     placing.forEach(d => {
       const t = Math.min((now - d.ts) / DUR, 1)
-      const te = eio(t)
-      d.mesh.position.lerpVectors(d.fp, d.tp, te)
-      d.mesh.quaternion.slerpQuaternions(d.fq, d.tq, te)
+      d.mesh.position.lerpVectors(d.fp, d.tp, eio(t))
       if (t < 1) done = false
-      else {
-        d.mesh.position.copy(d.tp)
-        d.mesh.quaternion.copy(d.tq)
-        d.phase = 'idle'
-      }
+      else { d.mesh.position.copy(d.tp); d.phase = 'idle' }
     })
     if (done) {
       const faces = ctx.dice.map(d => d.mesh.visible ? getTopFace(d.mesh) : d.value)
@@ -604,13 +597,11 @@ function beginPlace(ctx, now) {
     if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
     // Read physical top face before snapping Y
     d.value = getTopFace(d.mesh)
-    const fi = VALUE_TO_FACE[d.value] ?? 2
     const { x, z } = slotPos(i)
+    // Always snap to floor — prevents stacked dice appearing elevated
     d.mesh.position.y = REST_Y
     d.fp.copy(d.mesh.position)
     d.tp.set(x, REST_Y, z)
-    d.fq.copy(d.mesh.quaternion)       // from: physics rotation
-    d.tq.copy(FACE_UP_QUATS[fi])       // to: flat face-up
     d.ts = now
     d.phase = 'placing'
   })

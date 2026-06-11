@@ -15,7 +15,7 @@ function evaluateHand(dice) {
   const [[topKey, topCount]] = groups;
   const secondCount = groups[1]?.[1] ?? 0;
 
-  if (topCount === 5) return { rank: 7, name: 'Quintilla',      desc: `Quintilla de ${topKey}`,          topKey };
+  if (topCount === 5) return { rank: 7, name: `Repóker de ${topKey}`, desc: `Repóker de ${topKey}`, topKey };
   if (topCount === 4) return { rank: 6, name: 'Póker',          desc: `Póker de ${topKey}`,               topKey };
   if (topCount === 3 && secondCount === 2)
                       return { rank: 5, name: 'Full',           desc: `Full de ${topKey}`,                topKey };
