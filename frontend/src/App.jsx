@@ -10,6 +10,25 @@ function loadUser() {
   try { return JSON.parse(localStorage.getItem('bule_user')) } catch { return null }
 }
 
+const GUEST_NAMES = [
+  'neno', 'el_pirri', 'el_chiri', 'platanito', 'murdoc', 'la_rebekita',
+  'moreno_das_amorosas', 'el_manolo', 'la_choni', 'el_fiti', 'perico',
+  'el_chupi', 'la_niña', 'el_raton', 'churri', 'el_gordo', 'la_flaca',
+  'pepito', 'la_rubia', 'cachopo', 'el_tarchi', 'el_beni', 'la_puri',
+  'xan_o_bravo', 'la_turra', 'el_mago', 'maricarmen', 'el_cabra',
+  'kiko_el_raro', 'la_petra', 'el_señor_proper', 'tio_crispín',
+]
+
+function loadGuestName() {
+  const saved = localStorage.getItem('bule_guest')
+  if (saved) return saved
+  const name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)]
+  const num = String(Math.floor(Math.random() * 900) + 100)
+  const generated = `${name}_${num}`
+  localStorage.setItem('bule_guest', generated)
+  return generated
+}
+
 
 async function setupPush(userId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
@@ -29,7 +48,7 @@ export default function App() {
   const [room, setRoom] = useState(null)
   const [myId, setMyId] = useState(null)
   const [user, setUser] = useState(loadUser)
-  const [playerName, setPlayerName] = useState(() => loadUser()?.name || '')
+  const [playerName, setPlayerName] = useState(() => loadUser()?.name || loadGuestName())
   const [pendingJoinCode, setPendingJoinCode] = useState(() => {
     const p = new URLSearchParams(window.location.search).get('join')
     if (p) window.history.replaceState({}, '', '/')
