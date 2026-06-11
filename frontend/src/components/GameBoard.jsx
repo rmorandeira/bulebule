@@ -7,6 +7,9 @@ import DiceRollerScene from './DiceRollerScene'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
+const DIE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
+const sortDice = arr => [...arr].sort((a, b) => (DIE_RANK[b] ?? 0) - (DIE_RANK[a] ?? 0))
+
 function playDiscardSound() {
   new Audio('/assets/cogerdado.mp3').play().catch(() => {})
 }
@@ -347,7 +350,7 @@ export default function GameBoard({ room, myId, onLeave }) {
                 <div key={p.id} className={`results__row ${p.id === room.roundWinnerId ? 'results__row--winner' : ''} ${p.id === room.roundLoserId ? 'results__row--loser' : ''}`}>
                   <span className="results__player">{p.name}</span>
                   <div className="results__dice">
-                    {p.currentDice?.map((v, i) => <Die key={i} value={v} small />)}
+                    {sortDice(p.currentDice ?? []).map((v, i) => <Die key={i} value={v} small />)}
                   </div>
                   <span className="results__desc">{p.hand?.desc}</span>
                 </div>
@@ -384,7 +387,7 @@ export default function GameBoard({ room, myId, onLeave }) {
                   <PalilloState player={p} />
                   {dice.length > 0 && (
                     <div className="scoreboard__dice">
-                      {dice.map((v, j) => <Die key={j} value={v} small />)}
+                      {sortDice(dice).map((v, j) => <Die key={j} value={v} small />)}
                     </div>
                   )}
                   <span className="scoreboard__wins">{p.wins}</span>

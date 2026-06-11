@@ -13,6 +13,9 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
   const [error, setError] = useState('')
   const [joiningCode, setJoiningCode] = useState(null)
   const [connected, setConnected] = useState(socket.connected)
+  const [codeModal, setCodeModal] = useState(null) // null | room object
+  const [codeInput, setCodeInput] = useState('')
+  const [codeError, setCodeError] = useState('')
   const [animPhase, setAnimPhase] = useState('splash')
   const [bgVisible, setBgVisible] = useState(false)
 
@@ -60,6 +63,28 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
       setJoiningCode(null)
       if (!res?.ok) setError(res?.error || 'No se pudo unir a la sala')
     })
+  }
+
+  function handleJoinClick(room) {
+    if (room.isPrivate) {
+      setCodeModal(room)
+      setCodeInput('')
+      setCodeError('')
+    } else {
+      join(room.code)
+    }
+  }
+
+  function joinByCode() {
+    const entered = codeInput.trim().toUpperCase()
+    if (entered !== codeModal.code) {
+      setCodeError('Código incorrecto')
+      return
+    }
+    setCodeModal(null)
+    setCodeInput('')
+    setCodeError('')
+    join(codeModal.code)
   }
 
   const isFull = (r) => r.playerCount >= r.maxPlayers
@@ -161,7 +186,15 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
                     return (
                       <div key={room.code} className="home__room-card">
                         <div className="home__room-info">
-                          <span className="home__room-name">{room.name}</span>
+                          <span className="home__room-name">
+                            <span>{room.name}</span>
+                            {room.isPrivate && (
+                              <svg className="home__room-lock" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                              </svg>
+                            )}
+                          </span>
                           <div className="home__room-meta">
                             <span>{room.playerCount}/{room.maxPlayers} Jugadores</span>
                             {canJoin
@@ -172,7 +205,7 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
                         </div>
                         <button
                           className="home__join-btn"
-                          onClick={() => join(room.code)}
+                          onClick={() => handleJoinClick(room)}
                           disabled={!canJoin || joiningCode !== null || !connected}
                         >
                           {joiningCode === room.code ? '...' : 'Unirse'}
@@ -187,6 +220,31 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
           </>
         )}
       </div>
+
+      {codeModal && (
+        <div className="modal-overlay" onClick={() => setCodeModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-box__title">Sala privada</h3>
+            <p className="modal-box__hint">Introduce el código de acceso para unirte a <strong>{codeModal.name}</strong></p>
+            <input
+              className="input input--code"
+              maxLength={4}
+              autoFocus
+              value={codeInput}
+              onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeError('') }}
+              onKeyDown={e => e.key === 'Enter' && joinByCode()}
+              placeholder="XXXX"
+            />
+            {codeError && <p className="error">{codeError}</p>}
+            <div className="modal-box__actions">
+              <button className="btn btn--secondary" onClick={() => setCodeModal(null)}>Cancelar</button>
+              <button className="btn btn--primary" onClick={joinByCode} disabled={codeInput.trim().length !== 4}>
+                Unirse
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

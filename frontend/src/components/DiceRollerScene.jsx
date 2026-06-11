@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass }     from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { ShaderPass }     from 'three/examples/jsm/postprocessing/ShaderPass.js'
+import { FXAAShader }     from 'three/examples/jsm/shaders/FXAAShader.js'
 
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
 const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
@@ -168,7 +172,7 @@ export default function DiceRollerScene({
     const W = mount.offsetWidth  || mount.parentElement?.offsetWidth  || 360
     const H = mount.offsetHeight || mount.parentElement?.offsetHeight || 240
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    const renderer = new THREE.WebGLRenderer({ antialias: false })
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setClearColor(0xebebeb)
@@ -178,15 +182,28 @@ export default function DiceRollerScene({
 
     const scene  = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(52, W / H, 0.1, 100)
-    camera.position.set(0, 7, 5.5)
+    camera.position.set(0, 15, 11)
     camera.lookAt(0, FY + 1.5, 0)
+
+    // FXAA post-process composer
+    const composer = new EffectComposer(renderer)
+    composer.addPass(new RenderPass(scene, camera))
+    const fxaa = new ShaderPass(FXAAShader)
+    fxaa.material.uniforms.resolution.value.set(
+      1 / (W * Math.min(window.devicePixelRatio, 2)),
+      1 / (H * Math.min(window.devicePixelRatio, 2))
+    )
+    composer.addPass(fxaa)
 
     // Keep renderer + camera in sync with element size
     const ro = new ResizeObserver(entries => {
       const { width: rW, height: rH } = entries[0].contentRect
       if (rW > 0 && rH > 0) {
+        const pr = Math.min(window.devicePixelRatio, 2)
         renderer.setSize(rW, rH)
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        renderer.setPixelRatio(pr)
+        composer.setSize(rW, rH)
+        fxaa.material.uniforms.resolution.value.set(1 / (rW * pr), 1 / (rH * pr))
         camera.aspect = rW / rH
         camera.updateProjectionMatrix()
       }
@@ -255,7 +272,7 @@ export default function DiceRollerScene({
       renderer, scene, camera, dice,
       RAPIER: null, world: null,
       pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null, tempBodies: [],
-      camCurPos:  new THREE.Vector3(0, 7, 5.5),
+      camCurPos:  new THREE.Vector3(0, 11, 8.25),
       camCurLook: new THREE.Vector3(0, FY + 1.5, 0),
       camTween: null,
     }
@@ -286,7 +303,7 @@ export default function DiceRollerScene({
       if (!alive) return
       ctx.animId = requestAnimationFrame(tick)
       step(ctx, now, propsRef)
-      renderer.render(scene, camera)
+      composer.render()
     }
     ctx.animId = requestAnimationFrame(tick)
 
@@ -362,7 +379,7 @@ export default function DiceRollerScene({
     if (!ctx) return
     ctx.camTween = {
       fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-      toPos: new THREE.Vector3(0, 7, 5.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+      toPos: new THREE.Vector3(0, 11, 8.25), toLook: new THREE.Vector3(0, FY + 1.5, 0),
       ts: performance.now(), dur: 350,
     }
     ctx.dice.forEach(d => {
@@ -435,9 +452,9 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
       .setLinearDamping(0.4)
       .setAngularDamping(0.4)
       .setLinvel(
-        (rng() - .5) * 2,
-        9 + rng() * 4,
-        -5 - rng() * 3
+        (rng() - .5) * 3,
+        2 + rng() * 2,
+        -8 - rng() * 4
       )
       .setAngvel({ x: (rng()-.5)*25, y: (rng()-.5)*25, z: (rng()-.5)*25 })
 
@@ -612,7 +629,7 @@ function rollWithSounds(ctx, values, rollingIndices, seed) {
   const myId = ctx.rollId
   ctx.camTween = {
     fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-    toPos: new THREE.Vector3(0, 7, 5.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+    toPos: new THREE.Vector3(0, 11, 8.25), toLook: new THREE.Vector3(0, FY + 1.5, 0),
     ts: performance.now(), dur: 350,
   }
 

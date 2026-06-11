@@ -55,7 +55,7 @@ body {
   color: var(--die-text);
   font-size: 17px;
   font-weight: 700;
-  border: none;
+  border: 2px solid #000000;
   cursor: default;
   display: flex;
   align-items: center;
@@ -1381,6 +1381,12 @@ body {
   font-size: 15px;
   font-weight: 700;
   color: #111;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.home__room-name span {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1468,6 +1474,91 @@ body {
 }
 .home__create-btn:disabled { opacity: 0.4; cursor: default; }
 .home__create-btn:active:not(:disabled) { opacity: 0.75; }
+
+.home__room-lock { opacity: 0.5; flex-shrink: 0; }
+.home__code-btn {
+  width: 100%;
+  padding: 14px 24px;
+  min-height: 48px;
+  border-radius: 100px;
+  border: 2px solid #111;
+  background: transparent;
+  color: #111;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.home__code-btn:disabled { opacity: 0.4; cursor: default; }
+.home__code-btn:active:not(:disabled) { opacity: 0.6; }
+
+/* ── Private toggle (CreateRoom) ────────────────────────── */
+.private-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+.toggle-switch {
+  width: 50px;
+  height: 28px;
+  border-radius: 28px;
+  border: none;
+  background: #d1d1d1;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch--on { background: var(--primary); }
+.toggle-switch--on::after { transform: translateX(22px); }
+
+/* ── Code modal ─────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal-box__title { font-size: 20px; font-weight: 800; margin: 0; }
+.modal-box__hint { font-size: 14px; color: var(--text-subtle); margin: 0; }
+.input--code {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+.modal-box__actions { display: flex; gap: 10px; }
+.modal-box__actions .btn { flex: 1; }
 
 /* ── Invite friends ─────────────────────────────────────── */
 .invite-section { margin-top: 4px; }

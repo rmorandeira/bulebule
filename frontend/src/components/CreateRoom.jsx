@@ -8,6 +8,7 @@ const ROUNDS_LABEL = { 0: '∞' }
 
 export default function CreateRoom({ playerName, user, onBack }) {
   const [vsBot, setVsBot] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [soloPlayers, setSoloPlayers] = useState(2)
@@ -53,6 +54,7 @@ export default function CreateRoom({ playerName, user, onBack }) {
       maxPlayers: vsBot ? soloPlayers : maxPlayers,
       vsBot,
       maxRounds,
+      isPrivate: !vsBot && isPrivate,
     }, (res) => {
       setLoading(false)
       if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
@@ -101,6 +103,19 @@ export default function CreateRoom({ playerName, user, onBack }) {
             Solo Play
           </button>
         </div>
+
+        {!vsBot && (
+          <div className="private-toggle">
+            <span className="form-label" style={{ margin: 0 }}>Sala privada</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPrivate}
+              className={`toggle-switch ${isPrivate ? 'toggle-switch--on' : ''}`}
+              onClick={() => setIsPrivate(v => !v)}
+            />
+          </div>
+        )}
 
         {!vsBot && (
           <>
