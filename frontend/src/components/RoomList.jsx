@@ -153,23 +153,27 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
             </button>
           </div>
         ) : (
-          <div className="home__guest-card">
-            <div className="home__guest-info">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="home__guest-icon">
-                <circle cx="12" cy="8" r="4"/>
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-              </svg>
-              <div className="home__guest-text">
-                <span className="home__guest-name">{playerName}</span>
-                <span className="home__guest-label">Invitado</span>
+          <>
+            <div className="home__google-row">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError('Error al iniciar sesión con Google')}
+                shape="pill" size="large" text="signin_with" locale="es"
+              />
+            </div>
+            <div className="home__guest-card">
+              <div className="home__guest-avatar">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="4"/>
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                </svg>
+              </div>
+              <div className="home__user-info">
+                <span className="home__user-name">{playerName}</span>
+                <span className="home__user-email">Invitado</span>
               </div>
             </div>
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError('Error al iniciar sesión con Google')}
-              type="icon" shape="circle" size="medium"
-            />
-          </div>
+          </>
         )}
 
         {/* CTA principal */}

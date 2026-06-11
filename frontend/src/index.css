@@ -1277,46 +1277,30 @@ body {
 .home__conn-badge--off { background: #ef4444; color: #fff; }
 
 /* Barra de invitado */
+.home__google-row {
+  display: flex;
+  justify-content: center;
+}
 .home__guest-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  background: rgba(255,255,255,0.18);
+  background: #fff;
   border-radius: 18px;
-  padding: 12px 14px 12px 16px;
-  min-height: 64px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  min-height: 72px;
 }
-.home__guest-info {
+.home__guest-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f0f0f0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.home__guest-icon {
+  justify-content: center;
   flex-shrink: 0;
-  color: rgba(255,255,255,0.7);
-}
-.home__guest-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.home__guest-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.home__guest-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.55);
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  color: #888;
 }
 
 /* Tarjeta de usuario — blanca, sólida */
