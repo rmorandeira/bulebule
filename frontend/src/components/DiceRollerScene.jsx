@@ -40,45 +40,63 @@ const PIP = {
   '7': [1,1,1, 0,1,0, 1,1,1],  // 7 puntos negros
 }
 
+function makeToonGradient() {
+  const cv = document.createElement('canvas')
+  cv.width = 4; cv.height = 1
+  const c = cv.getContext('2d')
+  c.fillStyle = '#4A3000'; c.fillRect(0, 0, 1, 1)   // shadow
+  c.fillStyle = '#8C6010'; c.fillRect(1, 0, 1, 1)   // mid-dark
+  c.fillStyle = '#D0A040'; c.fillRect(2, 0, 1, 1)   // mid-light
+  c.fillStyle = '#FFFFFF'; c.fillRect(3, 0, 1, 1)   // lit
+  const tex = new THREE.CanvasTexture(cv)
+  tex.magFilter = THREE.NearestFilter
+  tex.minFilter = THREE.NearestFilter
+  return tex
+}
+
+function drawPip(ctx, cx, cy, r) {
+  ctx.fillStyle = '#0A0500'
+  ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#1E0F00'
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = 'rgba(230, 160, 40, 0.15)'
+  ctx.beginPath(); ctx.arc(cx - r * 0.28, cy - r * 0.32, r * 0.48, 0, Math.PI * 2); ctx.fill()
+}
+
 function makeTex(value) {
   const S = 256
   const cv = document.createElement('canvas')
   cv.width = cv.height = S
   const ctx = cv.getContext('2d')
-  // Fill full canvas so corners match the die face color (no black edges)
-  ctx.fillStyle = '#FCF8D3'
+
+  // Amber base — fills full canvas so rounded-box corners blend
+  ctx.fillStyle = '#CC8C14'
   ctx.fillRect(0, 0, S, S)
-  const r = S * 0.18
-  ctx.fillStyle = '#FCF8D3'
-  ctx.beginPath()
-  ctx.moveTo(r, 0); ctx.lineTo(S-r, 0); ctx.arcTo(S, 0, S, r, r)
-  ctx.lineTo(S, S-r); ctx.arcTo(S, S, S-r, S, r)
-  ctx.lineTo(r, S); ctx.arcTo(0, S, 0, S-r, r)
-  ctx.lineTo(0, r); ctx.arcTo(0, 0, r, 0, r)
-  ctx.closePath(); ctx.fill()
+
   if (value in PIP) {
-    ctx.fillStyle = value === '7' ? '#1a1a1a' : '#c0392b'
-    const pr = S*0.065, m = S*0.22, st = (S-m*2)/2
+    const pr = S * 0.086, m = S * 0.215, st = (S - m * 2) / 2
     PIP[value].forEach((on, i) => {
       if (!on) return
-      let cx = m + (i%3)*st
-      // Cara del 8: los dos pips de la fila central van centrados entre columnas
-      if (value === '8' && Math.floor(i/3) === 1) cx -= st/2
-      ctx.beginPath()
-      ctx.arc(cx, m+Math.floor(i/3)*st, pr, 0, Math.PI*2)
-      ctx.fill()
+      let cx = m + (i % 3) * st
+      if (value === '8' && Math.floor(i / 3) === 1) cx -= st / 2
+      drawPip(ctx, cx, m + Math.floor(i / 3) * st, pr)
     })
   } else {
-    ctx.fillStyle = value === 'K' ? '#c0392b' : '#1a1a1a'
-    ctx.font = `bold ${S*.55}px Georgia,serif`
+    const label = value === 'AS' ? 'A' : value
+    ctx.font = `900 ${S * 0.56}px Georgia,serif`
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.fillText(value === 'AS' ? 'A' : value, S/2, S/2)
+    ctx.fillStyle = '#0A0500'
+    ctx.fillText(label, S / 2 + 2, S / 2 + 3)
+    ctx.fillStyle = '#1E0F00'
+    ctx.fillText(label, S / 2, S / 2)
   }
   return new THREE.CanvasTexture(cv)
 }
 
+const _toonGrad = makeToonGradient()
+
 function buildMats() {
-  return FACE_VALUES.map(v => new THREE.MeshStandardMaterial({ map: makeTex(v), roughness: 0.4 }))
+  return FACE_VALUES.map(v => new THREE.MeshToonMaterial({ map: makeTex(v), gradientMap: _toonGrad }))
 }
 
 const eio = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
@@ -170,8 +188,8 @@ export default function DiceRollerScene({
     })
     ro.observe(mount)
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.75))
-    const dir = new THREE.DirectionalLight(0xffffff, 1.2)
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45))
+    const dir = new THREE.DirectionalLight(0xffffff, 1.8)
     dir.position.set(4, 10, 6)
     dir.castShadow = true
     dir.shadow.mapSize.width  = 1024
@@ -207,12 +225,12 @@ export default function DiceRollerScene({
       mesh.receiveShadow = true
       scene.add(mesh)
 
-      // Red outline shown when die is marked for discard
+      // Cell-shading outline — black by default, red when marked for discard
       const outline = new THREE.Mesh(
-        new THREE.BoxGeometry(DIE * 1.18, DIE * 1.18, DIE * 1.18),
-        new THREE.MeshBasicMaterial({ color: 0xe63946, side: THREE.BackSide })
+        new RoundedBoxGeometry(DIE * 1.11, DIE * 1.11, DIE * 1.11, 4, DIE * 0.14),
+        new THREE.MeshBasicMaterial({ color: 0x1a0a00, side: THREE.BackSide })
       )
-      outline.visible = false
+      outline.visible = true
       mesh.add(outline)
 
       return {
@@ -305,7 +323,7 @@ export default function DiceRollerScene({
     ctx.dice.forEach((d, i) => {
       if (d.phase !== 'idle') return
       const discarded = pendingDiscards.includes(i)
-      d.outline.visible = discarded
+      d.outline.material.color.set(discarded ? 0xe63946 : 0x1a0a00)
       d.mesh.material.forEach(mat => {
         mat.transparent = discarded
         mat.opacity = discarded ? 0.5 : 1.0
@@ -329,7 +347,9 @@ export default function DiceRollerScene({
       if (d.body) { ctx.world?.removeRigidBody(d.body); d.body = null }
       d.mesh.visible = false
       d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
-      d.outline.visible = false
+      d.outline.material.color.set(0x1a0a00)
+      d.outline.material.transparent = false
+      d.outline.material.opacity = 1.0
       d.phase = 'hidden'
       d.moveActive = false
     })
@@ -410,7 +430,9 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
     dice[i].moveActive = false
     dice[i].mesh.visible = true
     dice[i].mesh.position.set(startX, startY, startZ)
-    dice[i].outline.visible = false
+    dice[i].outline.material.color.set(0x1a0a00)
+    dice[i].outline.material.transparent = false
+    dice[i].outline.material.opacity = 1.0
     dice[i].mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
   })
 }
@@ -485,9 +507,14 @@ function step(ctx, now, propsRef) {
     d.mesh.position.y = d.exitFrom.y - c * c * 2
     d.mesh.position.z = d.exitFrom.z + c * 0.4
     d.mesh.material.forEach(mat => { mat.opacity = 1 - c })
+    d.outline.material.transparent = true
+    d.outline.material.opacity = 1 - c
     if (t >= 1) {
       d.mesh.visible = false
       d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
+      d.outline.material.transparent = false
+      d.outline.material.opacity = 1.0
+      d.outline.material.color.set(0x1a0a00)
       d.phase = 'hidden'
     }
   })
