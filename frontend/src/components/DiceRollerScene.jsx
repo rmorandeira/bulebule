@@ -54,12 +54,15 @@ function makeToonGradient() {
   return tex
 }
 
-function drawPip(ctx, cx, cy, r) {
-  ctx.fillStyle = '#0A0500'
+// AS, K, 8 → rojo   |   Q, J, 7 → negro
+const RED_FACES = new Set(['AS', 'K', '8'])
+
+function drawPip(ctx, cx, cy, r, isRed) {
+  ctx.fillStyle = isRed ? '#6A0000' : '#0A0500'
   ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#1E0F00'
+  ctx.fillStyle = isRed ? '#C02010' : '#1E0F00'
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = 'rgba(230, 160, 40, 0.15)'
+  ctx.fillStyle = isRed ? 'rgba(255,120,80,0.18)' : 'rgba(230,160,40,0.15)'
   ctx.beginPath(); ctx.arc(cx - r * 0.28, cy - r * 0.32, r * 0.48, 0, Math.PI * 2); ctx.fill()
 }
 
@@ -73,21 +76,23 @@ function makeTex(value) {
   ctx.fillStyle = '#CC8C14'
   ctx.fillRect(0, 0, S, S)
 
+  const isRed = RED_FACES.has(value)
+
   if (value in PIP) {
     const pr = S * 0.086, m = S * 0.215, st = (S - m * 2) / 2
     PIP[value].forEach((on, i) => {
       if (!on) return
       let cx = m + (i % 3) * st
       if (value === '8' && Math.floor(i / 3) === 1) cx -= st / 2
-      drawPip(ctx, cx, m + Math.floor(i / 3) * st, pr)
+      drawPip(ctx, cx, m + Math.floor(i / 3) * st, pr, isRed)
     })
   } else {
     const label = value === 'AS' ? 'A' : value
     ctx.font = `900 ${S * 0.56}px Georgia,serif`
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.fillStyle = '#0A0500'
+    ctx.fillStyle = isRed ? '#6A0000' : '#0A0500'
     ctx.fillText(label, S / 2 + 2, S / 2 + 3)
-    ctx.fillStyle = '#1E0F00'
+    ctx.fillStyle = isRed ? '#C02010' : '#1E0F00'
     ctx.fillText(label, S / 2, S / 2)
   }
   return new THREE.CanvasTexture(cv)
