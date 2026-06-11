@@ -369,6 +369,25 @@ export default function DiceRollerScene({
       d.moveTs = now
       d.moveActive = true
     })
+
+    // Zoom out adaptively when many discards spread the dice wide
+    if (nDiscard >= 4) {
+      const extra = nDiscard - 3  // 1 for 4 dice, 2 for 5 dice
+      ctx.camTween = {
+        fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
+        toPos: new THREE.Vector3(0, 5.5 + extra * 1.75, 4.3 + extra * 1.35),
+        toLook: new THREE.Vector3(0, FY + 1.5, 0),
+        ts: now, dur: 350,
+      }
+    } else if (nDiscard > 0) {
+      // Fewer discards: snap back to normal settled zoom
+      ctx.camTween = {
+        fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
+        toPos: new THREE.Vector3(0, 5.5, 4.3),
+        toLook: new THREE.Vector3(0, FY + 1.5, 0),
+        ts: now, dur: 350,
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiscards.join(',')])
 
