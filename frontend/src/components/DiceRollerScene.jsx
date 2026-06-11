@@ -329,21 +329,6 @@ export default function DiceRollerScene({
     if (!ctx) return
     const now = performance.now()
 
-    // Zoom out when any discard active so all dice are visible; in when cleared
-    if (pendingDiscards.length > 0) {
-      ctx.camTween = {
-        fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-        toPos: new THREE.Vector3(0, 7, 5.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
-        ts: now, dur: 400,
-      }
-    } else {
-      ctx.camTween = {
-        fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-        toPos: new THREE.Vector3(0, 4.2, 3.2), toLook: new THREE.Vector3(0, -1.5, -0.2),
-        ts: now, dur: 500,
-      }
-    }
-
     // Discarded dice: arrange centered, evenly spaced — no overlaps
     const discardedIdle = pendingDiscards.filter(i => ctx.dice[i]?.phase === 'idle')
     const nDiscard = discardedIdle.length
@@ -524,7 +509,7 @@ function step(ctx, now, propsRef) {
       propsRef.current.onSettled?.(faces)
       ctx.camTween = {
         fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-        toPos: new THREE.Vector3(0, 4.2, 3.2), toLook: new THREE.Vector3(0, -1.5, -0.2),
+        toPos: new THREE.Vector3(0, 5.5, 4.3), toLook: new THREE.Vector3(0, FY + 1.5, 0),
         ts: now, dur: 700,
       }
     }
