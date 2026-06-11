@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import socket from '../socket'
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
+const SOLO_PLAYERS_OPTIONS = [2, 3, 4, 5]
 const MAX_ROUNDS_OPTIONS = [0, 3, 5, 7, 10]
 const ROUNDS_LABEL = { 0: '∞' }
 
@@ -9,6 +10,7 @@ export default function CreateRoom({ playerName, user, onBack }) {
   const [vsBot, setVsBot] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
+  const [soloPlayers, setSoloPlayers] = useState(2)
   const [maxRounds, setMaxRounds] = useState(0) // sin límite por defecto
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -42,19 +44,20 @@ export default function CreateRoom({ playerName, user, onBack }) {
 
   function create() {
     if (!playerName.trim()) return setError('Vuelve atrás e introduce tu nombre')
-    if (!roomName.trim()) return setError('Ponle un nombre a la sala')
+    if (!vsBot && !roomName.trim()) return setError('Ponle un nombre a la sala')
     setLoading(true)
+    const name = vsBot ? 'Solo Play' : roomName.trim()
     socket.emit('create_room', {
       playerName: playerName.trim(),
-      roomName: roomName.trim(),
-      maxPlayers: vsBot ? 2 : maxPlayers,
+      roomName: name,
+      maxPlayers: vsBot ? soloPlayers : maxPlayers,
       vsBot,
       maxRounds,
     }, (res) => {
       setLoading(false)
       if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
       invitedFriends.forEach(friend => {
-        socket.emit('invite_to_room', { toUserId: friend.userId, roomCode: res.code, roomName: roomName.trim() })
+        socket.emit('invite_to_room', { toUserId: friend.userId, roomCode: res.code, roomName: name })
       })
     })
   }
@@ -95,20 +98,24 @@ export default function CreateRoom({ playerName, user, onBack }) {
                 <line x1="12" y1="15" x2="12" y2="17"/>
               </svg>
             </span>
-            Vs máquina
+            Solo Play
           </button>
         </div>
 
-        <label className="form-label">Nombre de la sala</label>
-        <input
-          className="input"
-          placeholder={vsBot ? 'Ej: Mi partida' : 'Ej: Sala de Roi'}
-          value={roomName}
-          maxLength={20}
-          autoFocus
-          onChange={e => { setRoomName(e.target.value); setError('') }}
-          onKeyDown={e => e.key === 'Enter' && create()}
-        />
+        {!vsBot && (
+          <>
+            <label className="form-label">Nombre de la sala</label>
+            <input
+              className="input"
+              placeholder="Ej: Sala de Roi"
+              value={roomName}
+              maxLength={20}
+              autoFocus
+              onChange={e => { setRoomName(e.target.value); setError('') }}
+              onKeyDown={e => e.key === 'Enter' && create()}
+            />
+          </>
+        )}
 
         <label className="form-label">Rondas</label>
         <div className="max-players-selector">
@@ -123,7 +130,25 @@ export default function CreateRoom({ playerName, user, onBack }) {
           ))}
         </div>
 
-        {!vsBot && (
+        {vsBot ? (
+          <>
+            <label className="form-label">Jugadores</label>
+            <div className="max-players-selector">
+              {SOLO_PLAYERS_OPTIONS.map(n => (
+                <button
+                  key={n}
+                  className={`max-players-btn ${soloPlayers === n ? 'max-players-btn--active' : ''}`}
+                  onClick={() => setSoloPlayers(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="create-room__bot-hint">
+              Tú + {soloPlayers - 1} bot{soloPlayers - 1 > 1 ? 's' : ''}
+            </p>
+          </>
+        ) : (
           <>
             <label className="form-label">Jugadores máximos</label>
             <div className="max-players-selector">
@@ -138,12 +163,6 @@ export default function CreateRoom({ playerName, user, onBack }) {
               ))}
             </div>
           </>
-        )}
-
-        {vsBot && (
-          <p className="create-room__bot-hint">
-            Jugarás contra el ordenador en una partida de 2 jugadores.
-          </p>
         )}
 
         {canInvite && (

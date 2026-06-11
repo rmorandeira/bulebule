@@ -173,7 +173,7 @@ export default function DiceRollerScene({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setClearColor(0xebebeb)
     renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.shadowMap.type = THREE.PCFShadowMap
     mount.appendChild(renderer.domElement)
 
     const scene  = new THREE.Scene()
@@ -483,10 +483,23 @@ function step(ctx, now, propsRef) {
 
     const slow = rolling.every(d => mag(d.body.linvel()) < .25 && mag(d.body.angvel()) < .25)
     if (slow) {
-      if (!ctx.settleSince) ctx.settleSince = now
-      else if (now - ctx.settleSince > 200) {
+      // Detect stacked dice (center elevated more than 65% of die height above floor)
+      const stacked = rolling.filter(d => d.body.translation().y > REST_Y + DIE * 0.65)
+      if (stacked.length > 0) {
+        // Nudge stacked dice sideways so they slide off and reach the floor
+        stacked.forEach(d => {
+          d.body.applyImpulse(
+            { x: (Math.random() - 0.5) * 0.4, y: 0, z: (Math.random() - 0.5) * 0.4 },
+            true
+          )
+        })
         ctx.settleSince = null
-        beginPlace(ctx, now)
+      } else {
+        if (!ctx.settleSince) ctx.settleSince = now
+        else if (now - ctx.settleSince > 200) {
+          ctx.settleSince = null
+          beginPlace(ctx, now)
+        }
       }
     } else {
       ctx.settleSince = null

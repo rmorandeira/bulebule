@@ -48,8 +48,8 @@ function makePlayer(id, name) {
   return { id, name, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false };
 }
 
-function makeBotPlayer() {
-  return { ...makePlayer(BOT_ID, BOT_NAME), isBot: true };
+function makeBotPlayer(n = 0) {
+  return { ...makePlayer(`${BOT_ID}_${n}`, n === 0 ? BOT_NAME : `${BOT_NAME} ${n + 1}`), isBot: true };
 }
 
 // Returns indices of dice the bot wants to keep
@@ -378,14 +378,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0 }, cb) => {
-    if (!playerName?.trim() || !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
+    if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
+    if (!vsBot && !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     let code;
     do { code = genCode(); } while (rooms[code]);
 
     const room = {
       code,
       name: roomName.trim(),
-      maxPlayers: vsBot ? 2 : Math.min(Math.max(2, parseInt(maxPlayers) || 6), 10),
+      maxPlayers: vsBot ? Math.min(Math.max(2, parseInt(maxPlayers) || 2), 5) : Math.min(Math.max(2, parseInt(maxPlayers) || 6), 10),
       vsBot,
       maxRounds: Math.max(0, parseInt(maxRounds) || 0),
       hostId: socket.id,
@@ -399,7 +400,8 @@ io.on('connection', (socket) => {
     };
 
     if (vsBot) {
-      room.players.push(makeBotPlayer());
+      const numBots = room.maxPlayers - 1;
+      for (let i = 0; i < numBots; i++) room.players.push(makeBotPlayer(i));
       startRound(room); // skip lobby phase
     }
 
