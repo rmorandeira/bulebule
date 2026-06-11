@@ -19,7 +19,7 @@ const FACE_UP_QUATS = (() => {
   ]
 })()
 
-const DIE    = 1.05
+const DIE    = 1.21
 const FY     = -2.5   // floor Y
 const WX     = 4.2    // wall half-extent X
 const WZ     = 3.4    // wall half-extent Z
@@ -30,8 +30,8 @@ const DISCARD_Z   =  2.2   // discard zone (furthest forward)
 
 // Dice 0,1 → back row (2 dice centered); 2,3,4 → front row (3 dice)
 function slotPos(i) {
-  if (i < 2) return { x: (i - 0.5) * 1.55, z: ROW_BACK_Z }
-  return { x: (i - 3) * 1.55, z: ROW_FRONT_Z }
+  if (i < 2) return { x: (i - 0.5) * 1.78, z: ROW_BACK_Z }
+  return { x: (i - 3) * 1.78, z: ROW_FRONT_Z }
 }
 
 const PIP = {
