@@ -255,6 +255,9 @@ export default function DiceRollerScene({
       renderer, scene, camera, dice,
       RAPIER: null, world: null,
       pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null, tempBodies: [],
+      camCurPos:  new THREE.Vector3(0, 7, 5.5),
+      camCurLook: new THREE.Vector3(0, FY + 1.5, 0),
+      camTween: null,
     }
     ctxRef.current = ctx
 
@@ -348,6 +351,11 @@ export default function DiceRollerScene({
     if (values?.length) return
     const ctx = ctxRef.current
     if (!ctx) return
+    ctx.camTween = {
+      fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
+      toPos: new THREE.Vector3(0, 7, 5.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+      ts: performance.now(), dur: 350,
+    }
     ctx.dice.forEach(d => {
       if (d.body) { ctx.world?.removeRigidBody(d.body); d.body = null }
       d.mesh.visible = false
@@ -490,6 +498,11 @@ function step(ctx, now, propsRef) {
     if (done) {
       const faces = ctx.dice.map(d => d.mesh.visible ? getTopFace(d.mesh) : d.value)
       propsRef.current.onSettled?.(faces)
+      ctx.camTween = {
+        fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
+        toPos: new THREE.Vector3(0, 4.2, 3.2), toLook: new THREE.Vector3(0, -1.5, -0.2),
+        ts: now, dur: 700,
+      }
     }
   }
 
@@ -529,6 +542,17 @@ function step(ctx, now, propsRef) {
     cb()
   }
 
+  // ── Camera tween (zoom in/out) ────────────────────────────────────────────────
+  if (ctx.camTween) {
+    const t = Math.min((now - ctx.camTween.ts) / ctx.camTween.dur, 1)
+    const te = eio(t)
+    ctx.camCurPos.lerpVectors(ctx.camTween.fromPos, ctx.camTween.toPos, te)
+    ctx.camCurLook.lerpVectors(ctx.camTween.fromLook, ctx.camTween.toLook, te)
+    ctx.camera.position.copy(ctx.camCurPos)
+    ctx.camera.lookAt(ctx.camCurLook)
+    if (t >= 1) ctx.camTween = null
+  }
+
 }
 
 function beginFace(ctx, now) {
@@ -564,6 +588,11 @@ function beginPlace(ctx, now) {
 function rollWithSounds(ctx, values, rollingIndices, seed) {
   ctx.rollId = (ctx.rollId ?? 0) + 1
   const myId = ctx.rollId
+  ctx.camTween = {
+    fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
+    toPos: new THREE.Vector3(0, 7, 5.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+    ts: performance.now(), dur: 350,
+  }
 
   const launchPhysics = () => {
     if (ctx.rollId !== myId) return
