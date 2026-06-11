@@ -42,6 +42,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   const [rollSeed, setRollSeed] = useState(null)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
+  const [rolling, setRolling] = useState(false)
   const [nextPlayerVisible, setNextPlayerVisible] = useState(false)
 
   // animacion_next_player: el servidor pausa el turno (awaitingContinue) hasta
@@ -121,16 +122,18 @@ export default function GameBoard({ room, myId, onLeave }) {
   }
 
   const handleRoll = useCallback(() => {
-    if (!canRoll) return
+    if (!canRoll || rolling) return
+    setRolling(true)
     const keptIndices = [0,1,2,3,4].filter(i =>
       me?.currentDice?.[i] != null && !pendingDiscards.includes(i)
     )
     setPendingDiscards([])
     setRollingIndices([])   // limpia hasta que llegue la respuesta del servidor
     socket.emit('roll', { keptIndices }, (res) => {
+      setRolling(false)
       if (!res?.ok && res?.error) alert(res.error)
     })
-  }, [canRoll, me, pendingDiscards])
+  }, [canRoll, rolling, me, pendingDiscards])
 
   function handleStand() {
     socket.emit('stand', { faces: lastFacesRef.current }, (res) => {
@@ -472,7 +475,7 @@ export default function GameBoard({ room, myId, onLeave }) {
                     <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0}>
                       Plantarse
                     </button>
-                    <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll}>
+                    <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll || rolling}>
                       Tirar dados
                     </button>
                   </div>
