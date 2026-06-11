@@ -301,6 +301,8 @@ export default function GameBoard({ room, myId, onLeave }) {
                 <p className="results__hand">
                   {room.endReason === 'rounds'
                     ? 'El peor clasificado al límite de rondas'
+                    : room.endReason === 'liberado'
+                    ? 'El rival consiguió un Repóker'
                     : 'Ha perdido estando en capilla'}
                 </p>
               </div>

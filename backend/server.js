@@ -368,6 +368,19 @@ function endRound(room) {
   // Solo participan en ganador/perdedor los no-liberados que jugaron la ronda
   const participants = room.players.filter(p => p.hand);
   const liberadoWinner = room.players.find(p => p.liberado);
+  const nonLiberado = room.players.filter(p => !p.liberado);
+
+  // Si hay un liberado y solo queda 1 jugador sin liberar → la partida termina
+  if (liberadoWinner && nonLiberado.length <= 1) {
+    liberadoWinner.wins += 1;
+    room.roundWinnerId = liberadoWinner.id;
+    if (nonLiberado.length === 1) {
+      room.gameLoserId = nonLiberado[0].id;
+      room.endReason = 'liberado';
+    }
+    room.phase = 'finished';
+    return;
+  }
 
   if (participants.length === 0) {
     // Caso auto-pérdida: el jugador no-liberado pierde sin haber jugado
