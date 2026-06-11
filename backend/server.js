@@ -341,10 +341,10 @@ function finishTurn(room, player) {
   if (room.currentPlayerIndex === (room.startingPlayerIndex ?? 0)) {
     room.maxRolls = player.rollCount;
   }
-  // Si acaba de liberarse, comprobar si queda ≤1 jugador sin jugar → fin automático
+  // Si acaba de liberarse y solo queda 1 jugador no-liberado en total → fin
   if (player.liberado) {
-    const pending = room.players.filter(p => !p.done && !p.liberado);
-    if (pending.length <= 1) {
+    const nonLiberado = room.players.filter(p => !p.liberado);
+    if (nonLiberado.length <= 1) {
       endRound(room);
       return;
     }
