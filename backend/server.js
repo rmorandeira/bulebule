@@ -267,6 +267,7 @@ function sanitizeForList(room) {
     playerCount: room.players.length,
     maxPlayers: room.maxPlayers,
     phase: room.phase,
+    isPrivate: !!room.isPrivate,
   };
 }
 
@@ -276,7 +277,7 @@ function broadcast(code) {
 }
 
 function broadcastRoomList() {
-  const list = Object.values(rooms).filter(r => !r.vsBot && !r.isPrivate).map(sanitizeForList);
+  const list = Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList);
   io.emit('rooms_list', list);
 }
 
@@ -397,7 +398,7 @@ function endRound(room) {
 io.on('connection', (socket) => {
 
   socket.on('list_rooms', (cb) => {
-    cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot && !r.isPrivate).map(sanitizeForList) });
+    cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList) });
   });
 
   socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false }, cb) => {
