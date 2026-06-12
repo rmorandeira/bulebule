@@ -490,23 +490,21 @@ io.on('connection', (socket) => {
     if (room.vsBot) return cb?.({ ok: false, error: 'No se puede unir a esta sala' });
     if (room.phase !== 'lobby') return cb?.({ ok: false, error: 'La partida ya ha comenzado' });
 
-    // Rejoin: player with same name whose socket is no longer connected
+    // Rejoin: player with same name already in the lobby (e.g. mobile reconnect)
     const existing = room.players.find(p => p.name === playerName.trim());
     if (existing) {
-      const prevSocket = io.sockets.sockets.get(existing.id);
-      if (!prevSocket || !prevSocket.connected) {
-        const oldId = existing.id;
-        existing.id = socket.id;
-        if (room.hostId === oldId) room.hostId = socket.id;
-        socket.join(normalCode);
-        socket.data.roomCode = normalCode;
-        console.log(`join_room rejoin: "${room.name}" player="${playerName}"`);
-        cb?.({ ok: true, code: normalCode });
-        broadcast(normalCode);
-        broadcastRoomList();
-        return;
-      }
-      return cb?.({ ok: false, error: 'Ya hay un jugador con ese nombre en la sala' });
+      const oldId = existing.id;
+      existing.id = socket.id;
+      if (room.hostId === oldId) room.hostId = socket.id;
+      const prevSocket = io.sockets.sockets.get(oldId);
+      if (prevSocket) prevSocket.leave(normalCode);
+      socket.join(normalCode);
+      socket.data.roomCode = normalCode;
+      console.log(`join_room rejoin: "${room.name}" player="${playerName}"`);
+      cb?.({ ok: true, code: normalCode });
+      broadcast(normalCode);
+      broadcastRoomList();
+      return;
     }
 
     if (room.players.length >= room.maxPlayers) return cb?.({ ok: false, error: 'Sala llena' });
