@@ -58,6 +58,8 @@ export default function App() {
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
   const swRegistered       = useRef(false)
   const sessionTrackedRef  = useRef(false)
+  const roomRef            = useRef(null)
+  const playerNameRef      = useRef(playerName)
   const musicRef           = useRef(null)
   const gameMusicRef  = useRef(null)
   const musicOnRef    = useRef(musicOn)
@@ -151,8 +153,18 @@ export default function App() {
     if (!user) track('session_guest')
   }, [myId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => { roomRef.current = room }, [room])
+  useEffect(() => { playerNameRef.current = playerName }, [playerName])
+
   useEffect(() => {
-    socket.on('connect', () => setMyId(socket.id))
+    socket.on('connect', () => {
+      setMyId(socket.id)
+      // Rejoin lobby after mobile app-switch reconnect
+      const r = roomRef.current
+      if (r?.phase === 'lobby') {
+        socket.emit('join_room', { code: r.code, playerName: playerNameRef.current })
+      }
+    })
     socket.on('room_state', setRoom)
     socket.on('room_destroyed', () => { setRoom(null); setScreen('list') })
     socket.on('room_invite', ({ roomCode, roomName, inviterName }) => {

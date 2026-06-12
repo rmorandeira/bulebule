@@ -484,18 +484,38 @@ io.on('connection', (socket) => {
 
   socket.on('join_room', ({ code, playerName }, cb) => {
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Introduce tu nombre' });
-    const room = rooms[code?.toUpperCase()];
+    const normalCode = code?.toUpperCase();
+    const room = rooms[normalCode];
     if (!room) return cb?.({ ok: false, error: 'Sala no encontrada' });
     if (room.vsBot) return cb?.({ ok: false, error: 'No se puede unir a esta sala' });
     if (room.phase !== 'lobby') return cb?.({ ok: false, error: 'La partida ya ha comenzado' });
-    if (room.players.length >= room.maxPlayers) return cb?.({ ok: false, error: 'Sala llena' });
 
+    // Rejoin: player with same name whose socket is no longer connected
+    const existing = room.players.find(p => p.name === playerName.trim());
+    if (existing) {
+      const prevSocket = io.sockets.sockets.get(existing.id);
+      if (!prevSocket || !prevSocket.connected) {
+        const oldId = existing.id;
+        existing.id = socket.id;
+        if (room.hostId === oldId) room.hostId = socket.id;
+        socket.join(normalCode);
+        socket.data.roomCode = normalCode;
+        console.log(`join_room rejoin: "${room.name}" player="${playerName}"`);
+        cb?.({ ok: true, code: normalCode });
+        broadcast(normalCode);
+        broadcastRoomList();
+        return;
+      }
+      return cb?.({ ok: false, error: 'Ya hay un jugador con ese nombre en la sala' });
+    }
+
+    if (room.players.length >= room.maxPlayers) return cb?.({ ok: false, error: 'Sala llena' });
     room.players.push(makePlayer(socket.id, playerName.trim()));
-    socket.join(code);
-    socket.data.roomCode = code;
+    socket.join(normalCode);
+    socket.data.roomCode = normalCode;
     console.log(`join_room: "${room.name}" player="${playerName}"`);
-    cb?.({ ok: true, code });
-    broadcast(code);
+    cb?.({ ok: true, code: normalCode });
+    broadcast(normalCode);
     broadcastRoomList();
   });
 
