@@ -832,6 +832,23 @@ body {
 .waiting-room__hint { font-size: 13px; color: var(--text-subtle); }
 .waiting-room__waiting { font-size: 14px; color: var(--text-subtle); text-align: center; }
 
+.btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #25D366;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  align-self: flex-start;
+}
+.btn-whatsapp:active { background: #1daf55; transform: scale(0.97); }
+
 .waiting-room__footer { margin-top: auto; }
 
 .player-list { display: flex; flex-direction: column; gap: 2px; }

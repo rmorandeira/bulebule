@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import socket from './socket'
+import { track } from './analytics'
 import RoomList from './components/RoomList'
 import CreateRoom from './components/CreateRoom'
 import WaitingRoom from './components/WaitingRoom'
@@ -55,8 +56,9 @@ export default function App() {
     return p?.toUpperCase() || null
   })
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
-  const swRegistered  = useRef(false)
-  const musicRef      = useRef(null)
+  const swRegistered       = useRef(false)
+  const sessionTrackedRef  = useRef(false)
+  const musicRef           = useRef(null)
   const gameMusicRef  = useRef(null)
   const musicOnRef    = useRef(musicOn)
   musicOnRef.current  = musicOn
@@ -142,6 +144,13 @@ export default function App() {
     }
   }, [])
 
+  // Track session type once after first socket connect
+  useEffect(() => {
+    if (!myId || sessionTrackedRef.current) return
+    sessionTrackedRef.current = true
+    if (!user) track('session_guest')
+  }, [myId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     socket.on('connect', () => setMyId(socket.id))
     socket.on('room_state', setRoom)
@@ -186,6 +195,7 @@ export default function App() {
   }, [pendingJoinCode, myId])
 
   function handleLogin(userData) {
+    track('login_google')
     localStorage.setItem('bule_user', JSON.stringify(userData))
     setUser(userData)
     setPlayerName(userData.name)

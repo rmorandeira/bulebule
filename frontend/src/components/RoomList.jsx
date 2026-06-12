@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import socket from '../socket'
+import { track } from '../analytics'
 
 function decodeJwt(token) {
   try {
@@ -61,7 +62,8 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
     setJoiningCode(code)
     socket.emit('join_room', { code, playerName: playerName.trim() }, (res) => {
       setJoiningCode(null)
-      if (!res?.ok) setError(res?.error || 'No se pudo unir a la sala')
+      if (!res?.ok) return setError(res?.error || 'No se pudo unir a la sala')
+      track('room_join')
     })
   }
 

@@ -9,6 +9,7 @@ import { FXAAShader }     from 'three/examples/jsm/shaders/FXAAShader.js'
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
 const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
 const VALUE_TO_FACE = Object.fromEntries(FACE_VALUES.map((v, i) => [v, i]))
+const VALUE_RANK = { AS: 0, K: 1, Q: 2, J: 3, '8': 4, '7': 5 }
 
 const FACE_UP_QUATS = (() => {
   const E = THREE.Euler
@@ -48,10 +49,10 @@ function makeToonGradient() {
   const cv = document.createElement('canvas')
   cv.width = 4; cv.height = 1
   const c = cv.getContext('2d')
-  c.fillStyle = '#383838'; c.fillRect(0, 0, 1, 1)   // shadow
-  c.fillStyle = '#888888'; c.fillRect(1, 0, 1, 1)   // mid-dark
-  c.fillStyle = '#D4D4D4'; c.fillRect(2, 0, 1, 1)   // mid-light
-  c.fillStyle = '#FFFFFF'; c.fillRect(3, 0, 1, 1)   // lit
+  c.fillStyle = '#2E2418'; c.fillRect(0, 0, 1, 1)   // warm shadow
+  c.fillStyle = '#8C7C60'; c.fillRect(1, 0, 1, 1)   // warm taupe
+  c.fillStyle = '#DDD8C8'; c.fillRect(2, 0, 1, 1)   // bone mid-light
+  c.fillStyle = '#FFFFFF'; c.fillRect(3, 0, 1, 1)   // white lit
   const tex = new THREE.CanvasTexture(cv)
   tex.magFilter = THREE.NearestFilter
   tex.minFilter = THREE.NearestFilter
@@ -77,7 +78,7 @@ function makeTex(value) {
   const ctx = cv.getContext('2d')
 
   // Amber base — fills full canvas so rounded-box corners blend
-  ctx.fillStyle = '#E4D9C3'
+  ctx.fillStyle = '#EDE5D2'
   ctx.fillRect(0, 0, S, S)
 
   const isRed = RED_FACES.has(value)
@@ -156,7 +157,7 @@ function getTopFace(mesh) {
 
 export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
-  interactive, onDieClick, onSettled, seed,
+  interactive, onDieClick, onSettled, seed, sorted = false,
 }) {
   const mountRef = useRef(null)
   const ctxRef   = useRef(null)
@@ -210,8 +211,8 @@ export default function DiceRollerScene({
     })
     ro.observe(mount)
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.45))
-    const dir = new THREE.DirectionalLight(0xffffff, 1.8)
+    scene.add(new THREE.AmbientLight(0xFFFAF0, 0.80))
+    const dir = new THREE.DirectionalLight(0xFFFDF0, 1.8)
     dir.position.set(4, 10, 6)
     dir.castShadow = true
     dir.shadow.mapSize.width  = 1024
@@ -264,7 +265,7 @@ export default function DiceRollerScene({
         moveActive: false, moveTs: 0,
         moveFrom: new THREE.Vector3(), moveTo: new THREE.Vector3(),
         exitFrom: new THREE.Vector3(), exitTs: 0,
-        prevVelY: 0, hitCooldown: 0,
+        prevVelY: 0, hitCooldown: 0, inCorner: false,
       }
     })
 
@@ -391,6 +392,27 @@ export default function DiceRollerScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiscards.join(',')])
 
+  // ── Ordenar dados por valor cuando el jugador finaliza su turno ───────────────
+  useEffect(() => {
+    const ctx = ctxRef.current
+    if (!ctx || !sorted) return
+    const now = performance.now()
+    const visible = [0,1,2,3,4].filter(i => ctx.dice[i].mesh.visible && ctx.dice[i].phase === 'idle')
+    if (visible.length < 2) return
+    const ordered = [...visible].sort((a, b) =>
+      (VALUE_RANK[ctx.dice[a].value] ?? 99) - (VALUE_RANK[ctx.dice[b].value] ?? 99)
+    )
+    ordered.forEach((dieIdx, slot) => {
+      const d = ctx.dice[dieIdx]
+      const { x, z } = slotPos(slot)
+      d.moveFrom.copy(d.mesh.position)
+      d.moveTo.set(x, REST_Y, z)
+      d.moveTs = now
+      d.moveActive = true
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorted])
+
   // ── Limpiar dados cuando se reinicia el turno (values → null) ────────────────
   useEffect(() => {
     if (values?.length) return
@@ -410,6 +432,7 @@ export default function DiceRollerScene({
       d.outline.material.opacity = 1.0
       d.phase = 'hidden'
       d.moveActive = false
+      d.inCorner = false
     })
     ctx.settleSince = null
     ctx.onExitDone = null
@@ -445,7 +468,7 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
   ctx.tempBodies.forEach(b => world.removeRigidBody(b))
   ctx.tempBodies = []
   dice.forEach((d, i) => {
-    if (d.phase !== 'idle' || rollingIndices.includes(i)) return
+    if (d.phase !== 'idle' || rollingIndices.includes(i) || d.inCorner) return
     const p = d.mesh.position
     const body = world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(p.x, p.y, p.z))
     world.createCollider(R.ColliderDesc.cuboid(DIE / 2, DIE / 2, DIE / 2).setRestitution(0.1).setFriction(0.9), body)
@@ -561,6 +584,16 @@ function step(ctx, now, propsRef) {
         toPos: new THREE.Vector3(0, 5.5, 4.3), toLook: new THREE.Vector3(0, FY + 1.5, 0),
         ts: now, dur: 700,
       }
+      // Return any corner-parked dice to their home slots
+      ctx.dice.forEach((d, i) => {
+        if (!d.inCorner) return
+        d.inCorner = false
+        const { x, z } = slotPos(i)
+        d.moveFrom.copy(d.mesh.position)
+        d.moveTo.set(x, REST_Y, z)
+        d.moveTs = now
+        d.moveActive = true
+      })
     }
   }
 
@@ -673,6 +706,30 @@ function rollWithSounds(ctx, values, rollingIndices, seed) {
     const d = ctx.dice[i]
     return d && d.mesh.visible && (d.phase === 'idle' || d.moveActive)
   })
+
+  // Kept dice: slide to a random top corner (left or right) while discarded dice exit
+  const keptDice = [0,1,2,3,4].filter(i =>
+    !rollingIndices.includes(i) &&
+    ctx.dice[i].mesh.visible &&
+    (ctx.dice[i].phase === 'idle' || ctx.dice[i].moveActive)
+  )
+  if (keptDice.length > 0 && needExit.length > 0) {
+    const now = performance.now()
+    // side: +1 = right wall, -1 = left wall. Random each roll.
+    const side = Math.random() < 0.5 ? 1 : -1
+    const anchorX = side * (WX - 0.8)   // ±3.4 — just inside the wall
+    const cornerZ = -(WZ - 0.8)          // -2.6 — just inside the back wall
+    keptDice.forEach((dieIdx, slot) => {
+      const d = ctx.dice[dieIdx]
+      // Expand dice away from the wall so they don't overlap
+      const x = anchorX - side * slot * 1.65
+      d.moveFrom.copy(d.mesh.position)
+      d.moveTo.set(x, REST_Y, cornerZ)
+      d.moveTs = now
+      d.moveActive = true
+      d.inCorner = true
+    })
+  }
 
   if (needExit.length > 0) {
     _eliminarAudio.currentTime = 0

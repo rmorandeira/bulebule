@@ -18,6 +18,31 @@ if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
 }
 webpush.setVapidDetails('mailto:rmorandeira@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
 
+const UMAMI_URL = process.env.UMAMI_URL;
+const UMAMI_WEBSITE_ID = process.env.UMAMI_WEBSITE_ID;
+
+async function trackEvent(name, data = {}) {
+  if (!UMAMI_URL || !UMAMI_WEBSITE_ID) return;
+  try {
+    await fetch(`${UMAMI_URL}/api/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'event',
+        payload: {
+          website: UMAMI_WEBSITE_ID,
+          name,
+          data,
+          url: '/server',
+          hostname: 'bule-bule-server',
+          language: 'es',
+          screen: '0x0',
+        },
+      }),
+    });
+  } catch { /* analytics never breaks gameplay */ }
+}
+
 const registeredUsers = {};
 
 const app = express();
@@ -226,6 +251,7 @@ function sanitize(room) {
     name: room.name,
     maxPlayers: room.maxPlayers,
     vsBot: room.vsBot ?? false,
+    isPrivate: !!room.isPrivate,
     hostId: room.hostId,
     phase: room.phase,
     roundNumber: room.roundNumber,
@@ -316,6 +342,7 @@ function applyRoundLoss(room, loser) {
     room.gameLoserId = loser.id;
     room.endReason = 'capilla';
     room.phase = 'finished';
+    trackEvent('game_end', { endReason: 'capilla', rounds: room.roundNumber, playerCount: room.players.length });
     return;
   }
   loser.breaks += 1;
@@ -325,6 +352,7 @@ function applyRoundLoss(room, loser) {
     room.gameLoserId = worst.id;
     room.endReason = 'rounds';
     room.phase = 'finished';
+    trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
     room.phase = 'results';
   }
@@ -379,6 +407,7 @@ function endRound(room) {
       room.endReason = 'liberado';
     }
     room.phase = 'finished';
+    trackEvent('game_end', { endReason: room.endReason ?? 'liberado', rounds: room.roundNumber, playerCount: room.players.length });
     return;
   }
 
@@ -448,6 +477,7 @@ io.on('connection', (socket) => {
     socket.data.roomCode = code;
     console.log(`create_room: "${roomName}" code="${code}" host="${playerName}" vsBot=${vsBot}`);
     cb?.({ ok: true, code });
+    trackEvent('room_create', { vsBot, isPrivate: !!isPrivate, maxPlayers: room.maxPlayers });
     broadcast(code);
     if (!vsBot) broadcastRoomList();
   });
@@ -507,6 +537,7 @@ io.on('connection', (socket) => {
     if (room.players.length < 2) return cb?.({ ok: false, error: 'Necesitas al menos 2 jugadores' });
     startRound(room);
     cb?.({ ok: true });
+    trackEvent('game_start', { playerCount: room.players.length, vsBot: room.vsBot ?? false });
     broadcast(room.code);
     broadcastRoomList();
   });

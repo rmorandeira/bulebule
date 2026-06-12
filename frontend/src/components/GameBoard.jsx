@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
+import { track } from '../analytics'
 import Die from './Die'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
@@ -65,18 +66,43 @@ export default function GameBoard({ room, myId, onLeave }) {
     }
     if (room.phase === 'playing') setPalilloRotoVisible(false)
   }, [room.phase, room.roundLoserId, room.gameLoserId])
-  const allowUnloadRef = useRef(false)
-  const lastFacesRef = useRef(null)
+  const allowUnloadRef        = useRef(false)
+  const lastFacesRef          = useRef(null)
+  const gameEndTrackedRef     = useRef(false)
+  const prevLiberadosRef      = useRef(new Set())
   const botReadyTimerRef = useRef(null)
   const botReadySentRef = useRef(false)
   const prevBotPhaseRef = useRef(null)
   const prevRollCountRef = useRef({})
 
+  // Analytics: game_start on mount
+  useEffect(() => {
+    track('game_start', { playerCount: room.players.length, vsBot: room.vsBot ?? false })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Analytics: game_end when phase becomes 'finished'
+  useEffect(() => {
+    if (room.phase === 'finished' && !gameEndTrackedRef.current) {
+      gameEndTrackedRef.current = true
+      track('game_end', { endReason: room.endReason ?? 'unknown', rounds: room.roundNumber, playerCount: room.players.length })
+    }
+  }, [room.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Analytics: player_liberado — fire once per player
+  useEffect(() => {
+    room.players.forEach(p => {
+      if (p.liberado && !prevLiberadosRef.current.has(p.id)) {
+        prevLiberadosRef.current.add(p.id)
+        track('player_liberado', { playerName: p.name })
+      }
+    })
+  }, [room.players])
+
   const me = room.players.find(p => p.id === myId)
   const currentPlayer = room.players[room.currentPlayerIndex]
   const isMyTurn = currentPlayer?.id === myId
   const maxAllowed = room.maxRolls ?? 3
-  const mustPass = isMyTurn && !me?.done && (me?.rollCount ?? 0) >= maxAllowed
+  const mustPass = isMyTurn && !me?.done && ((me?.rollCount ?? 0) >= maxAllowed || me?.hand?.rank === 7)
   const rollCount = me?.rollCount ?? 0
   const canRoll = isMyTurn && !me?.done && !mustPass &&
     (rollCount === 0 || pendingDiscards.length > 0)
@@ -409,6 +435,7 @@ export default function GameBoard({ room, myId, onLeave }) {
               interactive={isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0}
               onDieClick={toggleDiscard}
               seed={rollSeed}
+              sorted={!!displayPlayer?.done}
               onSettled={(faces) => {
                 setRollingIndices([])
                 if (faces?.length === 5) {

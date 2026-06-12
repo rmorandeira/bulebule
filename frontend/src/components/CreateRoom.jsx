@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import socket from '../socket'
+import { track } from '../analytics'
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
 const SOLO_PLAYERS_OPTIONS = [2, 3, 4, 5]
@@ -58,6 +59,7 @@ export default function CreateRoom({ playerName, user, onBack }) {
     }, (res) => {
       setLoading(false)
       if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
+      track('room_create', { vsBot, isPrivate: !vsBot && isPrivate, maxPlayers: vsBot ? soloPlayers : maxPlayers })
       invitedFriends.forEach(friend => {
         socket.emit('invite_to_room', { toUserId: friend.userId, roomCode: res.code, roomName: name })
       })
