@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const style = `
 @keyframes animacion_palillo_roto_in {
@@ -13,8 +13,17 @@ const style = `
 
 // Al final de cada ronda: velado + quién rompe el palillo, con la misma
 // animación que el cambio de jugador (entra de izquierda, sale a la derecha).
-export default function AnimacionPalilloRoto({ room, onDone }) {
+export default function AnimacionPalilloRoto({ room, onDone, continueDeadline }) {
   const [exitPhase, setExitPhase] = useState(null) // null | 'out' | 'fade'
+  const [secondsLeft, setSecondsLeft] = useState(null)
+
+  useEffect(() => {
+    if (!continueDeadline) { setSecondsLeft(null); return }
+    const update = () => setSecondsLeft(Math.max(0, Math.ceil((continueDeadline - Date.now()) / 1000)))
+    update()
+    const id = setInterval(update, 500)
+    return () => clearInterval(id)
+  }, [continueDeadline])
 
   const loser = room.players.find(p => p.id === (room.gameLoserId ?? room.roundLoserId))
   if (!loser) return null
@@ -71,7 +80,7 @@ export default function AnimacionPalilloRoto({ room, onDone }) {
         {!exitPhase && (
           <div className="next-player-footer">
             <button className="btn btn--primary next-player-continue" onClick={() => setExitPhase('out')}>
-              Continuar
+              {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
             </button>
           </div>
         )}

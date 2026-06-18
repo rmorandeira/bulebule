@@ -39,6 +39,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [botDiscards, setBotDiscards] = useState([])
   const [timeLeft, setTimeLeft] = useState(null)
   const [waitTimeLeft, setWaitTimeLeft] = useState(null)
+  const [continueSecondsLeft, setContinueSecondsLeft] = useState(null)
   const [rollingIndices, setRollingIndices] = useState([])
   const [sceneValues, setSceneValues] = useState(null)
   const [rollSeed, setRollSeed] = useState(null)
@@ -314,6 +315,15 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     return () => clearInterval(id)
   }, [room.turnDeadline, isMyTurn])
 
+  // Countdown timer — results/palillo phase (continueDeadline)
+  useEffect(() => {
+    if (!room.continueDeadline || room.phase === 'playing') { setContinueSecondsLeft(null); return }
+    const update = () => setContinueSecondsLeft(Math.max(0, Math.ceil((room.continueDeadline - Date.now()) / 1000)))
+    update()
+    const id = setInterval(update, 500)
+    return () => clearInterval(id)
+  }, [room.continueDeadline, room.phase])
+
   const displayPlayer = isMyTurn ? me : currentPlayer
 
   return (
@@ -437,8 +447,12 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               ))}
             </div>
             {room.hostId === myId
-              ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>Nueva ronda</button>
-              : <p className="waiting-label">Esperando al host...</p>}
+              ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>
+                  {continueSecondsLeft !== null ? `Nueva ronda (${continueSecondsLeft}s)` : 'Nueva ronda'}
+                </button>
+              : <p className="waiting-label">
+                  {continueSecondsLeft !== null ? `Esperando al host (${continueSecondsLeft}s)` : 'Esperando al host...'}
+                </p>}
           </div>
         )
       })() : (
@@ -591,7 +605,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
       )}
 
       {palilloRotoVisible && (
-        <AnimacionPalilloRoto room={room} onDone={() => setPalilloRotoVisible(false)} />
+        <AnimacionPalilloRoto room={room} onDone={() => setPalilloRotoVisible(false)} continueDeadline={room.continueDeadline} />
       )}
 
       {leaveIntent && (

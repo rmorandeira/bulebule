@@ -303,7 +303,7 @@ function broadcast(code) {
 }
 
 function broadcastRoomList() {
-  const list = Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList);
+  const list = Object.values(rooms).filter(r => !r.vsBot && r.phase === 'lobby').map(sanitizeForList);
   io.emit('rooms_list', list);
 }
 
@@ -359,6 +359,15 @@ function applyRoundLoss(room, loser) {
     trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
     room.phase = 'results';
+    clearContinueTimer(room);
+    room.continueDeadline = Date.now() + CONTINUE_TIMEOUT;
+    const code = room.code;
+    room.continueTimerId = setTimeout(() => {
+      const r = rooms[code];
+      if (!r || r.phase !== 'results') return;
+      startRound(r);
+      broadcast(code);
+    }, CONTINUE_TIMEOUT);
   }
 }
 
@@ -541,7 +550,9 @@ io.on('connection', (socket) => {
     socket.leave(code);
     socket.data.roomCode = null;
 
-    if (room.vsBot || room.players.length === 0) {
+    if (room.vsBot || room.players.length === 0 || (room.phase !== 'lobby' && room.players.filter(p => !p.isBot).length < 2)) {
+      clearContinueTimer(room);
+      io.to(code).emit('room_destroyed');
       delete rooms[code];
     } else {
       if (room.hostId === socket.id) room.hostId = room.players[0].id;
@@ -656,6 +667,7 @@ io.on('connection', (socket) => {
   socket.on('next_round', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.hostId !== socket.id || room.phase !== 'results') return cb?.({ ok: false });
+    clearContinueTimer(room);
     startRound(room);
     cb?.({ ok: true });
     broadcast(room.code);
@@ -734,7 +746,9 @@ io.on('connection', (socket) => {
       const r = rooms[code];
       if (!r) return;
       r.players = r.players.filter(p => p.id !== socket.id);
-      if (r.players.length === 0) {
+      if (r.players.length === 0 || (r.phase !== 'lobby' && r.players.filter(p => !p.isBot).length < 2)) {
+        clearContinueTimer(r);
+        io.to(code).emit('room_destroyed');
         delete rooms[code];
         broadcastRoomList();
         return;
