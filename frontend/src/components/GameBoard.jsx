@@ -320,7 +320,7 @@ export default function GameBoard({ room, myId, onLeave }) {
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
         const gameLoser = room.players.find(p => p.id === room.gameLoserId)
         return (
-          <>
+          <div className="results">
             {gameLoser ? (
               <div className="results__winner">
                 <p className="results__winner-label">Pierde la partida</p>
@@ -355,13 +355,13 @@ export default function GameBoard({ room, myId, onLeave }) {
             {room.hostId === myId
               ? <button className="btn btn--primary btn--full" onClick={handleRematch}>Revancha</button>
               : <p className="waiting-label">Esperando al host...</p>}
-          </>
+          </div>
         )
       })() : room.phase === 'results' ? (() => {
         const winner = room.players.find(p => p.id === room.roundWinnerId)
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
         return (
-          <>
+          <div className="results">
             <div className="results__winner">
               <p className="results__winner-label">🏆 Ganador 🏆</p>
               <h2 className="results__name">{winner?.name}</h2>
@@ -403,7 +403,7 @@ export default function GameBoard({ room, myId, onLeave }) {
             {room.hostId === myId
               ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>Nueva ronda</button>
               : <p className="waiting-label">Esperando al host...</p>}
-          </>
+          </div>
         )
       })() : (
         <>

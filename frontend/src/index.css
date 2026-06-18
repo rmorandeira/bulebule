@@ -344,8 +344,8 @@ body {
 
 .next-player-footer {
   position: absolute;
-  left: 24px;
-  right: 24px;
+  left: 16px;
+  right: 16px;
   bottom: calc(64px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
@@ -1100,6 +1100,14 @@ body {
 /* ── Results ─────────────────────────────────────────────── */
 .results {
   padding: 0;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
 }
 
 .results__winner {
