@@ -119,13 +119,8 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
         )}
         {!exitPhase && isMyTurn && (
           <div className="next-player-footer">
-            {secondsLeft !== null && (
-              <span className={`next-player-counter${secondsLeft <= 10 ? ' next-player-counter--urgent' : ''}`}>
-                {secondsLeft}s
-              </span>
-            )}
             <button className="btn btn--primary next-player-continue" onClick={onContinue}>
-              Continuar
+              {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
             </button>
           </div>
         )}
