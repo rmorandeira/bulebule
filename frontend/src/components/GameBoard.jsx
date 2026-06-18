@@ -567,7 +567,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               </>
             )}
             {me?.done && (
-              <p className="waiting-label">Tu mano: {me?.hand?.desc}</p>
+              <p className="waiting-label">
+                {isMyTurn ? `Tu mano: ${me?.hand?.desc}` : `Jugada: ${me?.hand?.desc}`}
+              </p>
             )}
             {!isMyTurn && !me?.done && waitTimeLeft !== null && (
               <p className={`actions__wait-label${waitTimeLeft <= 10 ? ' actions__hint--urgent' : ''}`}>
