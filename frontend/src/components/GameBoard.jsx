@@ -514,24 +514,26 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           <div className="actions">
             {isMyTurn && !me?.done && (
               <>
-                {timeLeft !== null && (
-                  <div className={`turn-timer ${timeLeft <= 10 ? 'turn-timer--urgent' : ''}`}>
-                    {timeLeft}s
-                  </div>
-                )}
                 {mustPass ? (
                   <div className="actions__row">
                     <button className="btn btn--primary btn--full" onClick={handleStand} disabled={isAnimating}>Pasar al siguiente jugador</button>
                   </div>
                 ) : (
-                  <div className="actions__row">
-                    <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || isAnimating}>
-                      Plantarse
-                    </button>
-                    <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll || isAnimating}>
-                      Tirar dados
-                    </button>
-                  </div>
+                  <>
+                    {rollCount > 0 && (
+                      <p className={`actions__hint ${timeLeft !== null && timeLeft <= 10 ? 'actions__hint--urgent' : ''}`}>
+                        Toca los dados a descartar
+                      </p>
+                    )}
+                    <div className="actions__row">
+                      <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || isAnimating}>
+                        Plantarse
+                      </button>
+                      <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll || isAnimating}>
+                        {timeLeft !== null ? `Tirar dados (${timeLeft}s)` : 'Tirar dados'}
+                      </button>
+                    </div>
+                  </>
                 )}
                 {isMobile() && needsMotionPermission() && !shakeEnabled && (
                   <button className="btn btn--secondary btn--full" onClick={enableShakeIOS} style={{ marginTop: 8 }}>

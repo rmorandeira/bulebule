@@ -1118,16 +1118,15 @@ body {
 }
 
 /* ── Turn timer ──────────────────────────────────────────── */
-.turn-timer {
+.actions__hint {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-subtle);
-  text-align: right;
-  letter-spacing: 0.5px;
-  transition: color 0.3s;
+  text-align: center;
+  margin-bottom: 8px;
 }
 
-.turn-timer--urgent {
+.actions__hint--urgent {
   color: #e74c3c;
   animation: timer-pulse 0.8s ease-in-out infinite;
 }
