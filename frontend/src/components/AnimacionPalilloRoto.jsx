@@ -23,6 +23,13 @@ export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDe
     return () => clearInterval(id)
   }, [continueDeadline])
 
+  // Non-losers: auto-dismiss after 3 s so the classification list becomes visible
+  useEffect(() => {
+    if (isLoser) return
+    const id = setTimeout(() => setExitPhase('out'), 3000)
+    return () => clearTimeout(id)
+  }, [isLoser])
+
   const loser = room.players.find(p => p.id === (room.gameLoserId ?? room.roundLoserId))
   if (!loser) return null
 
