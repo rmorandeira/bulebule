@@ -3,7 +3,7 @@ import socket from '../socket'
 import { track } from '../analytics'
 import Die from './Die'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
-import AnimacionPalilloRoto from './AnimacionPalilloRoto'
+
 import DiceRollerScene from './DiceRollerScene'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
@@ -56,17 +56,13 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     if (room.phase !== 'playing') setNextPlayerVisible(false)
   }, [awaitingContinue, room.phase])
 
-  // Overlay "palillo roto" al terminar la ronda: marca quién ha perdido
-  const [palilloRotoVisible, setPalilloRotoVisible] = useState(false)
   const prevPhaseRef = useRef(room.phase)
   useEffect(() => {
     const prev = prevPhaseRef.current
     prevPhaseRef.current = room.phase
     if (prev === 'playing' && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
-      setPalilloRotoVisible(true)
       new Audio('/assets/romper_palillo.mp3').play().catch(() => {})
     }
-    if (room.phase === 'playing') setPalilloRotoVisible(false)
   }, [room.phase, room.roundLoserId, room.gameLoserId])
   const allowUnloadRef        = useRef(false)
   const lastFacesRef          = useRef(null)
@@ -602,15 +598,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           closing={!awaitingContinue}
           onContinue={() => socket.emit('continue_turn')}
           onDone={() => setNextPlayerVisible(false)}
-        />
-      )}
-
-      {palilloRotoVisible && (
-        <AnimacionPalilloRoto
-          room={room}
-          isLoser={myId === (room.gameLoserId ?? room.roundLoserId)}
-          onDone={() => setPalilloRotoVisible(false)}
-          continueDeadline={room.continueDeadline}
         />
       )}
 
