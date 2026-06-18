@@ -447,12 +447,12 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 </div>
               ))}
             </div>
-            {room.hostId === myId
+            {room.roundLoserId === myId
               ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>
                   {continueSecondsLeft !== null ? `Nueva ronda (${continueSecondsLeft}s)` : 'Nueva ronda'}
                 </button>
               : <p className="waiting-label">
-                  {continueSecondsLeft !== null ? `Esperando al host (${continueSecondsLeft}s)` : 'Esperando al host...'}
+                  {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
                 </p>}
           </div>
         )
