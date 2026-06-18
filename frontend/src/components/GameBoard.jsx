@@ -308,7 +308,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   return (
     <div className="screen game">
       <nav className="navbar">
-        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')}>← Salir</button>
+        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')} disabled={rolling}>← Salir</button>
         <span className="navbar__round">
           Ronda {room.roundNumber}{room.maxRounds > 0 ? ` / ${room.maxRounds}` : ''}
         </span>
@@ -328,7 +328,9 @@ export default function GameBoard({ room, myId, onLeave }) {
                   {room.endReason === 'rounds'
                     ? 'El peor clasificado al límite de rondas'
                     : room.endReason === 'liberado'
-                    ? 'El rival consiguió un Repóker'
+                    ? gameLoser.breaks >= 3
+                      ? 'El rival consiguió un Repóker · estaba en capilla'
+                      : 'El rival consiguió un Repóker'
                     : 'Ha perdido estando en capilla'}
                 </p>
               </div>
@@ -497,11 +499,11 @@ export default function GameBoard({ room, myId, onLeave }) {
                 )}
                 {mustPass ? (
                   <div className="actions__row">
-                    <button className="btn btn--primary btn--full" onClick={handleStand}>Pasar turno</button>
+                    <button className="btn btn--primary btn--full" onClick={handleStand} disabled={rolling}>Pasar al siguiente jugador</button>
                   </div>
                 ) : (
                   <div className="actions__row">
-                    <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0}>
+                    <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || rolling}>
                       Plantarse
                     </button>
                     <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll || rolling}>

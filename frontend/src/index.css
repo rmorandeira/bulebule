@@ -363,6 +363,21 @@ body {
 
 .next-player-continue { width: 100%; }
 
+.next-player-ad {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  animation: next-player-btn-in 0.25s ease-out 0.45s both;
+}
+
+.ad-banner {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
 /* ── Modal de confirmación ───────────────────────────────── */
 .modal-overlay {
   position: fixed;

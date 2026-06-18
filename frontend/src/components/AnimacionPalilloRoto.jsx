@@ -61,7 +61,9 @@ export default function AnimacionPalilloRoto({ room, onDone }) {
           <h2 className="palillo-roto__name">{loser.name}</h2>
           <p className="palillo-roto__text">
             {esGameLoser
-              ? 'pierde la partida estando en capilla'
+              ? room.endReason === 'liberado'
+                ? 'pierde la partida · el rival consiguió un Repóker'
+                : 'pierde la partida estando en capilla'
               : 'rompe un palillo'}
           </p>
           {enCapilla && <p className="palillo-roto__capilla">¡Queda en capilla!</p>}

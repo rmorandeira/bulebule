@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Die from './Die'
+import AdBanner from './AdBanner'
 
 const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
 
@@ -102,6 +103,11 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
             </div>
           )}
         </div>
+        {!exitPhase && !isMyTurn && (
+          <div className="next-player-ad">
+            <AdBanner />
+          </div>
+        )}
         {!exitPhase && isMyTurn && (
           <div className="next-player-footer">
             {secondsLeft !== null && (
