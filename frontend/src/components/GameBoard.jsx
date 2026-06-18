@@ -540,7 +540,13 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   <span className="dice-box__tirada">
                     {rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar'}
                   </span>
-                  <span className="dice-box__hand">{displayPlayer?.hand?.desc ?? ''}</span>
+                  <span className="dice-box__hand">
+                    {displayPlayer?.hand?.desc
+                      ? isMyTurn
+                        ? displayPlayer.hand.desc
+                        : `Jugada de ${currentPlayer?.name}: ${displayPlayer.hand.desc}`
+                      : ''}
+                  </span>
                 </div>
               </div>
             )
@@ -579,7 +585,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             )}
             {me?.done && (
               <p className="waiting-label">
-                {isMyTurn ? `Tu mano: ${me?.hand?.desc}` : `Jugada: ${me?.hand?.desc}`}
+                {`Tu mano: ${me?.hand?.desc}`}
               </p>
             )}
             {!isMyTurn && !me?.done && waitTimeLeft !== null && (
