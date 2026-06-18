@@ -554,13 +554,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   <span className="dice-box__tirada">
                     {rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar'}
                   </span>
-                  <span className="dice-box__hand">
-                    {displayPlayer?.hand?.desc
-                      ? isMyTurn
-                        ? displayPlayer.hand.desc
-                        : `Jugada de ${currentPlayer?.name}: ${displayPlayer.hand.desc}`
-                      : ''}
-                  </span>
+                  <span className="dice-box__hand">{displayPlayer?.hand?.desc ?? ''}</span>
                 </div>
               </div>
             )
