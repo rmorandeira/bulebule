@@ -18,15 +18,22 @@ function playDiscardSound() {
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
-// Vidas: palillo con 3 roturas; sin palillo → en capilla; repóker → liberado
 function PalilloState({ player }) {
   if (player.liberado) return <span className="tag tag--liberado">Liberado</span>
-  if (player.breaks >= 3) return <span className="tag tag--capilla">En capilla</span>
+  const breaks = player.breaks ?? 0
+  const enCapilla = breaks >= 3
   return (
-    <span className="palillo" aria-label={`Palillo: ${3 - player.breaks} de 3`}>
-      {[0, 1, 2].map(i => (
-        <span key={i} className={i < 3 - player.breaks ? 'palillo__seg' : 'palillo__seg palillo__seg--roto'} />
-      ))}
+    <span className="palillo" aria-label={enCapilla ? 'En capilla' : `Palillo: ${3 - breaks} de 3`}>
+      {[0, 1, 2].map(i => {
+        const roto = i >= 3 - breaks
+        return (
+          <span key={i} className={[
+            'palillo__seg',
+            roto && 'palillo__seg--roto',
+            roto && enCapilla && 'palillo__seg--capilla',
+          ].filter(Boolean).join(' ')} />
+        )
+      })}
     </span>
   )
 }

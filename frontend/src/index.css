@@ -158,6 +158,10 @@ body {
   transform: rotate(20deg);
 }
 
+.palillo__seg--capilla {
+  background: #e8a0a0;
+}
+
 .tag {
   font-size: 10px;
   font-weight: 800;
