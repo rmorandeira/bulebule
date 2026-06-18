@@ -986,6 +986,7 @@ body {
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
+  margin: 0;
 }
 
 .scoreboard__row {
@@ -1227,7 +1228,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-subtle);
-  margin-bottom: 10px;
+  margin: 0 0 10px;
 }
 
 .results__score-row {
@@ -1290,6 +1291,7 @@ body {
 .music-btn {
   width: 36px;
   height: 36px;
+  padding: 0;
   border-radius: 50%;
   border: none;
   background: none;
@@ -1299,6 +1301,7 @@ body {
   color: var(--text-subtle);
   cursor: pointer;
   flex-shrink: 0;
+  line-height: 1;
 }
 .music-btn:active { transform: scale(0.88); }
 

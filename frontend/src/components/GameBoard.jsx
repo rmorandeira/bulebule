@@ -428,7 +428,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           <div className="scoreboard">
             <div className="scoreboard__header">
               <p className="scoreboard__title">Clasificación</p>
-              <span>🏆</span>
+              <span className="scoreboard__wins">🏆</span>
             </div>
             {[...room.players].sort((a, b) => b.wins - a.wins).map((p, i) => {
               const isRolling = rollingIndices.length > 0 && p.id === currentPlayer?.id
