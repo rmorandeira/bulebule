@@ -361,12 +361,16 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               </div>
             )}
             <div className="results__scores">
-              <p className="results__scores-title">Clasificación final</p>
+              <div className="results__scores-header">
+                <p className="results__scores-title">Clasificación</p>
+                <span className="scoreboard__trophy">🏆</span>
+              </div>
               {sorted.map((p, i) => (
                 <div key={p.id} className="results__score-row">
                   <span className="results__pos">{i + 1}.</span>
                   <span className="results__sname">{p.name}</span>
-                  <span className="results__wins">{p.wins} {p.wins === 1 ? 'victoria' : 'victorias'}</span>
+                  <PalilloState player={p} />
+                  <span className="scoreboard__wins">{p.wins}</span>
                 </div>
               ))}
             </div>
@@ -409,12 +413,16 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               ))}
             </div>
             <div className="results__scores">
-              <p className="results__scores-title">Clasificación</p>
+              <div className="results__scores-header">
+                <p className="results__scores-title">Clasificación</p>
+                <span className="scoreboard__trophy">🏆</span>
+              </div>
               {sorted.map((p, i) => (
                 <div key={p.id} className="results__score-row">
                   <span className="results__pos">{i + 1}.</span>
                   <span className="results__sname">{p.name}</span>
-                  <span className="results__wins">{p.wins} {p.wins === 1 ? 'victoria' : 'victorias'}</span>
+                  <PalilloState player={p} />
+                  <span className="scoreboard__wins">{p.wins}</span>
                 </div>
               ))}
             </div>
