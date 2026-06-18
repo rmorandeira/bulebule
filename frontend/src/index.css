@@ -1160,7 +1160,13 @@ body {
 .results__sname { flex: 1; font-size: 15px; font-weight: 600; }
 .results__wins { font-size: 13px; color: var(--text-subtle); }
 
-.results .btn--full { margin: 16px 20px 64px; width: calc(100% - 40px); }
+.results .btn--full {
+  position: fixed;
+  bottom: calc(37px + env(safe-area-inset-bottom));
+  left: 16px;
+  right: 16px;
+  width: auto;
+}
 
 /* ── Home / Landing — mobile-first, portrait ────────────────────────────── */
 @keyframes home-zoom {

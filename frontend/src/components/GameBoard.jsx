@@ -106,6 +106,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   const rollCount = me?.rollCount ?? 0
   const canRoll = isMyTurn && !me?.done && !mustPass &&
     (rollCount === 0 || pendingDiscards.length > 0)
+  const isAnimating = rolling || rollingIndices.length > 0
 
   // Reset al cambiar turno o ronda
   useEffect(() => {
@@ -308,7 +309,7 @@ export default function GameBoard({ room, myId, onLeave }) {
   return (
     <div className="screen game">
       <nav className="navbar">
-        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')} disabled={rolling}>← Salir</button>
+        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')} disabled={isAnimating}>← Salir</button>
         <span className="navbar__round">
           Ronda {room.roundNumber}{room.maxRounds > 0 ? ` / ${room.maxRounds}` : ''}
         </span>
@@ -499,14 +500,14 @@ export default function GameBoard({ room, myId, onLeave }) {
                 )}
                 {mustPass ? (
                   <div className="actions__row">
-                    <button className="btn btn--primary btn--full" onClick={handleStand} disabled={rolling}>Pasar al siguiente jugador</button>
+                    <button className="btn btn--primary btn--full" onClick={handleStand} disabled={isAnimating}>Pasar al siguiente jugador</button>
                   </div>
                 ) : (
                   <div className="actions__row">
-                    <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || rolling}>
+                    <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || isAnimating}>
                       Plantarse
                     </button>
-                    <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll || rolling}>
+                    <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll || isAnimating}>
                       Tirar dados
                     </button>
                   </div>
