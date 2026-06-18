@@ -341,6 +341,8 @@ function applyRoundLoss(room, loser) {
   if (loser.breaks >= 3) {
     room.gameLoserId = loser.id;
     room.endReason = 'capilla';
+    const gameWinner = room.players.find(p => p.id === room.roundWinnerId);
+    if (gameWinner) gameWinner.wins += 1;
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'capilla', rounds: room.roundNumber, playerCount: room.players.length });
     return;
@@ -348,9 +350,11 @@ function applyRoundLoss(room, loser) {
   loser.breaks += 1;
   const maxRounds = room.maxRounds ?? 0;
   if (maxRounds > 0 && room.roundNumber >= maxRounds) {
-    const worst = [...room.players].sort((a, b) => a.wins - b.wins || b.breaks - a.breaks)[0];
+    const worst = [...room.players].sort((a, b) => b.breaks - a.breaks)[0];
     room.gameLoserId = worst.id;
     room.endReason = 'rounds';
+    const gameWinner = room.players.filter(p => p.id !== worst.id).sort((a, b) => a.breaks - b.breaks)[0];
+    if (gameWinner) gameWinner.wins += 1;
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
@@ -416,7 +420,6 @@ function endRound(room) {
     const autoLoser = room.players.find(p => !p.liberado);
     if (!autoLoser) return; // no debería ocurrir
     if (liberadoWinner) {
-      liberadoWinner.wins += 1;
       room.roundWinnerId = liberadoWinner.id;
     }
     applyRoundLoss(room, autoLoser);
@@ -429,7 +432,6 @@ function endRound(room) {
     if (compareHands(p.hand, winner.hand) > 0) winner = p;
     if (compareHands(p.hand, loser.hand) < 0) loser = p;
   }
-  winner.wins += 1;
   room.roundWinnerId = winner.id;
   if (loser.id === winner.id && participants.length > 1) {
     loser = participants.find(p => p.id !== winner.id);
@@ -662,13 +664,13 @@ io.on('connection', (socket) => {
   socket.on('rematch', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.hostId !== socket.id || room.phase !== 'finished') return cb?.({ ok: false });
-    // Reset wins y palillos — el perdedor de la partida abre la revancha
+    // El perdedor de la partida abre la revancha; wins se acumulan entre partidas
     const loser = room.players.find(p => p.id === room.gameLoserId)
-      ?? room.players.reduce((l, p) => (p.wins < l.wins ? p : l), room.players[0]);
+      ?? [...room.players].sort((a, b) => b.breaks - a.breaks)[0];
     room.nextStarterId = loser.id;
     room.gameLoserId = null;
     room.endReason = null;
-    for (const p of room.players) { p.wins = 0; p.breaks = 0; p.liberado = false; }
+    for (const p of room.players) { p.breaks = 0; p.liberado = false; }
     room.roundNumber = 0;
     startRound(room);
     cb?.({ ok: true });
