@@ -251,7 +251,7 @@ export default function App() {
     if (room.phase === 'lobby') {
       return <WaitingRoom room={room} myId={myId || socket.id} onLeave={handleLeave} />
     }
-    return <GameBoard room={room} myId={myId || socket.id} onLeave={handleLeave} />
+    return <GameBoard room={room} myId={myId || socket.id} onLeave={handleLeave} musicOn={musicOn} onToggleMusic={toggleMusic} />
   }
 
   if (screen === 'settings' && user) {
@@ -272,6 +272,8 @@ export default function App() {
         playerName={playerName}
         user={user}
         onBack={() => setScreen('list')}
+        musicOn={musicOn}
+        onToggleMusic={toggleMusic}
       />
     )
   }

@@ -7,7 +7,7 @@ const SOLO_PLAYERS_OPTIONS = [2, 3, 4, 5]
 const MAX_ROUNDS_OPTIONS = [0, 3, 5, 7, 10]
 const ROUNDS_LABEL = { 0: '∞' }
 
-export default function CreateRoom({ playerName, user, onBack }) {
+export default function CreateRoom({ playerName, user, onBack, musicOn, onToggleMusic }) {
   const [vsBot, setVsBot] = useState(false)
   const [isPrivate, setIsPrivate] = useState(false)
   const [roomName, setRoomName] = useState('')
@@ -69,7 +69,24 @@ export default function CreateRoom({ playerName, user, onBack }) {
   return (
     <div className="screen create-room">
       <div className="create-room__header">
-        <button className="btn-back" onClick={onBack}>← Volver</button>
+        <div className="create-room__header-row">
+          <button className="btn-back" onClick={onBack}>← Volver</button>
+          <button className="music-btn" onClick={onToggleMusic} aria-label={musicOn ? 'Silenciar música' : 'Activar música'}>
+            {musicOn ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <line x1="23" y1="9" x2="17" y2="15"/>
+                <line x1="17" y1="9" x2="23" y2="15"/>
+              </svg>
+            )}
+          </button>
+        </div>
         <h2 className="create-room__title">Nueva sala</h2>
       </div>
 
