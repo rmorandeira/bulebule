@@ -365,6 +365,18 @@ body {
 
 .next-player-continue { width: 100%; }
 
+.next-player-footer--waiting {
+  justify-content: center;
+}
+
+.next-player-waiting {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
+  text-align: center;
+}
+
 .next-player-ad {
   position: absolute;
   left: 0;

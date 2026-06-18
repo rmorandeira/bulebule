@@ -104,9 +104,18 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
           )}
         </div>
         {!exitPhase && !isMyTurn && (
-          <div className="next-player-ad">
-            <AdBanner />
-          </div>
+          <>
+            <div className="next-player-ad">
+              <AdBanner />
+            </div>
+            <div className="next-player-footer next-player-footer--waiting">
+              <span className={`next-player-waiting${secondsLeft !== null && secondsLeft <= 10 ? ' next-player-counter--urgent' : ''}`}>
+                {secondsLeft !== null
+                  ? `Esperando al otro jugador (${secondsLeft}s)`
+                  : 'Esperando al otro jugador'}
+              </span>
+            </div>
+          </>
         )}
         {!exitPhase && isMyTurn && (
           <div className="next-player-footer">
