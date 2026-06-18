@@ -363,7 +363,7 @@ export default function GameBoard({ room, myId, onLeave }) {
         return (
           <>
             <div className="results__winner">
-              <p className="results__winner-label">Ganador</p>
+              <p className="results__winner-label">🏆 Ganador 🏆</p>
               <h2 className="results__name">{winner?.name}</h2>
               <p className="results__hand">{winner?.hand?.desc}</p>
             </div>
