@@ -230,6 +230,28 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* Inline (embedded in results__scores area) */
+.palillo-roto-inline {
+  overflow: hidden;
+}
+.palillo-roto-inline__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  text-align: center;
+}
+.palillo-roto-inline__name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.palillo-roto-inline__text {
+  font-size: 15px;
+  color: var(--text-subtle);
+}
+
 .results__row--loser {
   background: #fdecea;
   border-radius: 8px;

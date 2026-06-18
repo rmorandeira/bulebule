@@ -546,13 +546,15 @@ io.on('connection', (socket) => {
     if (!room) return cb?.({ ok: false });
 
     clearTurnTimer(room);
+    const leavingPlayer = room.players.find(p => p.id === socket.id);
     room.players = room.players.filter(p => p.id !== socket.id);
     socket.leave(code);
     socket.data.roomCode = null;
 
     if (room.vsBot || room.players.length === 0 || (room.phase !== 'lobby' && room.players.filter(p => !p.isBot).length < 2)) {
       clearContinueTimer(room);
-      io.to(code).emit('room_destroyed');
+      const byPlayer = room.phase !== 'lobby' ? (leavingPlayer?.name ?? null) : null;
+      io.to(code).emit('room_destroyed', { byPlayer });
       delete rooms[code];
     } else {
       if (room.hostId === socket.id) room.hostId = room.players[0].id;
@@ -743,13 +745,15 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const disconnectingName = room.players.find(p => p.id === socket.id)?.name ?? null;
     setTimeout(() => {
       const r = rooms[code];
       if (!r) return;
       r.players = r.players.filter(p => p.id !== socket.id);
       if (r.players.length === 0 || (r.phase !== 'lobby' && r.players.filter(p => !p.isBot).length < 2)) {
         clearContinueTimer(r);
-        io.to(code).emit('room_destroyed');
+        const byPlayer = r.phase !== 'lobby' ? disconnectingName : null;
+        io.to(code).emit('room_destroyed', { byPlayer });
         delete rooms[code];
         broadcastRoomList();
         return;

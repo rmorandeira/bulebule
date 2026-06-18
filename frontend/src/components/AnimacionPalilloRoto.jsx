@@ -1,20 +1,18 @@
 import { useState, useEffect } from 'react'
 
 const style = `
-@keyframes animacion_palillo_roto_in {
-  from { transform: translateX(-110vw); }
+@keyframes palillo_roto_inline_in {
+  from { transform: translateX(-110%); }
   to   { transform: translateX(0); }
 }
-@keyframes animacion_palillo_roto_out {
+@keyframes palillo_roto_inline_out {
   from { transform: translateX(0); }
-  to   { transform: translateX(110vw); }
+  to   { transform: translateX(110%); }
 }
 `
 
-// Al final de cada ronda: velado + quién rompe el palillo, con la misma
-// animación que el cambio de jugador (entra de izquierda, sale a la derecha).
 export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDeadline }) {
-  const [exitPhase, setExitPhase] = useState(null) // null | 'out' | 'fade'
+  const [exitPhase, setExitPhase] = useState(null) // null | 'out'
   const [secondsLeft, setSecondsLeft] = useState(null)
 
   useEffect(() => {
@@ -30,25 +28,21 @@ export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDe
 
   const esGameLoser = room.gameLoserId === loser.id
   const enCapilla = !esGameLoser && loser.breaks >= 3
-  // Segmentos intactos primero; el recién roto es el primero de los rotos
   const justBrokenIdx = esGameLoser ? -1 : 3 - loser.breaks
 
   return (
     <>
       <style>{style}</style>
-      <div
-        className={`next-player-overlay${exitPhase === 'fade' ? ' next-player-overlay--closing' : ''}`}
-        onTransitionEnd={(e) => { if (exitPhase === 'fade' && e.target === e.currentTarget) onDone?.() }}
-      >
+      <div className="palillo-roto-inline">
         <div
-          className="palillo-roto"
+          className="palillo-roto-inline__card"
           style={{
             animation: exitPhase
-              ? `animacion_palillo_roto_out 450ms ease-in forwards`
-              : `animacion_palillo_roto_in 450ms ease-out forwards`,
+              ? `palillo_roto_inline_out 350ms ease-in forwards`
+              : `palillo_roto_inline_in 350ms ease-out forwards`,
           }}
           onAnimationEnd={(e) => {
-            if (exitPhase === 'out' && e.target === e.currentTarget) setExitPhase('fade')
+            if (exitPhase === 'out' && e.target === e.currentTarget) onDone?.()
           }}
         >
           <div className="palillo-roto__sticks">
@@ -67,8 +61,8 @@ export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDe
               )
             })}
           </div>
-          <h2 className="palillo-roto__name">{loser.name}</h2>
-          <p className="palillo-roto__text">
+          <p className="palillo-roto-inline__name">{loser.name}</p>
+          <p className="palillo-roto-inline__text">
             {esGameLoser
               ? room.endReason === 'liberado'
                 ? 'pierde la partida · el rival consiguió un Repóker'
@@ -76,21 +70,17 @@ export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDe
               : 'rompe un palillo'}
           </p>
           {enCapilla && <p className="palillo-roto__capilla">¡Queda en capilla!</p>}
-        </div>
-        {!exitPhase && isLoser && (
-          <div className="next-player-footer">
-            <button className="btn btn--primary next-player-continue" onClick={() => setExitPhase('out')}>
+          {!exitPhase && isLoser && (
+            <button className="btn btn--primary btn--full" style={{ marginTop: 12 }} onClick={() => setExitPhase('out')}>
               {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
             </button>
-          </div>
-        )}
-        {!exitPhase && !isLoser && (
-          <div className="next-player-footer next-player-footer--waiting">
-            <span className={`next-player-waiting${secondsLeft !== null && secondsLeft <= 10 ? ' next-player-counter--urgent' : ''}`}>
+          )}
+          {!exitPhase && !isLoser && (
+            <p className="waiting-label" style={{ marginTop: 8 }}>
               {secondsLeft !== null ? `Esperando al jugador (${secondsLeft}s)` : 'Esperando al jugador...'}
-            </span>
-          </div>
-        )}
+            </p>
+          )}
+        </div>
       </div>
     </>
   )

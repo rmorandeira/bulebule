@@ -3,6 +3,7 @@ import socket from '../socket'
 import { track } from '../analytics'
 import Die from './Die'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
+import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 
 import DiceRollerScene from './DiceRollerScene'
 
@@ -56,13 +57,16 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     if (room.phase !== 'playing') setNextPlayerVisible(false)
   }, [awaitingContinue, room.phase])
 
+  const [palilloRotoShowing, setPalilloRotoShowing] = useState(false)
   const prevPhaseRef = useRef(room.phase)
   useEffect(() => {
     const prev = prevPhaseRef.current
     prevPhaseRef.current = room.phase
     if (prev === 'playing' && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
+      setPalilloRotoShowing(true)
       new Audio('/assets/romper_palillo.mp3').play().catch(() => {})
     }
+    if (room.phase === 'playing') setPalilloRotoShowing(false)
   }, [room.phase, room.roundLoserId, room.gameLoserId])
   const allowUnloadRef        = useRef(false)
   const lastFacesRef          = useRef(null)
@@ -430,26 +434,36 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               ))}
             </div>
             <div className="results__scores">
-              <div className="results__scores-header">
-                <p className="results__scores-title">Clasificación</p>
-                <span className="scoreboard__trophy">🏆</span>
-              </div>
-              {sorted.map((p, i) => (
-                <div key={p.id} className="results__score-row">
-                  <span className="results__pos">{i + 1}.</span>
-                  <span className="results__sname">{p.name}</span>
-                  <PalilloState player={p} />
-                  <span className="scoreboard__wins">{p.wins}</span>
-                </div>
-              ))}
+              {palilloRotoShowing
+                ? <AnimacionPalilloRoto
+                    room={room}
+                    isLoser={myId === (room.gameLoserId ?? room.roundLoserId)}
+                    onDone={() => setPalilloRotoShowing(false)}
+                    continueDeadline={room.continueDeadline}
+                  />
+                : <>
+                    <div className="results__scores-header">
+                      <p className="results__scores-title">Clasificación</p>
+                      <span className="scoreboard__trophy">🏆</span>
+                    </div>
+                    {sorted.map((p, i) => (
+                      <div key={p.id} className="results__score-row">
+                        <span className="results__pos">{i + 1}.</span>
+                        <span className="results__sname">{p.name}</span>
+                        <PalilloState player={p} />
+                        <span className="scoreboard__wins">{p.wins}</span>
+                      </div>
+                    ))}
+                  </>
+              }
             </div>
-            {room.roundLoserId === myId
+            {!palilloRotoShowing && (room.roundLoserId === myId
               ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>
                   {continueSecondsLeft !== null ? `Nueva ronda (${continueSecondsLeft}s)` : 'Nueva ronda'}
                 </button>
               : <p className="waiting-label">
                   {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
-                </p>}
+                </p>)}
           </div>
         )
       })() : (

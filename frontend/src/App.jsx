@@ -56,6 +56,7 @@ export default function App() {
     return p?.toUpperCase() || null
   })
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
+  const [abandonedBy, setAbandonedBy] = useState(null)
   const swRegistered       = useRef(false)
   const sessionTrackedRef  = useRef(false)
   const roomRef            = useRef(null)
@@ -166,7 +167,11 @@ export default function App() {
       }
     })
     socket.on('room_state', setRoom)
-    socket.on('room_destroyed', () => { setRoom(null); setScreen('list') })
+    socket.on('room_destroyed', ({ byPlayer } = {}) => {
+      setRoom(null)
+      setScreen('list')
+      if (byPlayer) setAbandonedBy(byPlayer)
+    })
     socket.on('room_invite', ({ roomCode, roomName, inviterName }) => {
       if (window.confirm(`${inviterName} te invita a "${roomName}". ¿Unirse?`)) {
         const name = loadUser()?.name || playerName
@@ -279,15 +284,28 @@ export default function App() {
   }
 
   return (
-    <RoomList
-      user={user}
-      musicOn={musicOn}
-      onToggleMusic={toggleMusic}
-      playerName={playerName}
-      onNameChange={setPlayerName}
-      onLogin={handleLogin}
-      onSettings={() => setScreen('settings')}
-      onCreateClick={() => setScreen('create')}
-    />
+    <>
+      <RoomList
+        user={user}
+        musicOn={musicOn}
+        onToggleMusic={toggleMusic}
+        playerName={playerName}
+        onNameChange={setPlayerName}
+        onLogin={handleLogin}
+        onSettings={() => setScreen('settings')}
+        onCreateClick={() => setScreen('create')}
+      />
+      {abandonedBy && (
+        <div className="modal-overlay">
+          <div className="modal" role="alertdialog" aria-modal="true">
+            <h2 className="modal__title">Partida terminada</h2>
+            <p className="modal__text">{abandonedBy} ha abandonado la partida</p>
+            <div className="modal__actions">
+              <button className="btn btn--primary" onClick={() => setAbandonedBy(null)}>Continuar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
