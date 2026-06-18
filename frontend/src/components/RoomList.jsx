@@ -189,47 +189,45 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
 
         {error && <p className="home__error">{error}</p>}
 
-        {/* Panel salas */}
-        <div className="home__rooms-panel">
-          {rooms.length === 0 ? (
-            <p className="home__rooms-empty">No hay salas abiertas</p>
-          ) : (
-            <div className="home__rooms-list">
-              {rooms.map(room => {
-                const canJoin = room.phase === 'lobby' && !isFull(room)
-                return (
-                  <div key={room.code} className="home__room-card">
-                    <div className="home__room-info">
-                      <span className="home__room-name">
-                        <span>{room.name}</span>
-                        {room.isPrivate && (
-                          <svg className="home__room-lock" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2"/>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                          </svg>
-                        )}
-                      </span>
-                      <div className="home__room-meta">
-                        <span>{room.playerCount}/{room.maxPlayers} Jugadores</span>
-                        {canJoin
-                          ? <span className="home__room-status">ESPERANDO</span>
-                          : <span className="home__room-status home__room-status--full">{isFull(room) ? 'Llena' : 'En curso'}</span>
-                        }
-                      </div>
+        {/* Lista de salas */}
+        {rooms.length === 0 ? (
+          <p className="home__rooms-empty">No hay salas abiertas</p>
+        ) : (
+          <div className="home__rooms-list">
+            {rooms.map(room => {
+              const canJoin = room.phase === 'lobby' && !isFull(room)
+              return (
+                <div key={room.code} className="home__room-card">
+                  <div className="home__room-info">
+                    <span className="home__room-name">
+                      <span>{room.name}</span>
+                      {room.isPrivate && (
+                        <svg className="home__room-lock" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                      )}
+                    </span>
+                    <div className="home__room-meta">
+                      <span>{room.playerCount}/{room.maxPlayers} Jugadores</span>
+                      {canJoin
+                        ? <span className="home__room-status">ESPERANDO</span>
+                        : <span className="home__room-status home__room-status--full">{isFull(room) ? 'Llena' : 'En curso'}</span>
+                      }
                     </div>
-                    <button
-                      className="home__join-btn"
-                      onClick={() => handleJoinClick(room)}
-                      disabled={!canJoin || joiningCode !== null || !connected}
-                    >
-                      {joiningCode === room.code ? '...' : 'Unirse'}
-                    </button>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                  <button
+                    className="home__join-btn"
+                    onClick={() => handleJoinClick(room)}
+                    disabled={!canJoin || joiningCode !== null || !connected}
+                  >
+                    {joiningCode === room.code ? '...' : 'Unirse'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {codeModal && (
