@@ -496,7 +496,13 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   <DiceRollerScene
                     values={sceneValues}
                     rollingIndices={rollingIndices}
-                    pendingDiscards={isMyTurn ? pendingDiscards : botDiscards}
+                    pendingDiscards={
+                      isMyTurn
+                        ? pendingDiscards
+                        : currentPlayer?.isBot
+                          ? botDiscards
+                          : (currentPlayer?.pendingDiscards ?? [])
+                    }
                     interactive={isMyTurn && !me?.done && !mustPass && rollNum > 0}
                     onDieClick={toggleDiscard}
                     seed={rollSeed}
