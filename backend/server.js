@@ -573,13 +573,13 @@ io.on('connection', (socket) => {
     broadcastRoomList();
   });
 
-  socket.on('discard', ({ index }, cb) => {
+  socket.on('discard', ({ indices }, cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
     if (player.id !== socket.id || player.done) return cb?.({ ok: false });
-    if (typeof index !== 'number') return cb?.({ ok: false });
-    if (!player.pendingDiscards.includes(index)) player.pendingDiscards.push(index);
+    if (!Array.isArray(indices)) return cb?.({ ok: false });
+    player.pendingDiscards = indices.filter(i => typeof i === 'number' && i >= 0 && i < 5);
     cb?.({ ok: true });
     broadcast(room.code);
   });

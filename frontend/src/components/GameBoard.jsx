@@ -144,9 +144,10 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
 
   function toggleDiscard(index) {
     setPendingDiscards(prev => {
-      if (prev.includes(index)) return prev.filter(i => i !== index)
-      playDiscardSound()
-      return [...prev, index]
+      const next = prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+      if (!prev.includes(index)) playDiscardSound()
+      socket.emit('discard', { indices: next })
+      return next
     })
   }
 
@@ -605,7 +606,12 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
       )}
 
       {palilloRotoVisible && (
-        <AnimacionPalilloRoto room={room} onDone={() => setPalilloRotoVisible(false)} continueDeadline={room.continueDeadline} />
+        <AnimacionPalilloRoto
+          room={room}
+          isLoser={myId === (room.gameLoserId ?? room.roundLoserId)}
+          onDone={() => setPalilloRotoVisible(false)}
+          continueDeadline={room.continueDeadline}
+        />
       )}
 
       {leaveIntent && (

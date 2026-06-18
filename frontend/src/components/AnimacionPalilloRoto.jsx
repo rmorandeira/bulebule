@@ -13,7 +13,7 @@ const style = `
 
 // Al final de cada ronda: velado + quién rompe el palillo, con la misma
 // animación que el cambio de jugador (entra de izquierda, sale a la derecha).
-export default function AnimacionPalilloRoto({ room, onDone, continueDeadline }) {
+export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDeadline }) {
   const [exitPhase, setExitPhase] = useState(null) // null | 'out' | 'fade'
   const [secondsLeft, setSecondsLeft] = useState(null)
 
@@ -77,11 +77,18 @@ export default function AnimacionPalilloRoto({ room, onDone, continueDeadline })
           </p>
           {enCapilla && <p className="palillo-roto__capilla">¡Queda en capilla!</p>}
         </div>
-        {!exitPhase && (
+        {!exitPhase && isLoser && (
           <div className="next-player-footer">
             <button className="btn btn--primary next-player-continue" onClick={() => setExitPhase('out')}>
               {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
             </button>
+          </div>
+        )}
+        {!exitPhase && !isLoser && (
+          <div className="next-player-footer next-player-footer--waiting">
+            <span className={`next-player-waiting${secondsLeft !== null && secondsLeft <= 10 ? ' next-player-counter--urgent' : ''}`}>
+              {secondsLeft !== null ? `Esperando al jugador (${secondsLeft}s)` : 'Esperando al jugador...'}
+            </span>
           </div>
         )}
       </div>
