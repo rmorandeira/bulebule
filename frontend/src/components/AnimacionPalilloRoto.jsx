@@ -11,24 +11,13 @@ const style = `
 }
 `
 
-export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDeadline }) {
-  const [exitPhase, setExitPhase] = useState(null) // null | 'out'
-  const [secondsLeft, setSecondsLeft] = useState(null)
+export default function AnimacionPalilloRoto({ room, onDone }) {
+  const [exitPhase, setExitPhase] = useState(null)
 
   useEffect(() => {
-    if (!continueDeadline) { setSecondsLeft(null); return }
-    const update = () => setSecondsLeft(Math.max(0, Math.ceil((continueDeadline - Date.now()) / 1000)))
-    update()
-    const id = setInterval(update, 500)
-    return () => clearInterval(id)
-  }, [continueDeadline])
-
-  // Non-losers: auto-dismiss after 3 s so the classification list becomes visible
-  useEffect(() => {
-    if (isLoser) return
     const id = setTimeout(() => setExitPhase('out'), 3000)
     return () => clearTimeout(id)
-  }, [isLoser])
+  }, [])
 
   const loser = room.players.find(p => p.id === (room.gameLoserId ?? room.roundLoserId))
   if (!loser) return null
@@ -77,16 +66,6 @@ export default function AnimacionPalilloRoto({ room, isLoser, onDone, continueDe
               : 'rompe un palillo'}
           </p>
           {enCapilla && <p className="palillo-roto__capilla">¡Queda en capilla!</p>}
-          {!exitPhase && isLoser && (
-            <button className="btn btn--primary btn--full" style={{ marginTop: 12 }} onClick={() => setExitPhase('out')}>
-              {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
-            </button>
-          )}
-          {!exitPhase && !isLoser && (
-            <p className="waiting-label" style={{ marginTop: 8 }}>
-              {secondsLeft !== null ? `Esperando al jugador (${secondsLeft}s)` : 'Esperando al jugador...'}
-            </p>
-          )}
         </div>
       </div>
     </>

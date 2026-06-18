@@ -437,9 +437,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               {palilloRotoShowing
                 ? <AnimacionPalilloRoto
                     room={room}
-                    isLoser={myId === (room.gameLoserId ?? room.roundLoserId)}
                     onDone={() => setPalilloRotoShowing(false)}
-                    continueDeadline={room.continueDeadline}
                   />
                 : <>
                     <div className="results__scores-header">
