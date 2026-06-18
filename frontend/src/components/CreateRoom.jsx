@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
 import { track } from '../analytics'
 
@@ -20,6 +20,9 @@ export default function CreateRoom({ playerName, user, onBack, musicOn, onToggle
   const [searchQuery, setSearchQuery] = useState('')
   const [allUsers, setAllUsers] = useState([])
   const [invitedFriends, setInvitedFriends] = useState([])
+
+  const roomNameRef = useRef(null)
+  useEffect(() => { roomNameRef.current?.focus() }, [])
 
   const canInvite = !vsBot && !!user
 
@@ -139,11 +142,11 @@ export default function CreateRoom({ playerName, user, onBack, musicOn, onToggle
           <>
             <label className="form-label">Nombre de la sala</label>
             <input
+              ref={roomNameRef}
               className="input"
               placeholder="Ej: Sala de Roi"
               value={roomName}
               maxLength={20}
-              autoFocus
               onChange={e => { setRoomName(e.target.value); setError('') }}
               onKeyDown={e => e.key === 'Enter' && create()}
             />
