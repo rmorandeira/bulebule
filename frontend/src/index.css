@@ -1003,8 +1003,8 @@ body {
 .scoreboard__pos { font-size: 12px; color: var(--text-subtle); width: 16px; flex-shrink: 0; }
 .scoreboard__name { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scoreboard__dice { display: flex; gap: 3px; }
-.scoreboard__wins { font-size: 13px; font-weight: 700; width: 24px; text-align: right; flex-shrink: 0; }
-.scoreboard__trophy { width: 24px; text-align: right; flex-shrink: 0; font-size: 15px; line-height: 1; }
+.scoreboard__wins { font-size: 13px; font-weight: 700; width: 24px; text-align: right; flex-shrink: 0; margin-right: -4px; }
+.scoreboard__trophy { width: 24px; text-align: right; flex-shrink: 0; font-size: 15px; line-height: 1; margin-right: -4px; }
 
 .roll { display: flex; flex-direction: column; gap: 8px; }
 
