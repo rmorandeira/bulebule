@@ -309,9 +309,10 @@ export default function GameBoard({ room, myId, onLeave }) {
   return (
     <div className="screen game">
       <nav className="navbar">
-        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')} disabled={isAnimating}>← Salir</button>
+        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')} disabled={isAnimating}>‹ Salir</button>
+        <span className="navbar__room">{room.name || `Ronda ${room.roundNumber}`}</span>
         <span className="navbar__round">
-          Ronda {room.roundNumber}{room.maxRounds > 0 ? ` / ${room.maxRounds}` : ''}
+          {room.maxRounds > 0 ? `${room.roundNumber}/${room.maxRounds}` : ''}
         </span>
       </nav>
 
@@ -408,7 +409,10 @@ export default function GameBoard({ room, myId, onLeave }) {
       })() : (
         <>
           <div className="scoreboard">
-            <p className="scoreboard__title">Clasificación</p>
+            <div className="scoreboard__header">
+              <p className="scoreboard__title">Clasificación</p>
+              <span>🏆</span>
+            </div>
             {[...room.players].sort((a, b) => b.wins - a.wins).map((p, i) => {
               const isRolling = rollingIndices.length > 0 && p.id === currentPlayer?.id
               const dice = isRolling
@@ -430,62 +434,62 @@ export default function GameBoard({ room, myId, onLeave }) {
             })}
           </div>
 
-          <div className="dice-box">
-            <DiceRollerScene
-              values={sceneValues}
-              rollingIndices={rollingIndices}
-              pendingDiscards={isMyTurn ? pendingDiscards : botDiscards}
-              interactive={isMyTurn && !me?.done && !mustPass && (me?.rollCount ?? 0) > 0}
-              onDieClick={toggleDiscard}
-              seed={rollSeed}
-              sorted={!!displayPlayer?.done}
-              onSettled={(faces) => {
-                setRollingIndices([])
-                if (faces?.length === 5) {
-                  lastFacesRef.current = faces
-                  setScoreboardDice(prev => ({ ...prev, [currentPlayer?.id]: faces }))
-                }
-                if (isMyTurn && faces?.length === 5) socket.emit('report_faces', { faces })
-                // Bot: los dados ya han caído y están parados → puede decidir
-                if (currentPlayer?.isBot && room.botPhase === 'rolled') {
-                  if (faces?.length === 5) socket.emit('report_faces', { faces })
-                  if (!botReadySentRef.current) {
-                    botReadySentRef.current = true
-                    clearTimeout(botReadyTimerRef.current)
-                    socket.emit('bot_ready')
-                  }
-                }
-              }}
-            />
-          </div>
-
           {(() => {
             const rollNum = displayPlayer?.rollCount ?? 0
-            const isInteractive = isMyTurn && !me?.done && !mustPass && rollNum > 0
+            let toBeat = null
+            for (const p of room.players) {
+              if (p.done && p.hand && (!toBeat || p.hand.rank > toBeat.hand.rank ||
+                (p.hand.rank === toBeat.hand.rank && (p.hand.topKey ?? '') > (toBeat.hand.topKey ?? '')))) toBeat = p
+            }
             return (
-              <div className="game-hand">
-                <div className="game-hand__header">
-                  <span className="game-hand__title">
-                    {isMyTurn ? 'Tu jugada' : `Turno de ${currentPlayer?.name}`}
-                  </span>
-                  {rollNum > 0 && (
-                    <span className="game-hand__tirada">
-                      Tirada {ROLL_WORDS[rollNum - 1] ?? rollNum}
+              <div className="dice-box">
+                <div className="dice-box__header">
+                  {toBeat ? (
+                    <>
+                      <span className="dice-box__label">Supera</span>
+                      <span className="dice-box__beat">
+                        {toBeat.hand.desc} en {toBeat.rollCount} {toBeat.rollCount === 1 ? 'ronda' : 'rondas'}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="dice-box__label">
+                      {isMyTurn ? 'Tu jugada' : `Turno de ${currentPlayer?.name}`}
                     </span>
                   )}
                 </div>
-                <div className="game-hand__separator" />
-                {displayPlayer?.done && displayPlayer?.hand
-                  ? <p className="hand-result">{displayPlayer.hand.desc}</p>
-                  : displayPlayer?.hand && rollNum > 0
-                    ? <>
-                        <p className="hand-result hand-result--live">{displayPlayer.hand.desc}</p>
-                        {isInteractive && <p className="game-hand__hint">Toca un dado para descartarlo</p>}
-                      </>
-                    : rollNum === 0
-                      ? <p className="game-hand__hint">Tira los dados para empezar</p>
-                      : null
-                }
+                <div className="dice-box__scene">
+                  <DiceRollerScene
+                    values={sceneValues}
+                    rollingIndices={rollingIndices}
+                    pendingDiscards={isMyTurn ? pendingDiscards : botDiscards}
+                    interactive={isMyTurn && !me?.done && !mustPass && rollNum > 0}
+                    onDieClick={toggleDiscard}
+                    seed={rollSeed}
+                    sorted={!!displayPlayer?.done}
+                    onSettled={(faces) => {
+                      setRollingIndices([])
+                      if (faces?.length === 5) {
+                        lastFacesRef.current = faces
+                        setScoreboardDice(prev => ({ ...prev, [currentPlayer?.id]: faces }))
+                      }
+                      if (isMyTurn && faces?.length === 5) socket.emit('report_faces', { faces })
+                      if (currentPlayer?.isBot && room.botPhase === 'rolled') {
+                        if (faces?.length === 5) socket.emit('report_faces', { faces })
+                        if (!botReadySentRef.current) {
+                          botReadySentRef.current = true
+                          clearTimeout(botReadyTimerRef.current)
+                          socket.emit('bot_ready')
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div className="dice-box__footer">
+                  <span className="dice-box__tirada">
+                    {rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar'}
+                  </span>
+                  <span className="dice-box__hand">{displayPlayer?.hand?.desc ?? ''}</span>
+                </div>
               </div>
             )
           })()}
@@ -512,7 +516,6 @@ export default function GameBoard({ room, myId, onLeave }) {
                     </button>
                   </div>
                 )}
-                {shakeEnabled && canRoll && <p className="shake-hint">Agita el móvil para tirar</p>}
                 {isMobile() && needsMotionPermission() && !shakeEnabled && (
                   <button className="btn btn--secondary btn--full" onClick={enableShakeIOS} style={{ marginTop: 8 }}>
                     Activar agitar

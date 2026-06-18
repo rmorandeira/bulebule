@@ -468,8 +468,9 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
   ctx.tempBodies.forEach(b => world.removeRigidBody(b))
   ctx.tempBodies = []
   dice.forEach((d, i) => {
-    if (d.phase !== 'idle' || rollingIndices.includes(i) || d.inCorner) return
-    const p = d.mesh.position
+    if (d.phase !== 'idle' || rollingIndices.includes(i)) return
+    // Use final position for dice still animating (inCorner slide or return)
+    const p = d.moveActive ? d.moveTo : d.mesh.position
     const body = world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(p.x, p.y, p.z))
     world.createCollider(R.ColliderDesc.cuboid(DIE / 2, DIE / 2, DIE / 2).setRestitution(0.1).setFriction(0.9), body)
     ctx.tempBodies.push(body)
@@ -493,6 +494,7 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
       .setTranslation(startX, startY, startZ)
       .setLinearDamping(0.4)
       .setAngularDamping(0.4)
+      .setCcdEnabled(true)
       .setLinvel(
         (rng() - .5) * 3,
         2 + rng() * 2,
