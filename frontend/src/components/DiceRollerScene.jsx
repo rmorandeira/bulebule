@@ -575,8 +575,13 @@ function step(ctx, now, propsRef) {
     placing.forEach(d => {
       const t = Math.min((now - d.ts) / DUR, 1)
       d.mesh.position.lerpVectors(d.fp, d.tp, eio(t))
+      d.mesh.quaternion.slerpQuaternions(d.fq, d.tq, eio(t))
       if (t < 1) done = false
-      else { d.mesh.position.copy(d.tp); d.phase = 'idle' }
+      else {
+        d.mesh.position.copy(d.tp)
+        d.mesh.quaternion.copy(d.tq)
+        d.phase = 'idle'
+      }
     })
     if (done) {
       const faces = ctx.dice.map(d => d.mesh.visible ? getTopFace(d.mesh) : d.value)
@@ -668,11 +673,14 @@ function beginPlace(ctx, now) {
     if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
     // Read physical top face before snapping Y
     d.value = getTopFace(d.mesh)
+    const fi = VALUE_TO_FACE[d.value] ?? 2
     const { x, z } = slotPos(i)
     // Always snap to floor — prevents stacked dice appearing elevated
     d.mesh.position.y = REST_Y
     d.fp.copy(d.mesh.position)
     d.tp.set(x, REST_Y, z)
+    d.fq.copy(d.mesh.quaternion)
+    d.tq.copy(FACE_UP_QUATS[fi])
     d.ts = now
     d.phase = 'placing'
   })
