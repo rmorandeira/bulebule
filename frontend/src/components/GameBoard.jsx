@@ -38,6 +38,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [shakeEnabled, setShakeEnabled] = useState(false)
   const [botDiscards, setBotDiscards] = useState([])
   const [timeLeft, setTimeLeft] = useState(null)
+  const [waitTimeLeft, setWaitTimeLeft] = useState(null)
   const [rollingIndices, setRollingIndices] = useState([])
   const [sceneValues, setSceneValues] = useState(null)
   const [rollSeed, setRollSeed] = useState(null)
@@ -295,10 +296,19 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [botPhase])
 
-  // Countdown timer
+  // Countdown timer — active player
   useEffect(() => {
     if (!room.turnDeadline || !isMyTurn) { setTimeLeft(null); return }
     const update = () => setTimeLeft(Math.max(0, Math.ceil((room.turnDeadline - Date.now()) / 1000)))
+    update()
+    const id = setInterval(update, 500)
+    return () => clearInterval(id)
+  }, [room.turnDeadline, isMyTurn])
+
+  // Countdown timer — waiting player
+  useEffect(() => {
+    if (!room.turnDeadline || isMyTurn) { setWaitTimeLeft(null); return }
+    const update = () => setWaitTimeLeft(Math.max(0, Math.ceil((room.turnDeadline - Date.now()) / 1000)))
     update()
     const id = setInterval(update, 500)
     return () => clearInterval(id)
@@ -552,6 +562,11 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             )}
             {me?.done && (
               <p className="waiting-label">Tu mano: {me?.hand?.desc}</p>
+            )}
+            {!isMyTurn && !me?.done && waitTimeLeft !== null && (
+              <p className={`actions__wait-label${waitTimeLeft <= 10 ? ' actions__hint--urgent' : ''}`}>
+                Esperando la tirada del otro jugador ({waitTimeLeft}s)
+              </p>
             )}
           </div>
         </>

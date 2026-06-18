@@ -1146,6 +1146,14 @@ body {
   animation: timer-pulse 0.8s ease-in-out infinite;
 }
 
+.actions__wait-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes timer-pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.5; }
