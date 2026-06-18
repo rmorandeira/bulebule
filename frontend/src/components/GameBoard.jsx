@@ -413,7 +413,7 @@ export default function GameBoard({ room, myId, onLeave }) {
               const isRolling = rollingIndices.length > 0 && p.id === currentPlayer?.id
               const dice = isRolling
                 ? (scoreboardDice[p.id] ?? [])
-                : (scoreboardDice[p.id] ?? p.currentDice ?? [])
+                : (p.currentDice ?? [])
               return (
                 <div key={p.id} className={`scoreboard__row ${p.id === currentPlayer?.id ? 'scoreboard__row--active' : ''}`}>
                   <span className="scoreboard__pos">{i + 1}.</span>
@@ -547,7 +547,7 @@ export default function GameBoard({ room, myId, onLeave }) {
             <h2 className="modal__title">Abandonar la partida</h2>
             <p className="modal__text">¿Estás seguro de que quieres abandonar la partida?</p>
             <div className="modal__actions">
-              <button className="btn btn--secondary" onClick={() => setLeaveIntent(null)}>Continuar</button>
+              <button className="btn btn--secondary" onClick={() => setLeaveIntent(null)}>Seguir jugando</button>
               <button className="btn btn--primary" onClick={confirmLeave}>Abandonar</button>
             </div>
           </div>
