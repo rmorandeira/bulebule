@@ -346,7 +346,7 @@ body {
   position: absolute;
   left: 24px;
   right: 24px;
-  bottom: calc(40px + env(safe-area-inset-bottom));
+  bottom: calc(64px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1164,7 +1164,7 @@ body {
 
 .results .btn--full {
   position: fixed;
-  bottom: calc(37px + env(safe-area-inset-bottom));
+  bottom: calc(64px + env(safe-area-inset-bottom));
   left: 16px;
   right: 16px;
   width: auto;
