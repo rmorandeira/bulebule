@@ -183,7 +183,7 @@ export default function DiceRollerScene({
 
     const scene  = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(52, W / H, 0.1, 100)
-    camera.position.set(0, 8.5, 10.8)
+    camera.position.set(0, 5.4, 12.6)
     camera.lookAt(0, FY + 1.5, 0)
 
     // FXAA post-process composer
@@ -273,7 +273,7 @@ export default function DiceRollerScene({
       renderer, scene, camera, dice,
       RAPIER: null, world: null,
       pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null, tempBodies: [],
-      camCurPos:  new THREE.Vector3(0, 8.5, 10.8),
+      camCurPos:  new THREE.Vector3(0, 5.4, 12.6),
       camCurLook: new THREE.Vector3(0, FY + 1.5, 0),
       camTween: null,
     }
@@ -420,7 +420,7 @@ export default function DiceRollerScene({
     if (!ctx) return
     ctx.camTween = {
       fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-      toPos: new THREE.Vector3(0, 8.5, 10.8), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+      toPos: new THREE.Vector3(0, 5.4, 12.6), toLook: new THREE.Vector3(0, FY + 1.5, 0),
       ts: performance.now(), dur: 350,
     }
     ctx.dice.forEach(d => {
@@ -683,7 +683,7 @@ function rollWithSounds(ctx, values, rollingIndices, seed) {
   const myId = ctx.rollId
   ctx.camTween = {
     fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-    toPos: new THREE.Vector3(0, 8.5, 10.8), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+    toPos: new THREE.Vector3(0, 5.4, 12.6), toLook: new THREE.Vector3(0, FY + 1.5, 0),
     ts: performance.now(), dur: 350,
   }
 
