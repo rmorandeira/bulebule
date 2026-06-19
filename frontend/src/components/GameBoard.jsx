@@ -330,7 +330,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   return (
     <div className="screen game">
       <nav className="navbar">
-        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')} disabled={isAnimating}>‹ Salir</button>
+        <button className="navbar__exit" onClick={() => setLeaveIntent('exit')}>‹ Salir</button>
         <span className="navbar__room">{room.name || `Ronda ${room.roundNumber}`}</span>
         <div className="navbar__right">
           <span className="navbar__round">
