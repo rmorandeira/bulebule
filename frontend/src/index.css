@@ -905,7 +905,12 @@ body {
 }
 .btn-whatsapp:active { background: #1daf55; transform: scale(0.97); }
 
-.waiting-room__footer { margin-top: auto; }
+.waiting-room__footer {
+  position: fixed;
+  bottom: 64px;
+  left: 16px;
+  right: 16px;
+}
 
 .player-list { display: flex; flex-direction: column; gap: 2px; }
 

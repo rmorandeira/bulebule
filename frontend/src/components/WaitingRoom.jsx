@@ -46,7 +46,7 @@ export default function WaitingRoom({ room, myId, onLeave }) {
 
       <div className="player-list">
         <p className="player-list__title">
-          Jugadores ({room.players.length}/{room.maxPlayers})
+          Jugadores
         </p>
         {room.players.map(p => (
           <div key={p.id} className="player-list__item">
