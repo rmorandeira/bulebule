@@ -17,20 +17,13 @@ function compareHands(h1, h2) {
 function PalilloMini({ player }) {
   if (!player) return null
   if (player.liberado) return <span className="tag tag--liberado" style={{ fontSize: 10 }}>Lib</span>
+  if ((player.breaks ?? 0) >= 3) return <span className="tag tag--capilla" style={{ fontSize: 10 }}>Cap</span>
   const breaks = player.breaks ?? 0
-  const enCapilla = breaks >= 3
   return (
     <span className="palillo">
-      {[0, 1, 2].map(i => {
-        const roto = i >= 3 - breaks
-        return (
-          <span key={i} className={[
-            'palillo__seg',
-            roto && 'palillo__seg--roto',
-            roto && enCapilla && 'palillo__seg--capilla',
-          ].filter(Boolean).join(' ')} />
-        )
-      })}
+      {[0, 1, 2].map(i => (
+        <span key={i} className={i < 3 - breaks ? 'palillo__seg' : 'palillo__seg palillo__seg--roto'} />
+      ))}
     </span>
   )
 }
@@ -99,7 +92,7 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
             <div className="next-player-hand">
               <p className="next-player-hand__title">Jugada a superar</p>
               <div className="next-player-hand__dice">
-                {toBeat.currentDice?.map((v, i) => <Die key={i} value={v} />)}
+                {[...(toBeat.currentDice ?? [])].sort((a, b) => (VALUE_RANK[b] ?? 0) - (VALUE_RANK[a] ?? 0)).map((v, i) => <Die key={i} value={v} />)}
               </div>
               <div className="next-player-hand__row">
                 <span className="next-player-hand__name">{toBeat.hand.desc}</span>

@@ -669,7 +669,8 @@ io.on('connection', (socket) => {
   socket.on('next_round', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'results') return cb?.({ ok: false });
-    if (socket.id !== room.roundLoserId) return cb?.({ ok: false });
+    const loserIsBot = room.players.find(p => p.id === room.roundLoserId)?.isBot;
+    if (socket.id !== room.roundLoserId && !loserIsBot) return cb?.({ ok: false });
     clearContinueTimer(room);
     startRound(room);
     cb?.({ ok: true });

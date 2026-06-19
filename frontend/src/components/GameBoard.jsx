@@ -20,20 +20,13 @@ const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
 function PalilloState({ player }) {
   if (player.liberado) return <span className="tag tag--liberado">Liberado</span>
+  if ((player.breaks ?? 0) >= 3) return <span className="tag tag--capilla">En capilla</span>
   const breaks = player.breaks ?? 0
-  const enCapilla = breaks >= 3
   return (
-    <span className="palillo" aria-label={enCapilla ? 'En capilla' : `Palillo: ${3 - breaks} de 3`}>
-      {[0, 1, 2].map(i => {
-        const roto = i >= 3 - breaks
-        return (
-          <span key={i} className={[
-            'palillo__seg',
-            roto && 'palillo__seg--roto',
-            roto && enCapilla && 'palillo__seg--capilla',
-          ].filter(Boolean).join(' ')} />
-        )
-      })}
+    <span className="palillo" aria-label={`Palillo: ${3 - breaks} de 3`}>
+      {[0, 1, 2].map(i => (
+        <span key={i} className={i < 3 - breaks ? 'palillo__seg' : 'palillo__seg palillo__seg--roto'} />
+      ))}
     </span>
   )
 }
@@ -462,13 +455,17 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   </>
               }
             </div>
-            {!palilloRotoShowing && (room.roundLoserId === myId
-              ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>
-                  {continueSecondsLeft !== null ? `Nueva ronda (${continueSecondsLeft}s)` : 'Nueva ronda'}
-                </button>
-              : <p className="waiting-label">
-                  {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
-                </p>)}
+            {!palilloRotoShowing && (() => {
+              const loserIsBot = room.players.find(p => p.id === room.roundLoserId)?.isBot
+              const iCanAdvance = room.roundLoserId === myId || loserIsBot
+              return iCanAdvance
+                ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>
+                    {!loserIsBot && continueSecondsLeft !== null ? `Nueva ronda (${continueSecondsLeft}s)` : 'Nueva ronda'}
+                  </button>
+                : <p className="waiting-label">
+                    {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
+                  </p>
+            })()}
           </div>
         )
       })() : (
