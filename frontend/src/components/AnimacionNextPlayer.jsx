@@ -60,7 +60,7 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
   // Jugada a superar: la mejor mano de los jugadores ya plantados
   let toBeat = null
   for (const p of room.players) {
-    if (p.done && p.hand && (!toBeat || compareHands(p.hand, toBeat.hand) > 0)) toBeat = p
+    if (p.done && p.hand && (!toBeat || compareHands(p.hand, toBeat.hand) < 0)) toBeat = p
   }
 
   return (
