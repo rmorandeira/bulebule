@@ -370,6 +370,13 @@ export default function RoomList({
                 <input className="rl__search" placeholder="Buscar jugador"
                   value={rankSearch}
                   onChange={e => setRankSearch(e.target.value)} />
+                {rankSearch && (
+                  <button className="rl__search-clear" onClick={() => setRankSearch('')} aria-label="Borrar búsqueda">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                )}
               </div>
               <button className="rl__icon-btn" aria-label="Actualizar" onClick={fetchStats}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -413,6 +420,13 @@ export default function RoomList({
                 <input className="rl__search" placeholder="Buscar sala"
                   value={roomSearch}
                   onChange={e => setRoomSearch(e.target.value)} />
+                {roomSearch && (
+                  <button className="rl__search-clear" onClick={() => setRoomSearch('')} aria-label="Borrar búsqueda">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                )}
               </div>
               <button className="rl__create-inline-btn" onClick={openCreate} disabled={!connected}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
