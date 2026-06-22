@@ -101,7 +101,7 @@ db.exec(`
 // Puntos por ronda: base + rank * multiplicador (rank 0–7)
 const ROUND_PTS_BASE = 8;
 const ROUND_PTS_MULT = 4;   // pareja=12, dos pares=16, trío=20, full=24, póker=28, repóker=32
-const POINTS = { ROUND_LOSS: -6, GAME_WIN: 80, GAME_LOSS: -15, GAME_PARTICIPATE: 10 };
+const POINTS = { GAME_WIN: 80, GAME_PARTICIPATE: 10 };
 const TIERS = [
   { name: 'Diamante', min: 700 },
   { name: 'Oro',      min: 300 },
@@ -134,10 +134,9 @@ function ensureStats(userId) {
 const commitGamePoints = db.transaction((uid, roundDelta, result) => {
   const row = stmts.getStats.get(uid);
   if (!row) return 0;
-  let score = Math.max(0, row.score + roundDelta);
+  let score = row.score + roundDelta;
   let gamesWon = row.games_won;
   if (result === 'win')  { score += POINTS.GAME_WIN; gamesWon++; }
-  else if (result === 'loss') { score = Math.max(0, score + POINTS.GAME_LOSS); }
   else                   { score += POINTS.GAME_PARTICIPATE; }
   const delta = score - row.score;
   stmts.updateStats.run(score, row.games_played + 1, gamesWon, uid);
@@ -151,24 +150,15 @@ function getUserIdForPlayer(player) {
   return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? null;
 }
 
-function awardRoundPoints(room, loserId) {
-  const winner = room.players.find(p => p.id === room.roundWinnerId);
-  const handRank = winner?.hand?.rank ?? 0;
-  const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
+function awardRoundPoints(room) {
   if (!room.pendingScores) room.pendingScores = {};
   for (const player of room.players) {
     if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
-    const isWinner = player.id === room.roundWinnerId;
-    const isLoser  = player.id === loserId;
-    if (!isWinner && !isLoser) continue;
-    if (uid) {
-      // Registered: accumulate in pendingScores — committed to DB only at game end
-      const prev = room.pendingScores[uid] ?? 0;
-      if (isWinner) { room.pendingScores[uid] = prev + roundPts; }
-      else          { room.pendingScores[uid] = prev + POINTS.ROUND_LOSS; }
-    }
-    // Guests: no score tracking (shown as — in UI)
+    if (!uid) continue; // guests: shown as — in UI
+    const handRank = player.hand?.rank ?? 0;
+    const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
+    room.pendingScores[uid] = (room.pendingScores[uid] ?? 0) + roundPts;
   }
 }
 
@@ -554,7 +544,7 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'capilla';
     const gameWinner = room.players.find(p => p.id === room.roundWinnerId);
     if (gameWinner) gameWinner.wins += 1;
-    awardRoundPoints(room, loser.id);
+    awardRoundPoints(room);
     awardGamePoints(room, room.roundWinnerId, loser.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'capilla', rounds: room.roundNumber, playerCount: room.players.length });
@@ -568,12 +558,12 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'rounds';
     const gameWinner = room.players.filter(p => p.id !== worst.id).sort((a, b) => a.breaks - b.breaks)[0];
     if (gameWinner) gameWinner.wins += 1;
-    awardRoundPoints(room, loser.id);
+    awardRoundPoints(room);
     awardGamePoints(room, gameWinner?.id ?? null, worst.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
-    awardRoundPoints(room, loser.id);
+    awardRoundPoints(room);
     room.phase = 'results';
     clearContinueTimer(room);
     room.continueDeadline = Date.now() + CONTINUE_TIMEOUT;

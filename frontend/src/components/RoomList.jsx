@@ -29,8 +29,9 @@ const DEFAULT_PAGE = 'online'
 
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
-function CreateSheet({ playerName, closing, onClose }) {
+function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
   const [mode, setMode]             = useState('multi') // 'multi' | 'solo'
+  const [guestName, setGuestName]   = useState(playerName || '')
   const [roomName, setRoomName]     = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [soloPlayers, setSoloPlayers] = useState(2)
@@ -45,13 +46,17 @@ function CreateSheet({ playerName, closing, onClose }) {
     }
   }, [mode])
 
+  const activeName = user ? playerName : guestName
+
   function create() {
-    if (!playerName?.trim()) return setError('Introduce tu nombre primero')
+    const name = activeName?.trim()
+    if (!name) return setError('Introduce tu nombre primero')
+    if (!user) onNameChange?.(name)
     if (mode === 'multi' && !roomName.trim()) return setError('Ponle un nombre a la sala')
     setLoading(true)
     if (mode === 'solo') {
       socket.emit('create_room', {
-        playerName: playerName.trim(),
+        playerName: name,
         roomName: 'Solo Play',
         maxPlayers: soloPlayers,
         vsBot: true,
@@ -65,7 +70,7 @@ function CreateSheet({ playerName, closing, onClose }) {
       })
     } else {
       socket.emit('create_room', {
-        playerName: playerName.trim(),
+        playerName: name,
         roomName: roomName.trim(),
         maxPlayers,
         vsBot: false,
@@ -85,6 +90,21 @@ function CreateSheet({ playerName, closing, onClose }) {
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
       <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
         <div className="bs__handle" />
+
+        {/* Guest name input */}
+        {!user && (
+          <div className="bs__field">
+            <p className="bs__label">TU NOMBRE</p>
+            <input
+              className="bs__input"
+              placeholder="Tu nombre de jugador"
+              value={guestName}
+              maxLength={20}
+              onChange={e => { setGuestName(e.target.value); setError('') }}
+              onKeyDown={e => e.key === 'Enter' && create()}
+            />
+          </div>
+        )}
 
         {/* Mode selector */}
         <div className="bs__mode-row">
@@ -147,7 +167,7 @@ function CreateSheet({ playerName, closing, onClose }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RoomList({
-  user, playerName, onLogin,
+  user, playerName, onNameChange, onLogin,
   onSettingsUpdate, onSettingsLogout, onSettingsDelete,
 }) {
   const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
@@ -361,7 +381,7 @@ export default function RoomList({
         <div className="rl__hd-score">
           {myStats && <>
             <span className="rl__hd-pts">{myStats.score.toLocaleString()} pts</span>
-            {myRank && <span className="rl__hd-rank">{myRank}/{rankTotal}</span>}
+            {myRank && <span className="rl__hd-rank">Ranking {myRank}/{rankTotal}</span>}
           </>}
         </div>
       </header>
@@ -456,11 +476,15 @@ export default function RoomList({
                   </button>
                 )}
               </div>
-              <button className="rl__create-inline-btn" onClick={openCreate} disabled={!connected}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              <button className="rl__icon-btn" onClick={openCreate} disabled={!connected} aria-label="Crear sala">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4"  y1="6"  x2="20" y2="6"/>
+                  <line x1="4"  y1="12" x2="20" y2="12"/>
+                  <line x1="4"  y1="18" x2="20" y2="18"/>
+                  <circle cx="8"  cy="6"  r="2" fill="currentColor" stroke="none"/>
+                  <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/>
+                  <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
                 </svg>
-                Crear sala
               </button>
             </div>
             <div className="rl__rooms">
@@ -508,6 +532,15 @@ export default function RoomList({
         )}
 
       </div>
+
+      {/* Crear sala — full-width bar, only in online tab */}
+      {activeTab === 'online' && (
+        <div className="rl__create-bar">
+          <button className="rl__create-bar-btn" onClick={openCreate} disabled={!connected}>
+            Crear sala
+          </button>
+        </div>
+      )}
 
       {/* Navbar */}
       <nav className="rl__navbar">
@@ -560,7 +593,8 @@ export default function RoomList({
 
       {/* Create / Solo play sheet */}
       {createSheet && (
-        <CreateSheet playerName={playerName} closing={createClosing} onClose={closeCreate} />
+        <CreateSheet user={user} playerName={playerName} onNameChange={onNameChange}
+          closing={createClosing} onClose={closeCreate} />
       )}
 
       {/* Private room code modal */}

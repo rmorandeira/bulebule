@@ -240,10 +240,15 @@ export default function App() {
     }
   }
 
+  function handleGuestNameChange(name) {
+    localStorage.setItem('bule_guest', name)
+    setPlayerName(name)
+  }
+
   function handleLogout() {
     localStorage.removeItem('bule_user')
     setUser(null)
-    setPlayerName('')
+    setPlayerName(loadGuestName())
     setRoom(null)
     setScreen('list')
   }
@@ -258,7 +263,7 @@ export default function App() {
   function handleDeleteAccount() {
     localStorage.removeItem('bule_user')
     setUser(null)
-    setPlayerName('')
+    setPlayerName(loadGuestName())
     setRoom(null)
     setScreen('list')
   }
@@ -331,7 +336,7 @@ export default function App() {
         musicOn={musicOn}
         onToggleMusic={toggleMusic}
         playerName={playerName}
-        onNameChange={setPlayerName}
+        onNameChange={handleGuestNameChange}
         onLogin={handleLogin}
         onSettingsUpdate={handleUpdateUser}
         onSettingsLogout={handleLogout}

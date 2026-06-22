@@ -378,6 +378,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
         const gameLoser = room.players.find(p => p.id === room.gameLoserId)
         return (
+          <>
           <div className="results">
             {gameLoser ? (
               <div className="results__winner">
@@ -427,15 +428,19 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 )
               })}
             </div>
-            {room.hostId === myId
-              ? <button className="btn btn--primary btn--full" onClick={handleRematch}>Otra partida</button>
-              : <p className="waiting-label">Esperando al host...</p>}
           </div>
+          {room.hostId === myId
+            ? <button className="results-action-btn btn btn--primary" onClick={handleRematch}>Otra partida</button>
+            : <p className="results-action-label">Esperando al host...</p>}
+        </>
         )
       })() : room.phase === 'results' ? (() => {
         const winner = room.players.find(p => p.id === room.roundWinnerId)
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
+        const loserIsBot = room.players.find(p => p.id === room.roundLoserId)?.isBot
+        const iCanAdvance = room.roundLoserId === myId || loserIsBot
         return (
+          <>
           <div className="results">
             <div className="results__winner">
               <p className="results__winner-label">🏆 Ganador 🏆</p>
@@ -508,18 +513,16 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   </>
               }
             </div>
-            {!palilloRotoShowing && (() => {
-              const loserIsBot = room.players.find(p => p.id === room.roundLoserId)?.isBot
-              const iCanAdvance = room.roundLoserId === myId || loserIsBot
-              return iCanAdvance
-                ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>
-                    {!loserIsBot && continueSecondsLeft !== null ? `Siguiente ronda (${continueSecondsLeft}s)` : 'Siguiente ronda'}
-                  </button>
-                : <p className="waiting-label">
-                    {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
-                  </p>
-            })()}
           </div>
+          {!palilloRotoShowing && (iCanAdvance
+            ? <button className="results-action-btn btn btn--primary" onClick={handleNextRound}>
+                {!loserIsBot && continueSecondsLeft !== null ? `Siguiente ronda (${continueSecondsLeft}s)` : 'Siguiente ronda'}
+              </button>
+            : <p className="results-action-label">
+                {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
+              </p>
+          )}
+          </>
         )
       })() : room.phase === 'tiebreak' ? (() => {
         const tb = room.tiebreaker
@@ -714,7 +717,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   </div>
                 ) : (
                   <>
-                    {rollCount > 0 && (
+                    {rollCount > 0 && pendingDiscards.length === 0 && (
                       <p className={`actions__hint ${timeLeft !== null && timeLeft <= 10 ? 'actions__hint--urgent' : ''}`}>
                         Toca los dados a descartar
                       </p>

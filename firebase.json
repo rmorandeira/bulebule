@@ -3,6 +3,15 @@
     "target": "bulebule",
     "public": "frontend/dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "/ads.txt",
+        "headers": [
+          { "key": "Content-Type", "value": "text/plain" },
+          { "key": "Cache-Control", "value": "public, max-age=86400" }
+        ]
+      }
+    ],
     "rewrites": [
       {
         "source": "**",
