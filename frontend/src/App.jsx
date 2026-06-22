@@ -48,7 +48,7 @@ export default function App() {
   const [screen, setScreen] = useState(() => {
     const p = new URLSearchParams(window.location.search).get('join')
     return p ? 'list' : 'intro'
-  }) // 'intro' | 'list' | 'create' | 'settings'
+  }) // 'intro' | 'list' | 'create'
   const [room, setRoom] = useState(null)
   const [myId, setMyId] = useState(null)
   const [user, setUser] = useState(loadUser)
@@ -312,18 +312,6 @@ export default function App() {
     return <GameBoard room={room} myId={myId || socket.id} onLeave={handleLeave} musicOn={musicOn} onToggleMusic={toggleMusic} />
   }
 
-  if (screen === 'settings' && user) {
-    return (
-      <UserSettings
-        user={user}
-        onBack={() => setScreen('list')}
-        onUpdate={handleUpdateUser}
-        onLogout={handleLogout}
-        onDeleteAccount={handleDeleteAccount}
-      />
-    )
-  }
-
   if (screen === 'create') {
     return (
       <CreateRoom
@@ -345,8 +333,9 @@ export default function App() {
         playerName={playerName}
         onNameChange={setPlayerName}
         onLogin={handleLogin}
-        onSettings={() => setScreen('settings')}
-        onCreateClick={() => setScreen('create')}
+        onSettingsUpdate={handleUpdateUser}
+        onSettingsLogout={handleLogout}
+        onSettingsDelete={handleDeleteAccount}
       />
       {abandonedBy && (
         <div className="modal-overlay">
