@@ -253,6 +253,7 @@ app.get('/health', (_, res) => res.json({ status: 'ok' }));
 app.get('/api/vapid-public-key', (_, res) => res.json({ key: VAPID_PUBLIC }));
 const server = http.createServer(app);
 const io = new Server(server, {
+  path: '/ws',
   cors: { origin: '*', methods: ['GET', 'POST'] },
   transports: ['polling', 'websocket'],
 });
