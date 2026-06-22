@@ -55,32 +55,15 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    user_id    TEXT PRIMARY KEY,
-    name       TEXT NOT NULL DEFAULT '',
-    email      TEXT,
-    picture    TEXT,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-  );
-
-  CREATE TABLE IF NOT EXISTS push_subscriptions (
-    user_id    TEXT PRIMARY KEY REFERENCES users(user_id),
-    endpoint   TEXT NOT NULL,
-    p256dh     TEXT NOT NULL,
-    auth       TEXT NOT NULL,
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-  );
-
   CREATE TABLE IF NOT EXISTS player_stats (
-    user_id      TEXT PRIMARY KEY,
-    name         TEXT NOT NULL DEFAULT '',
-    picture      TEXT,
-    score        INTEGER NOT NULL DEFAULT 0,
+    user_id     TEXT PRIMARY KEY,
+    name        TEXT NOT NULL DEFAULT '',
+    picture     TEXT,
+    score       INTEGER NOT NULL DEFAULT 0,
     games_played INTEGER NOT NULL DEFAULT 0,
     games_won    INTEGER NOT NULL DEFAULT 0,
-    created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
-    updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
   );
 
   CREATE TABLE IF NOT EXISTS game_sessions (
@@ -89,7 +72,7 @@ db.exec(`
     result      TEXT    NOT NULL,
     score_delta INTEGER NOT NULL DEFAULT 0,
     played_at   INTEGER NOT NULL DEFAULT (unixepoch()),
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    FOREIGN KEY (user_id) REFERENCES player_stats(user_id)
   );
 `);
 
@@ -99,12 +82,13 @@ db.exec(`
   if (!fs.existsSync(jsonFile)) return;
   try {
     const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
-    const insUser  = db.prepare(`INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)`);
-    const insStats = db.prepare(`INSERT OR IGNORE INTO player_stats (user_id, score, games_played, games_won) VALUES (?, ?, ?, ?)`);
+    const ins = db.prepare(`
+      INSERT OR IGNORE INTO player_stats (user_id, name, score, games_played, games_won)
+      VALUES (?, ?, ?, ?, ?)
+    `);
     db.transaction(() => {
       for (const [uid, s] of Object.entries(data)) {
-        insUser.run(uid, uid);
-        insStats.run(uid, s.score ?? 0, s.gamesPlayed ?? 0, s.gamesWon ?? 0);
+        ins.run(uid, uid, s.score ?? 0, s.gamesPlayed ?? 0, s.gamesWon ?? 0);
       }
     })();
     fs.renameSync(jsonFile, jsonFile + '.migrated');
@@ -114,37 +98,10 @@ db.exec(`
   }
 })();
 
-// ── Migrate player_stats name/picture → users (one-time) ──────────────────────
-(function migratePlayerStatsToUsers() {
-  const hasNameCol = db.prepare("PRAGMA table_info(player_stats)").all().some(c => c.name === 'name');
-  if (!hasNameCol) return;
-  const { changes } = db.prepare(`
-    INSERT OR IGNORE INTO users (user_id, name, picture, created_at)
-    SELECT user_id, COALESCE(NULLIF(name,''), user_id), picture, created_at
-    FROM player_stats
-  `).run();
-  if (changes > 0) console.log(`Migrated ${changes} users from player_stats to users table`);
-})();
-
-// ── Load persisted users + push subscriptions into memory ─────────────────────
-(function loadPersistedData() {
-  for (const u of db.prepare('SELECT user_id, name, email, picture FROM users').all()) {
-    registeredUsers[u.user_id] = { userId: u.user_id, name: u.name, email: u.email ?? null, picture: u.picture ?? null, socketId: null, pushSubscription: null };
-  }
-  let subCount = 0;
-  for (const s of db.prepare('SELECT user_id, endpoint, p256dh, auth FROM push_subscriptions').all()) {
-    if (registeredUsers[s.user_id]) {
-      registeredUsers[s.user_id].pushSubscription = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } };
-      subCount++;
-    }
-  }
-  console.log(`Loaded ${Object.keys(registeredUsers).length} users, ${subCount} push subscriptions from DB`);
-})();
-
 // Puntos por ronda: base + rank * multiplicador (rank 0–7)
 const ROUND_PTS_BASE = 8;
 const ROUND_PTS_MULT = 4;   // pareja=12, dos pares=16, trío=20, full=24, póker=28, repóker=32
-const POINTS = { GAME_WIN: 80, GAME_PARTICIPATE: 10 };
+const POINTS = { ROUND_LOSS: -6, GAME_WIN: 80, GAME_LOSS: -15, GAME_PARTICIPATE: 10 };
 const TIERS = [
   { name: 'Diamante', min: 700 },
   { name: 'Oro',      min: 300 },
@@ -155,40 +112,32 @@ const TIERS = [
 function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
 
 const stmts = {
-  upsertUser:    db.prepare(`INSERT INTO users (user_id, name, email, picture)
-                               VALUES (?, ?, ?, ?)
-                               ON CONFLICT(user_id) DO UPDATE
-                                 SET name=excluded.name, email=excluded.email, picture=excluded.picture, updated_at=unixepoch()`),
-  ensureUser:    db.prepare(`INSERT OR IGNORE INTO users (user_id, name, picture) VALUES (?, ?, ?)`),
-  ensureStats:   db.prepare(`INSERT OR IGNORE INTO player_stats (user_id) VALUES (?)`),
-  getStats:      db.prepare(`SELECT * FROM player_stats WHERE user_id = ?`),
-  updateStats:   db.prepare(`UPDATE player_stats
-                               SET score=?, games_played=?, games_won=?, updated_at=unixepoch()
-                               WHERE user_id=?`),
-  insertSession: db.prepare(`INSERT INTO game_sessions (user_id, result, score_delta) VALUES (?, ?, ?)`),
-  upsertPushSub: db.prepare(`INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
-                               VALUES (?, ?, ?, ?)
-                               ON CONFLICT(user_id) DO UPDATE
-                                 SET endpoint=excluded.endpoint, p256dh=excluded.p256dh, auth=excluded.auth, updated_at=unixepoch()`),
-  deletePushSub: db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`),
-  rankings:      db.prepare(`SELECT ps.user_id, u.name, u.picture, ps.score, ps.games_played, ps.games_won
-                               FROM player_stats ps JOIN users u ON ps.user_id=u.user_id
-                               ORDER BY ps.score DESC LIMIT 100`),
+  upsertUser:   db.prepare(`INSERT INTO player_stats (user_id, name, picture)
+                              VALUES (?, ?, ?)
+                              ON CONFLICT(user_id) DO UPDATE
+                                SET name = excluded.name, picture = excluded.picture, updated_at = unixepoch()`),
+  ensureUser:   db.prepare(`INSERT OR IGNORE INTO player_stats (user_id, name, picture) VALUES (?, ?, ?)`),
+  getStats:     db.prepare(`SELECT * FROM player_stats WHERE user_id = ?`),
+  updateStats:  db.prepare(`UPDATE player_stats
+                              SET score = ?, games_played = ?, games_won = ?, updated_at = unixepoch()
+                              WHERE user_id = ?`),
+  insertSession:db.prepare(`INSERT INTO game_sessions (user_id, result, score_delta) VALUES (?, ?, ?)`),
+  rankings:     db.prepare(`SELECT user_id, name, picture, score, games_played, games_won
+                              FROM player_stats ORDER BY score DESC LIMIT 100`),
 };
 
 function ensureStats(userId) {
-  const u = registeredUsers[userId];
-  stmts.ensureUser.run(userId, u?.name ?? userId, u?.picture ?? null);
-  stmts.ensureStats.run(userId);
+  stmts.ensureUser.run(userId, registeredUsers[userId]?.name ?? userId, registeredUsers[userId]?.picture ?? null);
   return stmts.getStats.get(userId);
 }
 
 const commitGamePoints = db.transaction((uid, roundDelta, result) => {
   const row = stmts.getStats.get(uid);
   if (!row) return 0;
-  let score = row.score + roundDelta;
+  let score = Math.max(0, row.score + roundDelta);
   let gamesWon = row.games_won;
   if (result === 'win')  { score += POINTS.GAME_WIN; gamesWon++; }
+  else if (result === 'loss') { score = Math.max(0, score + POINTS.GAME_LOSS); }
   else                   { score += POINTS.GAME_PARTICIPATE; }
   const delta = score - row.score;
   stmts.updateStats.run(score, row.games_played + 1, gamesWon, uid);
@@ -202,15 +151,24 @@ function getUserIdForPlayer(player) {
   return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? null;
 }
 
-function awardRoundPoints(room) {
+function awardRoundPoints(room, loserId) {
+  const winner = room.players.find(p => p.id === room.roundWinnerId);
+  const handRank = winner?.hand?.rank ?? 0;
+  const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
   if (!room.pendingScores) room.pendingScores = {};
   for (const player of room.players) {
     if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
-    if (!uid) continue; // guests: shown as — in UI
-    const handRank = player.hand?.rank ?? 0;
-    const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
-    room.pendingScores[uid] = (room.pendingScores[uid] ?? 0) + roundPts;
+    const isWinner = player.id === room.roundWinnerId;
+    const isLoser  = player.id === loserId;
+    if (!isWinner && !isLoser) continue;
+    if (uid) {
+      // Registered: accumulate in pendingScores — committed to DB only at game end
+      const prev = room.pendingScores[uid] ?? 0;
+      if (isWinner) { room.pendingScores[uid] = prev + roundPts; }
+      else          { room.pendingScores[uid] = prev + POINTS.ROUND_LOSS; }
+    }
+    // Guests: no score tracking (shown as — in UI)
   }
 }
 
@@ -596,7 +554,7 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'capilla';
     const gameWinner = room.players.find(p => p.id === room.roundWinnerId);
     if (gameWinner) gameWinner.wins += 1;
-    awardRoundPoints(room);
+    awardRoundPoints(room, loser.id);
     awardGamePoints(room, room.roundWinnerId, loser.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'capilla', rounds: room.roundNumber, playerCount: room.players.length });
@@ -610,12 +568,12 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'rounds';
     const gameWinner = room.players.filter(p => p.id !== worst.id).sort((a, b) => a.breaks - b.breaks)[0];
     if (gameWinner) gameWinner.wins += 1;
-    awardRoundPoints(room);
+    awardRoundPoints(room, loser.id);
     awardGamePoints(room, gameWinner?.id ?? null, worst.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
-    awardRoundPoints(room);
+    awardRoundPoints(room, loser.id);
     room.phase = 'results';
     clearContinueTimer(room);
     room.continueDeadline = Date.now() + CONTINUE_TIMEOUT;
@@ -990,17 +948,14 @@ io.on('connection', (socket) => {
 
   socket.on('register_user', ({ userId, name, email, picture }) => {
     if (!userId || !name) return;
-    registeredUsers[userId] = { ...(registeredUsers[userId] || {}), userId, name, email: email ?? null, picture: picture ?? null, socketId: socket.id };
+    registeredUsers[userId] = { ...(registeredUsers[userId] || {}), userId, name, email, picture, socketId: socket.id };
     socket.data.userId = userId;
-    stmts.upsertUser.run(userId, name, email ?? null, picture ?? null);
-    stmts.ensureStats.run(userId);
+    stmts.upsertUser.run(userId, name, picture ?? null);
   });
 
   socket.on('subscribe_push', ({ userId, subscription }) => {
     if (!userId || !subscription) return;
     if (registeredUsers[userId]) registeredUsers[userId].pushSubscription = subscription;
-    const { endpoint, keys: { p256dh, auth } = {} } = subscription;
-    if (endpoint && p256dh && auth) stmts.upsertPushSub.run(userId, endpoint, p256dh, auth);
   });
 
   socket.on('search_users', ({ query = '' }, cb) => {
@@ -1027,14 +982,7 @@ io.on('connection', (socket) => {
         body: `${inviterName} te invita a "${roomName}"`,
         url: `/?join=${roomCode}`,
       });
-      webpush.sendNotification(invitee.pushSubscription, payload).catch(err => {
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          if (registeredUsers[toUserId]) registeredUsers[toUserId].pushSubscription = null;
-          stmts.deletePushSub.run(toUserId);
-        } else {
-          console.error('Push error:', err);
-        }
-      });
+      webpush.sendNotification(invitee.pushSubscription, payload).catch(err => console.error('Push error:', err));
     }
     cb?.({ ok: true });
   });
