@@ -31,7 +31,6 @@ function CreateSheet({ playerName, user, initialVsBot, closing, onClose }) {
   const [loading, setLoading] = useState(false)
   const inputRef = useRef(null)
 
-  // Focus the room name input only on desktop (avoid opening mobile keyboard on open)
   useEffect(() => {
     if (!vsBot && window.matchMedia('(pointer: fine)').matches) {
       inputRef.current?.focus()
@@ -97,7 +96,6 @@ function CreateSheet({ playerName, user, initialVsBot, closing, onClose }) {
           </button>
         </div>
 
-        {/* Collapsible multijugador fields — animated with grid-template-rows */}
         <div className={`bs__collapse${!vsBot ? ' bs__collapse--open' : ''}`}>
           <div className="bs__collapse-inner">
             <p className="bs__label">NOMBRE DE LA SALA</p>
@@ -156,10 +154,10 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
   const [codeModal, setCodeModal] = useState(null)
   const [codeInput, setCodeInput] = useState('')
   const [codeError, setCodeError] = useState('')
-  const [sheetState, setSheetState] = useState(null)  // null | { vsBot: bool }
+  const [sheetState, setSheetState] = useState(null)
   const [sheetClosing, setSheetClosing] = useState(false)
   const closeTimerRef = useRef(null)
-  const [myStats, setMyStats] = useState(null)    // { score, tier, gamesPlayed, ... }
+  const [myStats, setMyStats] = useState(null)
   const [myRank, setMyRank] = useState(null)
   const [rankings, setRankings] = useState([])
   const [rankTotal, setRankTotal] = useState(0)
@@ -298,22 +296,6 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
         ) : null}
       </div>
 
-      {/* Challenge cards carousel */}
-      <div className="rl__challenges">
-        <div className="rl__challenge-card" onClick={() => openSheet(true)}>
-          <h3 className="rl__challenge-title">Reto semanal</h3>
-          <p className="rl__challenge-desc">Juega una partida tú sólo contra la maquina</p>
-        </div>
-        <div className="rl__challenge-card" onClick={() => openSheet(true)}>
-          <h3 className="rl__challenge-title">Solo Play</h3>
-          <p className="rl__challenge-desc">Reta a la máquina en una partida rápida</p>
-        </div>
-        <div className="rl__challenge-card" onClick={() => openSheet(false)}>
-          <h3 className="rl__challenge-title">Con amigos</h3>
-          <p className="rl__challenge-desc">Crea una sala y comparte el código</p>
-        </div>
-      </div>
-
       {/* Google login for guests */}
       {!user && (
         <div className="rl__login-row">
@@ -325,76 +307,99 @@ export default function RoomList({ user, playerName, onNameChange, onLogin, onSe
         </div>
       )}
 
-      {/* Create room CTA */}
-      <div className="rl__cta">
-        <button className="rl__create-btn" onClick={() => openSheet(false)} disabled={!connected}>
-          Crear sala
-        </button>
-      </div>
-
       {error && <p className="rl__error">{error}</p>}
 
-      {/* Salas activas (solo si las hay) */}
-      {rooms.length > 0 && (
-        <div className="rl__rooms">
-          {rooms.map(room => {
-            const canJoin = room.phase === 'lobby' && !isFull(room)
-            return (
-              <div key={room.code} className="rl__room">
-                <div className="rl__room-info">
-                  <span className="rl__room-name">
-                    {room.name}
-                    {room.isPrivate && (
-                      <svg className="rl__lock" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                    )}
-                  </span>
-                  <span className="rl__room-meta">
-                    {room.playerCount} / {room.maxPlayers} Jugadores
-                    {!canJoin && <span className="rl__room-status">{isFull(room) ? ' · Llena' : ' · En curso'}</span>}
-                  </span>
-                </div>
-                <button
-                  className="rl__join-btn"
-                  onClick={() => handleJoinClick(room)}
-                  disabled={!canJoin || joiningCode !== null || !connected}
-                >
-                  {joiningCode === room.code ? '...' : 'Unirse'}
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {/* Three main cards */}
+      <div className="rl__cards">
 
-      {/* Clasificación */}
-      <div className="rl__ranking">
-        <div className="rl__ranking-header">
-          <h2 className="rl__ranking-title">Clasificación</h2>
-          <button className="rl__icon-btn" aria-label="Filtrar" onClick={fetchStats}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
-              <circle cx="8"  cy="6"  r="2" fill="currentColor" stroke="none"/>
-              <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/>
-              <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
-            </svg>
-          </button>
-        </div>
-
-        {rankings.length === 0 ? (
-          <p className="rl__empty">Juega partidas para aparecer en la clasificación</p>
-        ) : rankings.map(r => (
-          <div key={r.userId} className={`rl__rank-row${r.userId === user?.email ? ' rl__rank-row--me' : ''}`}>
-            <span className="rl__rank-pos">{r.rank}</span>
-            <span className="rl__rank-name">
-              {r.name}
-              <TierDot tier={r.tier} />
-            </span>
-            <span className="rl__rank-score">{r.score.toLocaleString()}</span>
+        {/* Card: Partidas Online */}
+        <div className="rl__card">
+          <div className="rl__card-header">
+            <h2 className="rl__card-title">
+              Partidas Online
+              {rooms.length > 0 && <span className="rl__card-badge">{rooms.length}</span>}
+            </h2>
+            <button
+              className="rl__card-action-btn"
+              onClick={() => openSheet(false)}
+              disabled={!connected}
+            >
+              + Crear sala
+            </button>
           </div>
-        ))}
+          <div className="rl__card-body">
+            {rooms.length === 0 ? (
+              <p className="rl__empty">No hay partidas abiertas ahora mismo</p>
+            ) : rooms.map(room => {
+              const canJoin = room.phase === 'lobby' && !isFull(room)
+              return (
+                <div key={room.code} className="rl__room">
+                  <div className="rl__room-info">
+                    <span className="rl__room-name">
+                      {room.name}
+                      {room.isPrivate && (
+                        <svg className="rl__lock" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                      )}
+                    </span>
+                    <span className="rl__room-meta">
+                      {room.playerCount} / {room.maxPlayers} Jugadores
+                      {!canJoin && <span className="rl__room-status">{isFull(room) ? ' · Llena' : ' · En curso'}</span>}
+                    </span>
+                  </div>
+                  <button
+                    className="rl__join-btn"
+                    onClick={() => handleJoinClick(room)}
+                    disabled={!canJoin || joiningCode !== null || !connected}
+                  >
+                    {joiningCode === room.code ? '...' : 'Unirse'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Card: Clasificación */}
+        <div className="rl__card">
+          <div className="rl__card-header">
+            <h2 className="rl__card-title">Clasificación</h2>
+            <button className="rl__icon-btn" aria-label="Actualizar" onClick={fetchStats}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+            </button>
+          </div>
+          <div className="rl__card-body">
+            {rankings.length === 0 ? (
+              <p className="rl__empty">Juega partidas para aparecer en la clasificación</p>
+            ) : rankings.map(r => (
+              <div key={r.userId} className={`rl__rank-row${r.userId === user?.email ? ' rl__rank-row--me' : ''}`}>
+                <span className="rl__rank-pos">{r.rank}</span>
+                <span className="rl__rank-name">
+                  {r.name}
+                  <TierDot tier={r.tier} />
+                </span>
+                <span className="rl__rank-score">{r.score.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Card: Solo Play */}
+        <button className="rl__card rl__card--solo" onClick={() => openSheet(true)}>
+          <div className="rl__card-header">
+            <h2 className="rl__card-title">Solo Play</h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+          <p className="rl__card-desc">Juega contra la máquina</p>
+        </button>
+
       </div>
 
       {/* Bottom sheet */}
