@@ -434,7 +434,7 @@ function sanitize(room) {
         liberado: p.liberado ?? false,
         pendingDiscards: p.pendingDiscards ?? [],
         score: p.isBot ? null : (uid
-          ? (playerStats[uid]?.score ?? 0) + (room.pendingScores?.[uid] ?? 0)
+          ? (room.pendingScores?.[uid] ?? 0)
           : (p.sessionScore ?? 0)),
         inDesempate: p.inDesempate ?? false,
       };
