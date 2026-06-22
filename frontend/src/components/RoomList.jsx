@@ -20,43 +20,43 @@ const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
 const SOLO_PLAYERS_OPTIONS = [2, 3, 4, 5]
 const CLOSE_DURATION = 260
 
-const CARDS = [
-  { id: 'clasificacion', label: 'Clasificación',  desc: 'Consulta el ranking de jugadores' },
-  { id: 'online',        label: 'Juego online',   desc: 'Únete a una partida o crea la tuya' },
-  { id: 'solo',          label: 'Solo Play',       desc: 'Reta a la máquina en una partida rápida' },
+// Pages in swipe order
+const PAGES = [
+  { id: 'clasificacion', label: 'Clasificación', desc: 'Consulta el ranking de jugadores' },
+  { id: 'online',        label: 'Juego online',  desc: 'Únete a una partida o crea la tuya' },
+  { id: 'solo',          label: 'Solo Play',      desc: 'Reta a la máquina en una partida rápida' },
 ]
+const DEFAULT_PAGE = 'online'
 
-// ── Bottom sheet (crear sala) ─────────────────────────────────────────────────
+// ── Sheet: crear sala (solo multijugador) ────────────────────────────────────
 
-function CreateSheet({ playerName, user, initialVsBot, closing, onClose }) {
-  const [vsBot, setVsBot] = useState(initialVsBot ?? false)
-  const [roomName, setRoomName] = useState('')
+function CreateSheet({ playerName, closing, onClose }) {
+  const [roomName, setRoomName]     = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
-  const [soloPlayers, setSoloPlayers] = useState(2)
-  const [isPrivate, setIsPrivate] = useState(false)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isPrivate, setIsPrivate]   = useState(false)
+  const [error, setError]           = useState('')
+  const [loading, setLoading]       = useState(false)
   const inputRef = useRef(null)
 
   useEffect(() => {
-    if (!vsBot && window.matchMedia('(pointer: fine)').matches) inputRef.current?.focus()
-  }, [vsBot])
+    if (window.matchMedia('(pointer: fine)').matches) inputRef.current?.focus()
+  }, [])
 
   function create() {
     if (!playerName?.trim()) return setError('Introduce tu nombre primero')
-    if (!vsBot && !roomName.trim()) return setError('Ponle un nombre a la sala')
+    if (!roomName.trim())    return setError('Ponle un nombre a la sala')
     setLoading(true)
     socket.emit('create_room', {
       playerName: playerName.trim(),
-      roomName: vsBot ? 'Solo Play' : roomName.trim(),
-      maxPlayers: vsBot ? soloPlayers : maxPlayers,
-      vsBot,
+      roomName: roomName.trim(),
+      maxPlayers,
+      vsBot: false,
       maxRounds: 0,
-      isPrivate: !vsBot && isPrivate,
+      isPrivate,
     }, (res) => {
       setLoading(false)
       if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
-      track('room_create', { vsBot, isPrivate: !vsBot && isPrivate })
+      track('room_create', { isPrivate })
       onClose()
     })
   }
@@ -66,47 +66,73 @@ function CreateSheet({ playerName, user, initialVsBot, closing, onClose }) {
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
       <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
         <div className="bs__handle" />
-        <p className="bs__label">MODO DE JUEGO</p>
-        <div className="bs__mode-row">
-          <button className={`bs__mode-btn${!vsBot ? ' bs__mode-btn--active' : ''}`} onClick={() => { setVsBot(false); setError('') }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            Multijugador
-          </button>
-          <button className={`bs__mode-btn${vsBot ? ' bs__mode-btn--active' : ''}`} onClick={() => { setVsBot(true); setError('') }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-            Vs máquina
-          </button>
+        <p className="bs__label">NOMBRE DE LA SALA</p>
+        <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi"
+          value={roomName} maxLength={20}
+          onChange={e => { setRoomName(e.target.value); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && create()} />
+        <div className="bs__private-row">
+          <span className="bs__label" style={{ margin: 0 }}>SALA PRIVADA</span>
+          <button type="button" role="switch" aria-checked={isPrivate}
+            className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
+            onClick={() => setIsPrivate(v => !v)} />
         </div>
-        <div className={`bs__collapse${!vsBot ? ' bs__collapse--open' : ''}`}>
-          <div className="bs__collapse-inner">
-            <p className="bs__label">NOMBRE DE LA SALA</p>
-            <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi" value={roomName} maxLength={20}
-              onChange={e => { setRoomName(e.target.value); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && create()} />
-            <div className="bs__private-row">
-              <span className="bs__label" style={{ margin: 0 }}>SALA PRIVADA</span>
-              <button type="button" role="switch" aria-checked={isPrivate}
-                className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
-                onClick={() => setIsPrivate(v => !v)} />
-            </div>
-          </div>
-        </div>
-        <p className="bs__label">JUGADORES {vsBot ? '' : 'MÁXIMOS'}</p>
+        <p className="bs__label">JUGADORES MÁXIMOS</p>
         <div className="bs__pills">
-          {(vsBot ? SOLO_PLAYERS_OPTIONS : MAX_PLAYERS_OPTIONS).map(n => (
-            <button key={n}
-              className={`bs__pill${(vsBot ? soloPlayers : maxPlayers) === n ? ' bs__pill--active' : ''}`}
-              onClick={() => vsBot ? setSoloPlayers(n) : setMaxPlayers(n)}>{n}</button>
+          {MAX_PLAYERS_OPTIONS.map(n => (
+            <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
+              onClick={() => setMaxPlayers(n)}>{n}</button>
           ))}
         </div>
         {error && <p className="bs__error">{error}</p>}
         <button className="bs__submit" onClick={create} disabled={loading}>
-          {loading ? 'Creando...' : vsBot ? 'Jugar' : 'Crear sala'}
+          {loading ? 'Creando...' : 'Crear sala'}
+        </button>
+      </div>
+    </>
+  )
+}
+
+// ── Sheet: solo play (vs bots) ───────────────────────────────────────────────
+
+function SoloSheet({ playerName, closing, onClose }) {
+  const [soloPlayers, setSoloPlayers] = useState(2)
+  const [error, setError]             = useState('')
+  const [loading, setLoading]         = useState(false)
+
+  function create() {
+    if (!playerName?.trim()) return setError('Introduce tu nombre primero')
+    setLoading(true)
+    socket.emit('create_room', {
+      playerName: playerName.trim(),
+      roomName: 'Solo Play',
+      maxPlayers: soloPlayers,
+      vsBot: true,
+      maxRounds: 0,
+      isPrivate: false,
+    }, (res) => {
+      setLoading(false)
+      if (!res?.ok) return setError(res?.error || 'Error al crear la partida')
+      track('room_create', { vsBot: true })
+      onClose()
+    })
+  }
+
+  return (
+    <>
+      <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
+      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
+        <div className="bs__handle" />
+        <p className="bs__label">JUGADORES</p>
+        <div className="bs__pills">
+          {SOLO_PLAYERS_OPTIONS.map(n => (
+            <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
+              onClick={() => setSoloPlayers(n)}>{n}</button>
+          ))}
+        </div>
+        {error && <p className="bs__error">{error}</p>}
+        <button className="bs__submit" onClick={create} disabled={loading}>
+          {loading ? 'Creando...' : 'Jugar'}
         </button>
       </div>
     </>
@@ -118,30 +144,33 @@ function CreateSheet({ playerName, user, initialVsBot, closing, onClose }) {
 export default function RoomList({
   user, playerName, onLogin,
   onSettingsUpdate, onSettingsLogout, onSettingsDelete,
-  musicOn, onToggleMusic,
 }) {
-  const [activeTab, setActiveTab]       = useState('online')
-  const [rooms, setRooms]               = useState([])
-  const [error, setError]               = useState('')
-  const [joiningCode, setJoiningCode]   = useState(null)
-  const [connected, setConnected]       = useState(socket.connected)
-  const [codeModal, setCodeModal]       = useState(null)
-  const [codeInput, setCodeInput]       = useState('')
-  const [codeError, setCodeError]       = useState('')
-  const [sheetState, setSheetState]     = useState(null)
-  const [sheetClosing, setSheetClosing] = useState(false)
-  const [settingsOpen, setSettingsOpen]       = useState(false)
+  const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
+  const [rooms, setRooms]                   = useState([])
+  const [error, setError]                   = useState('')
+  const [joiningCode, setJoiningCode]       = useState(null)
+  const [connected, setConnected]           = useState(socket.connected)
+  const [codeModal, setCodeModal]           = useState(null)
+  const [codeInput, setCodeInput]           = useState('')
+  const [codeError, setCodeError]           = useState('')
+  const [createSheet, setCreateSheet]       = useState(false)
+  const [createClosing, setCreateClosing]   = useState(false)
+  const [soloSheet, setSoloSheet]           = useState(false)
+  const [soloClosing, setSoloClosing]       = useState(false)
+  const [settingsOpen, setSettingsOpen]     = useState(false)
   const [settingsClosing, setSettingsClosing] = useState(false)
   const [myStats, setMyStats]   = useState(null)
   const [myRank, setMyRank]     = useState(null)
   const [rankings, setRankings] = useState([])
   const [rankTotal, setRankTotal] = useState(0)
 
-  const closeTimerRef    = useRef(null)
-  const settingsTimerRef = useRef(null)
-  const carouselRef      = useRef(null)
+  const pagerRef         = useRef(null)
   const scrollTimerRef   = useRef(null)
-  const progScrollRef    = useRef(false)   // true while JS-driven scroll is in flight
+  const progScrollRef    = useRef(false)
+  const closeCreateRef   = useRef(null)
+  const closeSoloRef     = useRef(null)
+  const closeSettingsRef = useRef(null)
+  const didInitRef       = useRef(false)
 
   function fetchStats() {
     socket.emit('get_stats', (res) => {
@@ -172,74 +201,85 @@ export default function RoomList({
       socket.off('connect', onConnect)
       socket.off('disconnect', onDisconnect)
       socket.off('rooms_list', onRoomsList)
-      clearTimeout(closeTimerRef.current)
-      clearTimeout(settingsTimerRef.current)
+      clearTimeout(closeCreateRef.current)
+      clearTimeout(closeSoloRef.current)
+      clearTimeout(closeSettingsRef.current)
       clearTimeout(scrollTimerRef.current)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Carousel ↔ tab sync ──────────────────────────────────────────────────
-
-  // When activeTab changes via navbar → scroll carousel
+  // Scroll pager to default page on mount (no animation)
   useEffect(() => {
-    const carousel = carouselRef.current
-    if (!carousel) return
-    const idx = CARDS.findIndex(c => c.id === activeTab)
-    if (idx < 0) return
-    const card = carousel.children[idx]
-    if (!card) return
-    progScrollRef.current = true
-    carousel.scrollTo({ left: card.offsetLeft - 16, behavior: 'smooth' })
-    setTimeout(() => { progScrollRef.current = false }, 600)
-  }, [activeTab])
+    if (didInitRef.current) return
+    const pager = pagerRef.current
+    if (!pager) return
+    const idx = PAGES.findIndex(p => p.id === DEFAULT_PAGE)
+    requestAnimationFrame(() => {
+      progScrollRef.current = true
+      pager.scrollLeft = pager.offsetWidth * idx
+      requestAnimationFrame(() => { progScrollRef.current = false })
+    })
+    didInitRef.current = true
+  }, [])
 
-  // When carousel is dragged → update activeTab
-  function handleCarouselScroll() {
+  // ── Pager ↔ tab sync ─────────────────────────────────────────────────────
+
+  function handlePagerScroll() {
     if (progScrollRef.current) return
     clearTimeout(scrollTimerRef.current)
     scrollTimerRef.current = setTimeout(() => {
-      const carousel = carouselRef.current
-      if (!carousel) return
-      const center = carousel.scrollLeft + carousel.clientWidth / 2
-      let bestIdx = 0, bestDist = Infinity
-      Array.from(carousel.children).forEach((card, i) => {
-        const d = Math.abs((card.offsetLeft + card.clientWidth / 2) - center)
-        if (d < bestDist) { bestDist = d; bestIdx = i }
-      })
-      const card = CARDS[bestIdx]
-      if (card?.id === 'solo') {
-        openSheet(true)
-        // drift back to online
-        setTimeout(() => setActiveTab('online'), 50)
-      } else if (card) {
-        setActiveTab(card.id)
-      }
-    }, 180)
+      const pager = pagerRef.current
+      if (!pager) return
+      const idx = Math.round(pager.scrollLeft / pager.offsetWidth)
+      const page = PAGES[Math.min(idx, PAGES.length - 1)]
+      if (page && page.id !== activeTab) setActiveTab(page.id)
+    }, 150)
   }
 
-  // ── Sheets ───────────────────────────────────────────────────────────────
-
-  function openSheet(vsBot = false) {
-    clearTimeout(closeTimerRef.current)
-    setSheetClosing(false)
-    setSheetState({ vsBot })
+  function goToPage(id) {
+    const idx = PAGES.findIndex(p => p.id === id)
+    if (idx < 0) return
+    const pager = pagerRef.current
+    if (!pager) return
+    progScrollRef.current = true
+    pager.scrollTo({ left: pager.offsetWidth * idx, behavior: 'smooth' })
+    setActiveTab(id)
+    setTimeout(() => { progScrollRef.current = false }, 600)
   }
-  function closeSheet() {
-    setSheetClosing(true)
-    closeTimerRef.current = setTimeout(() => { setSheetState(null); setSheetClosing(false) }, CLOSE_DURATION)
+
+  // ── Sheets ────────────────────────────────────────────────────────────────
+
+  function openCreate() {
+    clearTimeout(closeCreateRef.current)
+    setCreateClosing(false)
+    setCreateSheet(true)
+  }
+  function closeCreate() {
+    setCreateClosing(true)
+    closeCreateRef.current = setTimeout(() => { setCreateSheet(false); setCreateClosing(false) }, CLOSE_DURATION)
+  }
+
+  function openSolo() {
+    clearTimeout(closeSoloRef.current)
+    setSoloClosing(false)
+    setSoloSheet(true)
+  }
+  function closeSolo() {
+    setSoloClosing(true)
+    closeSoloRef.current = setTimeout(() => { setSoloSheet(false); setSoloClosing(false) }, CLOSE_DURATION)
   }
 
   function openSettings() {
-    clearTimeout(settingsTimerRef.current)
+    clearTimeout(closeSettingsRef.current)
     setSettingsClosing(false)
     setSettingsOpen(true)
   }
   function closeSettings() {
     setSettingsClosing(true)
-    settingsTimerRef.current = setTimeout(() => { setSettingsOpen(false); setSettingsClosing(false) }, CLOSE_DURATION)
+    closeSettingsRef.current = setTimeout(() => { setSettingsOpen(false); setSettingsClosing(false) }, CLOSE_DURATION)
   }
 
-  // ── Auth ─────────────────────────────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────────────────
 
   function handleGoogleSuccess(credentialResponse) {
     const payload = decodeJwt(credentialResponse.credential)
@@ -248,7 +288,7 @@ export default function RoomList({
     setError('')
   }
 
-  // ── Rooms ────────────────────────────────────────────────────────────────
+  // ── Rooms ─────────────────────────────────────────────────────────────────
 
   function join(code) {
     if (!connected) return setError('Sin conexión al servidor')
@@ -274,57 +314,70 @@ export default function RoomList({
   }
 
   const isFull = r => r.playerCount >= r.maxPlayers
-
   const initials = user
     ? user.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : ''
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="rl">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="rl__header">
         <div className="rl__hd-user">
           <span className="rl__hd-name">{user?.name || playerName}</span>
           {myStats && <TierDot tier={myStats.tier} />}
           {!connected && <span className="rl__offline">off</span>}
         </div>
-
         <img className="rl__logo" src="/assets/logo-bulebule.png" alt="Bule Bule" draggable={false} />
-
         <div className="rl__hd-score">
-          {myStats ? (
-            <>
-              <span className="rl__hd-pts">{myStats.score.toLocaleString()} pts</span>
-              {myRank && <span className="rl__hd-rank">{myRank}/{rankTotal}</span>}
-            </>
-          ) : null}
+          {myStats && <>
+            <span className="rl__hd-pts">{myStats.score.toLocaleString()} pts</span>
+            {myRank && <span className="rl__hd-rank">{myRank}/{rankTotal}</span>}
+          </>}
         </div>
       </header>
 
-      {/* ── Carousel ── */}
-      <div className="rl__carousel" ref={carouselRef} onScroll={handleCarouselScroll}>
-        {CARDS.map(card => (
-          <div
-            key={card.id}
-            className={`rl__slide${activeTab === card.id ? ' rl__slide--active' : ''}`}
-            onClick={() => card.id === 'solo' ? openSheet(true) : setActiveTab(card.id)}
-          >
-            <span className="rl__slide-label">{card.label}</span>
-            <span className="rl__slide-desc">{card.desc}</span>
+      {/* Horizontal pager — each child is a full-width page */}
+      <div className="rl__pager" ref={pagerRef} onScroll={handlePagerScroll}>
+
+        {/* Page 0: Clasificación */}
+        <div className="rl__page">
+          <div className="rl__page-card">
+            <span className="rl__page-label">Clasificación</span>
+            <span className="rl__page-desc">Consulta el ranking de jugadores</span>
           </div>
-        ))}
-      </div>
+          <div className="rl__page-body">
+            <div className="rl__ranking-header">
+              <h2 className="rl__ranking-title">Clasificación</h2>
+              <button className="rl__icon-btn" aria-label="Actualizar" onClick={fetchStats}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+              </button>
+            </div>
+            {rankings.length === 0 ? (
+              <p className="rl__empty">Juega partidas para aparecer en la clasificación</p>
+            ) : rankings.map(r => (
+              <div key={r.userId} className={`rl__rank-row${r.userId === user?.email ? ' rl__rank-row--me' : ''}`}>
+                <span className="rl__rank-pos">{r.rank}</span>
+                <span className="rl__rank-name">{r.name}<TierDot tier={r.tier} /></span>
+                <span className="rl__rank-score">{r.score.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
-      {/* ── Content ── */}
-      <main className="rl__main">
-
-        {activeTab === 'online' && (
-          <>
+        {/* Page 1: Juego online */}
+        <div className="rl__page">
+          <div className="rl__page-card">
+            <span className="rl__page-label">Juego online</span>
+            <span className="rl__page-desc">Únete a una partida o crea la tuya</span>
+          </div>
+          <div className="rl__page-body">
             {error && <p className="rl__error">{error}</p>}
-
             {!user && (
               <div className="rl__login-row">
                 <GoogleLogin
@@ -334,11 +387,9 @@ export default function RoomList({
                 />
               </div>
             )}
-
-            <button className="rl__create-btn" onClick={() => openSheet(false)} disabled={!connected}>
+            <button className="rl__create-btn" onClick={openCreate} disabled={!connected}>
               Crear sala
             </button>
-
             <div className="rl__rooms">
               {rooms.length === 0 ? (
                 <p className="rl__empty">No hay partidas abiertas ahora mismo</p>
@@ -370,58 +421,45 @@ export default function RoomList({
                 )
               })}
             </div>
-          </>
-        )}
+          </div>
+        </div>
 
-        {activeTab === 'clasificacion' && (
-          <>
-            <div className="rl__ranking-header">
-              <h2 className="rl__ranking-title">Clasificación</h2>
-              <button className="rl__icon-btn" aria-label="Actualizar" onClick={fetchStats}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                </svg>
-              </button>
-            </div>
+        {/* Page 2: Solo Play */}
+        <div className="rl__page">
+          <div className="rl__page-card rl__page-card--solo">
+            <span className="rl__page-label">Solo Play</span>
+            <span className="rl__page-desc">Reta a la máquina en una partida rápida</span>
+          </div>
+          <div className="rl__page-body">
+            <button className="rl__create-btn" onClick={openSolo} disabled={!connected}>
+              Jugar
+            </button>
+          </div>
+        </div>
 
-            {rankings.length === 0 ? (
-              <p className="rl__empty">Juega partidas para aparecer en la clasificación</p>
-            ) : rankings.map(r => (
-              <div key={r.userId} className={`rl__rank-row${r.userId === user?.email ? ' rl__rank-row--me' : ''}`}>
-                <span className="rl__rank-pos">{r.rank}</span>
-                <span className="rl__rank-name">{r.name}<TierDot tier={r.tier} /></span>
-                <span className="rl__rank-score">{r.score.toLocaleString()}</span>
-              </div>
-            ))}
-          </>
-        )}
+      </div>
 
-      </main>
-
-      {/* ── Navbar ── */}
+      {/* Navbar */}
       <nav className="rl__navbar">
-        <button
-          className={`rl__nav-btn${activeTab === 'clasificacion' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => setActiveTab('clasificacion')} aria-label="Clasificación">
+        <button className={`rl__nav-btn${activeTab === 'clasificacion' ? ' rl__nav-btn--active' : ''}`}
+          onClick={() => goToPage('clasificacion')} aria-label="Clasificación">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
           </svg>
         </button>
 
-        <button
-          className={`rl__nav-btn${activeTab === 'online' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => setActiveTab('online')} aria-label="Inicio">
+        <button className={`rl__nav-btn${activeTab === 'online' ? ' rl__nav-btn--active' : ''}`}
+          onClick={() => goToPage('online')} aria-label="Juego online">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
         </button>
 
-        <button
-          className="rl__nav-btn"
-          onClick={() => user ? openSettings() : setActiveTab('online')}
-          aria-label="Usuario">
+        <button className="rl__nav-btn" aria-label="Usuario"
+          onClick={() => user ? openSettings() : goToPage('online')}>
           {user?.picture ? (
             <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="rl__nav-avatar" />
           ) : (
@@ -433,7 +471,7 @@ export default function RoomList({
         </button>
       </nav>
 
-      {/* ── User settings sheet ── */}
+      {/* Settings sheet */}
       {settingsOpen && (
         <>
           <div className={`bs-overlay${settingsClosing ? ' bs-overlay--closing' : ''}`} onClick={closeSettings} />
@@ -450,18 +488,17 @@ export default function RoomList({
         </>
       )}
 
-      {/* ── Create room sheet ── */}
-      {sheetState && (
-        <CreateSheet
-          playerName={playerName}
-          user={user}
-          initialVsBot={sheetState.vsBot}
-          closing={sheetClosing}
-          onClose={closeSheet}
-        />
+      {/* Create room sheet */}
+      {createSheet && (
+        <CreateSheet playerName={playerName} closing={createClosing} onClose={closeCreate} />
       )}
 
-      {/* ── Private room code modal ── */}
+      {/* Solo play sheet */}
+      {soloSheet && (
+        <SoloSheet playerName={playerName} closing={soloClosing} onClose={closeSolo} />
+      )}
+
+      {/* Private room code modal */}
       {codeModal && (
         <div className="modal-overlay" onClick={() => setCodeModal(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
