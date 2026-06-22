@@ -175,6 +175,7 @@ export default function RoomList({
   const closeCreateRef   = useRef(null)
   const closeSettingsRef = useRef(null)
   const didInitRef       = useRef(false)
+  const swipeTouchRef    = useRef(null) // {x, y, scrollY} at touchstart
 
   function fetchStats() {
     socket.emit('get_stats', (res) => {
@@ -323,6 +324,27 @@ export default function RoomList({
     ? rooms.filter(r => r.name.toLowerCase().includes(roomSearch.trim().toLowerCase()))
     : rooms
 
+  // ── Swipe on content area → navigate tabs ─────────────────────────────────
+
+  function handleContentTouchStart(e) {
+    const t = e.touches[0]
+    swipeTouchRef.current = { x: t.clientX, y: t.clientY, scrollTop: e.currentTarget.scrollTop }
+  }
+
+  function handleContentTouchEnd(e) {
+    const start = swipeTouchRef.current
+    if (!start) return
+    swipeTouchRef.current = null
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    // Only act on clearly horizontal swipes; ignore vertical scrolling
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    const idx = PAGES.findIndex(p => p.id === activeTab)
+    if (dx < 0 && idx < PAGES.length - 1) goToPage(PAGES[idx + 1].id)
+    if (dx > 0 && idx > 0)               goToPage(PAGES[idx - 1].id)
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -360,8 +382,10 @@ export default function RoomList({
       {/* Thin divider */}
       <div className="rl__divider" />
 
-      {/* Content area — only active tab is shown */}
-      <div className="rl__content">
+      {/* Content area — only active tab is shown; swipe to navigate */}
+      <div className="rl__content"
+        onTouchStart={handleContentTouchStart}
+        onTouchEnd={handleContentTouchEnd}>
 
         {/* ── Clasificación ── */}
         {activeTab === 'clasificacion' && (
