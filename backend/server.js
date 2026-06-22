@@ -47,26 +47,56 @@ async function trackEvent(name, data = {}) {
 
 const registeredUsers = {};
 
-const STATS_FILE = path.join(__dirname, 'data', 'playerStats.json');
+// ── SQLite persistence ────────────────────────────────────────────────────────
+const Database = require('better-sqlite3');
+const DB_PATH  = path.join(__dirname, 'data', 'bulebule.db');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
 
-function loadStats() {
+db.exec(`
+  CREATE TABLE IF NOT EXISTS player_stats (
+    user_id     TEXT PRIMARY KEY,
+    name        TEXT NOT NULL DEFAULT '',
+    picture     TEXT,
+    score       INTEGER NOT NULL DEFAULT 0,
+    games_played INTEGER NOT NULL DEFAULT 0,
+    games_won    INTEGER NOT NULL DEFAULT 0,
+    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TABLE IF NOT EXISTS game_sessions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     TEXT    NOT NULL,
+    result      TEXT    NOT NULL,
+    score_delta INTEGER NOT NULL DEFAULT 0,
+    played_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+    FOREIGN KEY (user_id) REFERENCES player_stats(user_id)
+  );
+`);
+
+// ── Migrate from old JSON file if it exists ───────────────────────────────────
+(function migrateFromJson() {
+  const jsonFile = path.join(__dirname, 'data', 'playerStats.json');
+  if (!fs.existsSync(jsonFile)) return;
   try {
-    fs.mkdirSync(path.dirname(STATS_FILE), { recursive: true });
-    return JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
-  } catch {
-    return {};
+    const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
+    const ins = db.prepare(`
+      INSERT OR IGNORE INTO player_stats (user_id, name, score, games_played, games_won)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    db.transaction(() => {
+      for (const [uid, s] of Object.entries(data)) {
+        ins.run(uid, uid, s.score ?? 0, s.gamesPlayed ?? 0, s.gamesWon ?? 0);
+      }
+    })();
+    fs.renameSync(jsonFile, jsonFile + '.migrated');
+    console.log(`Migrated ${Object.keys(data).length} player entries from JSON to SQLite`);
+  } catch (e) {
+    console.error('JSON→SQLite migration failed:', e);
   }
-}
-
-let persistTimer = null;
-function saveStats() {
-  clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    try { fs.writeFileSync(STATS_FILE, JSON.stringify(playerStats), 'utf8'); } catch {}
-  }, 2000);
-}
-
-const playerStats = loadStats();
+})();
 
 // Puntos por ronda: base + rank * multiplicador (rank 0–7)
 const ROUND_PTS_BASE = 8;
@@ -81,10 +111,38 @@ const TIERS = [
 
 function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
 
+const stmts = {
+  upsertUser:   db.prepare(`INSERT INTO player_stats (user_id, name, picture)
+                              VALUES (?, ?, ?)
+                              ON CONFLICT(user_id) DO UPDATE
+                                SET name = excluded.name, picture = excluded.picture, updated_at = unixepoch()`),
+  ensureUser:   db.prepare(`INSERT OR IGNORE INTO player_stats (user_id, name, picture) VALUES (?, ?, ?)`),
+  getStats:     db.prepare(`SELECT * FROM player_stats WHERE user_id = ?`),
+  updateStats:  db.prepare(`UPDATE player_stats
+                              SET score = ?, games_played = ?, games_won = ?, updated_at = unixepoch()
+                              WHERE user_id = ?`),
+  insertSession:db.prepare(`INSERT INTO game_sessions (user_id, result, score_delta) VALUES (?, ?, ?)`),
+  rankings:     db.prepare(`SELECT user_id, name, picture, score, games_played, games_won
+                              FROM player_stats ORDER BY score DESC LIMIT 100`),
+};
+
 function ensureStats(userId) {
-  if (!playerStats[userId]) playerStats[userId] = { score: 0, gamesPlayed: 0, gamesWon: 0, roundsWon: 0 };
-  return playerStats[userId];
+  stmts.ensureUser.run(userId, registeredUsers[userId]?.name ?? userId, registeredUsers[userId]?.picture ?? null);
+  return stmts.getStats.get(userId);
 }
+
+const commitGamePoints = db.transaction((uid, roundDelta, result) => {
+  const row = stmts.getStats.get(uid);
+  if (!row) return;
+  let score = Math.max(0, row.score + roundDelta);
+  let gamesWon = row.games_won;
+  if (result === 'win')  { score += POINTS.GAME_WIN; gamesWon++; }
+  else if (result === 'loss') { score = Math.max(0, score + POINTS.GAME_LOSS); }
+  else                   { score += POINTS.GAME_PARTICIPATE; }
+  const delta = score - row.score;
+  stmts.updateStats.run(score, row.games_played + 1, gamesWon, uid);
+  stmts.insertSession.run(uid, result, delta);
+});
 
 function getUserIdForPlayer(player) {
   if (player.isBot) return null;
@@ -104,9 +162,9 @@ function awardRoundPoints(room, loserId) {
     const isLoser  = player.id === loserId;
     if (!isWinner && !isLoser) continue;
     if (uid) {
-      // Registered: accumulate in pendingScores — committed to playerStats only at game end
+      // Registered: accumulate in pendingScores — committed to DB only at game end
       const prev = room.pendingScores[uid] ?? 0;
-      const base = playerStats[uid]?.score ?? 0;
+      const base = stmts.getStats.get(uid)?.score ?? 0;
       if (isWinner) { room.pendingScores[uid] = prev + roundPts; }
       else          { room.pendingScores[uid] = Math.max(-base, prev + POINTS.ROUND_LOSS); }
     } else {
@@ -123,34 +181,32 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
     if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
     if (uid) {
-      // Flush pending round deltas + game bonus into persistent stats
-      const s = ensureStats(uid);
-      const roundDelta = room.pendingScores[uid] ?? 0;
-      s.score = Math.max(0, s.score + roundDelta);
-      s.gamesPlayed++;
-      if (player.id === gameWinnerId)     { s.score += POINTS.GAME_WIN; s.gamesWon++; }
-      else if (player.id === gameLoserId) { s.score = Math.max(0, s.score + POINTS.GAME_LOSS); }
-      else                                { s.score += POINTS.GAME_PARTICIPATE; }
+      const result = player.id === gameWinnerId ? 'win' : player.id === gameLoserId ? 'loss' : 'participate';
+      commitGamePoints(uid, room.pendingScores[uid] ?? 0, result);
     } else {
-      // Guest: session score only
+      // Guest: session score only (never persisted)
       if (player.id === gameWinnerId)     { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_WIN; }
       else if (player.id === gameLoserId) { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.GAME_LOSS); }
       else                                { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_PARTICIPATE; }
     }
   }
   room.pendingScores = {};
-  saveStats();
 }
 
 function buildRankings() {
-  return Object.entries(playerStats)
-    .filter(([userId]) => registeredUsers[userId])
-    .map(([userId, s]) => {
-      const u = registeredUsers[userId];
-      return { userId, name: u.name, picture: u.picture ?? null, ...s, tier: getTier(s.score).name };
-    })
-    .sort((a, b) => b.score - a.score)
-    .map((e, i) => ({ ...e, rank: i + 1 }));
+  return stmts.rankings.all().map((row, i) => {
+    const online = registeredUsers[row.user_id];
+    return {
+      userId:      row.user_id,
+      name:        online?.name    ?? row.name,
+      picture:     online?.picture ?? row.picture ?? null,
+      score:       row.score,
+      gamesPlayed: row.games_played,
+      gamesWon:    row.games_won,
+      tier:        getTier(row.score).name,
+      rank:        i + 1,
+    };
+  });
 }
 
 const app = express();
@@ -637,10 +693,14 @@ app.get('/api/rankings', (_, res) => res.json({ rankings: buildRankings().slice(
 io.on('connection', (socket) => {
 
   socket.on('get_stats', (cb) => {
-    const uid = socket.data.userId;
-    const rankings = buildRankings().slice(0, 100);
+    const uid      = socket.data.userId;
+    const rankings = buildRankings();
     const myRank   = uid ? (rankings.findIndex(r => r.userId === uid) + 1) || null : null;
-    const stats    = uid ? { ...ensureStats(uid), tier: getTier(ensureStats(uid).score).name } : null;
+    let stats = null;
+    if (uid) {
+      const row = stmts.getStats.get(uid);
+      if (row) stats = { score: row.score, gamesPlayed: row.games_played, gamesWon: row.games_won, tier: getTier(row.score).name };
+    }
     cb?.({ ok: true, stats, rankings, myRank, total: rankings.length });
   });
 
@@ -893,6 +953,7 @@ io.on('connection', (socket) => {
     if (!userId || !name) return;
     registeredUsers[userId] = { ...(registeredUsers[userId] || {}), userId, name, email, picture, socketId: socket.id };
     socket.data.userId = userId;
+    stmts.upsertUser.run(userId, name, picture ?? null);
   });
 
   socket.on('subscribe_push', ({ userId, subscription }) => {
