@@ -168,8 +168,9 @@ body {
   flex-shrink: 0;
 }
 
-.tag--capilla { background: #fdecea; color: #c0392b; }
+.tag--capilla  { background: #fdecea; color: #c0392b; }
 .tag--liberado { background: #e8f6ec; color: #1e8e4e; }
+.tag--desempate { background: #fff3cd; color: #b45309; font-size: 9px; letter-spacing: 0.4px; }
 
 /* Overlay "palillo roto" al final de la ronda */
 .palillo-roto {
@@ -1029,6 +1030,9 @@ body {
   flex: 1;
 }
 
+.scoreboard__col-headers { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.scoreboard__col-pts { font-size: 11px; font-weight: 600; color: var(--text-subtle); letter-spacing: 0.3px; }
+
 .scoreboard__row {
   display: flex;
   align-items: center;
@@ -1039,13 +1043,11 @@ body {
 
 .scoreboard__row--active { background: var(--active-row); padding-left: 6px; padding-right: 6px; margin: 0 -6px; }
 
-.scoreboard__pos { font-size: 12px; color: var(--text-subtle); width: 16px; flex-shrink: 0; }
 .scoreboard__name { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scoreboard__dice { display: flex; gap: 3px; }
-.scoreboard__right { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; gap: 1px; position: relative; min-width: 52px; }
-.scoreboard__wins  { font-size: 13px; font-weight: 700; line-height: 1.2; }
-.scoreboard__score { font-size: 10px; color: var(--text-subtle); font-weight: 500; white-space: nowrap; }
-.scoreboard__trophy { width: 24px; text-align: right; flex-shrink: 0; font-size: 15px; line-height: 1; margin-right: -4px; }
+.scoreboard__pts-num { font-size: 13px; font-weight: 700; flex-shrink: 0; white-space: nowrap; min-width: 42px; text-align: right; }
+.scoreboard__wins-num { font-size: 13px; font-weight: 700; flex-shrink: 0; width: 20px; text-align: center; }
+.scoreboard__trophy { width: 24px; text-align: center; flex-shrink: 0; font-size: 15px; line-height: 1; }
 
 .roll { display: flex; flex-direction: column; gap: 8px; }
 
@@ -1086,6 +1088,27 @@ body {
   height: 100% !important;
 }
 
+
+.dice-box--waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 20px;
+}
+.dice-box__waiting-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+.dice-box__waiting-sub {
+  font-size: 13px;
+  color: var(--text-subtle);
+  text-align: center;
+}
+
 .dice-box__header {
   display: flex;
   justify-content: space-between;
@@ -1121,7 +1144,18 @@ body {
 
 .dice-box__hand {
   font-size: 13px;
-  color: var(--text-subtle);
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  text-align: right;
+}
+.dice-box__hand-pts {
+  font-size: 13px;
+  font-weight: 700;
+  color: #22c55e;
+  white-space: nowrap;
 }
 
 /* ── Game hand (dice slots below dice-box) ───────────────── */
@@ -1243,7 +1277,8 @@ body {
 
 .results__winner-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 4px; }
 .results__name { font-size: clamp(14px, 5.5vw, 24px); font-weight: 800; word-break: break-word; }
-.results__hand { font-size: 16px; color: var(--text-subtle); margin-top: 4px; }
+.results__hand { font-size: 16px; color: var(--text-subtle); margin-top: 4px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.results__hand-pts { font-size: 13px; font-weight: 700; color: #22c55e; }
 
 .results__hands {
   padding: 16px 20px;
@@ -1266,7 +1301,7 @@ body {
 
 .results__player { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results__dice { display: flex; gap: 3px; flex-shrink: 0; }
-.results__desc { font-size: 12px; color: var(--text-subtle); white-space: nowrap; margin-left: 6px; flex-shrink: 0; }
+.results__desc { font-size: 12px; color: var(--text-subtle); white-space: nowrap; margin-left: 6px; flex-shrink: 0; display: flex; align-items: baseline; gap: 5px; }
 
 .results__scores {
   padding: 16px 20px;
@@ -1300,7 +1335,8 @@ body {
 
 .results__pos   { color: var(--text-subtle); font-size: 13px; width: 18px; flex-shrink: 0; }
 .results__sname { flex: 1; font-size: 15px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results__pts   { font-size: 12px; color: var(--text-subtle); flex-shrink: 0; white-space: nowrap; }
+.results__right { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; gap: 1px; position: relative; min-width: 52px; }
+.results__pts   { font-size: 10px; color: var(--text-subtle); white-space: nowrap; }
 
 /* Badge flotante de puntuación */
 @keyframes score-float {
@@ -1376,6 +1412,103 @@ body {
   color: var(--text-subtle);
   letter-spacing: 2px;
 }
+
+/* ── Intro / Splash screen ───────────────────────────────────────────────── */
+@keyframes intro-zoom {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: opacity 0.5s ease;
+}
+.intro--leaving { opacity: 0; pointer-events: none; }
+
+.intro__bg-wrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #0e1117;
+}
+.intro__bg {
+  position: absolute;
+  inset: -7%;
+  background-image: url('/assets/bg-home.png');
+  background-size: cover;
+  background-position: center top;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+  animation: intro-zoom 28s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.intro__bg--visible { opacity: 1; }
+
+.intro__logo {
+  position: relative;
+  z-index: 1;
+  width: min(80vw, 340px);
+  pointer-events: none;
+  user-select: none;
+  will-change: transform, opacity;
+  transition: transform 0.8s cubic-bezier(0.34, 1.15, 0.64, 1), opacity 0.6s ease;
+  transform: scale(0.4);
+  opacity: 0;
+}
+.intro__logo--center {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.intro__btn {
+  position: relative;
+  z-index: 1;
+  margin-top: 48px;
+  padding: 14px 48px;
+  border-radius: 100px;
+  border: none;
+  background: #fff;
+  color: #0e1117;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease 0.3s, transform 0.5s ease 0.3s, background 0.15s;
+}
+.intro__btn--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.intro__btn:active { background: #e2e8f0; transform: scale(0.96); }
+
+.intro__music-btn {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top) + 12px);
+  right: 16px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.intro__music-btn:active { transform: scale(0.88); }
 
 /* ── Room list (home screen) ─────────────────────────────────────────────── */
 

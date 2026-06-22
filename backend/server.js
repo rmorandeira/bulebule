@@ -66,7 +66,8 @@ function ensureStats(userId) {
 
 function getUserIdForPlayer(player) {
   if (player.isBot) return null;
-  return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? null;
+  // Return Google userId for registered players, or socket ID as fallback for guests
+  return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? player.id;
 }
 
 function awardRoundPoints(room, loserId) {
@@ -255,92 +256,36 @@ function clearTiebreakerTimer(room) {
   }
 }
 
-// ── Tiebreaker (desempate a la caída) ─────────────────────────────────────────
+// ── Desempate a la caída (mini-ronda con los dados normales) ──────────────────
 
-function startTiebreak(room, playerIds, winnerId) {
-  room.phase = 'tiebreak';
-  room.roundWinnerId = winnerId;
-  room.tiebreaker = { playerIds, currentIdx: 0, results: {}, rollSeeds: {}, round: 1 };
-  scheduleTiebreakerTimeout(room);
-  scheduleNextTiebreakerBot(room);
-}
+function startDesempate(room, playerIds, provisionalWinnerId) {
+  clearTurnTimer(room);
+  room.roundWinnerId = provisionalWinnerId;
+  room.desempate = true;
 
-function scheduleTiebreakerTimeout(room) {
-  clearTiebreakerTimer(room);
-  const tb = room.tiebreaker;
-  if (!tb || tb.currentIdx >= tb.playerIds.length) return;
-  const currentPlayerId = tb.playerIds[tb.currentIdx];
-  const currentPlayer = room.players.find(p => p.id === currentPlayerId);
-  if (currentPlayer?.isBot) return;
-
-  const code = room.code;
-  room.tiebreakerTimerId = setTimeout(() => {
-    const r = rooms[code];
-    if (!r || r.phase !== 'tiebreak' || !r.tiebreaker) return;
-    const rtb = r.tiebreaker;
-    if (rtb.playerIds[rtb.currentIdx] !== currentPlayerId) return;
-    rtb.results[currentPlayerId] = rollDie();
-    rtb.rollSeeds[currentPlayerId] = Math.floor(Math.random() * 0xFFFFFFFF);
-    rtb.currentIdx++;
-    if (rtb.currentIdx >= rtb.playerIds.length) {
-      resolveTiebreak(r);
+  for (const p of room.players) {
+    if (playerIds.includes(p.id)) {
+      p.inDesempate = true;
+      p.done        = false;
+      p.rollCount   = 0;
+      p.currentDice = [];
+      p.hand        = null;
+      p.pendingDiscards  = [];
+      p.rollHistory      = [];
+      p.rollDiscardHistory = [];
     } else {
-      scheduleTiebreakerTimeout(r);
-      scheduleNextTiebreakerBot(r);
+      p.inDesempate = false;
+      // non-desempate players keep done=true from the main round
     }
-    broadcast(code);
-  }, TIEBREAK_TIMEOUT);
-}
-
-function scheduleNextTiebreakerBot(room) {
-  if (room.phase !== 'tiebreak' || !room.tiebreaker) return;
-  const tb = room.tiebreaker;
-  if (tb.currentIdx >= tb.playerIds.length) return;
-  const currentPlayerId = tb.playerIds[tb.currentIdx];
-  const currentPlayer = room.players.find(p => p.id === currentPlayerId);
-  if (!currentPlayer?.isBot) return;
-
-  const code = room.code;
-  setTimeout(() => {
-    const r = rooms[code];
-    if (!r || r.phase !== 'tiebreak' || !r.tiebreaker) return;
-    const rtb = r.tiebreaker;
-    if (rtb.playerIds[rtb.currentIdx] !== currentPlayerId) return;
-    rtb.results[currentPlayerId] = rollDie();
-    rtb.rollSeeds[currentPlayerId] = Math.floor(Math.random() * 0xFFFFFFFF);
-    rtb.currentIdx++;
-    if (rtb.currentIdx >= rtb.playerIds.length) {
-      resolveTiebreak(r);
-    } else {
-      scheduleNextTiebreakerBot(r);
-      scheduleTiebreakerTimeout(r);
-    }
-    broadcast(code);
-  }, 1500);
-}
-
-function resolveTiebreak(room) {
-  clearTiebreakerTimer(room);
-  const tb = room.tiebreaker;
-
-  let minRank = Infinity;
-  for (const id of tb.playerIds) {
-    const rank = VALUE_RANK[tb.results[id]] ?? 0;
-    if (rank < minRank) minRank = rank;
   }
-  const stillTied = tb.playerIds.filter(id => (VALUE_RANK[tb.results[id]] ?? 0) === minRank);
 
-  if (stillTied.length === 1) {
-    const loser = room.players.find(p => p.id === stillTied[0]);
-    room.tiebreaker = null;
-    applyRoundLoss(room, loser);
-  } else {
-    const savedWinnerId = room.roundWinnerId;
-    room.tiebreaker = { playerIds: stillTied, currentIdx: 0, results: {}, rollSeeds: {}, round: (tb.round || 1) + 1 };
-    room.roundWinnerId = savedWinnerId;
-    scheduleTiebreakerTimeout(room);
-    scheduleNextTiebreakerBot(room);
-  }
+  const firstIdx = room.players.findIndex(p => p.id === playerIds[0]);
+  room.startingPlayerIndex = firstIdx !== -1 ? firstIdx : 0;
+  room.currentPlayerIndex  = room.startingPlayerIndex;
+  room.maxRolls    = null;
+  room.turnDeadline = null;
+
+  awaitContinue(room);
 }
 
 // Pausa entre jugadores: el siguiente (bot o humano) no empieza hasta que
@@ -422,13 +367,7 @@ function sanitize(room) {
     awaitingContinue: room.awaitingContinue ?? false,
     continueDeadline: room.continueDeadline ?? null,
     maxRounds: room.maxRounds ?? 0,
-    tiebreaker: room.tiebreaker ? {
-      playerIds:     room.tiebreaker.playerIds,
-      currentPlayerId: room.tiebreaker.playerIds[room.tiebreaker.currentIdx] ?? null,
-      results:       { ...room.tiebreaker.results },
-      rollSeeds:     { ...(room.tiebreaker.rollSeeds ?? {}) },
-      round:         room.tiebreaker.round,
-    } : null,
+    desempate: room.desempate ?? false,
     players: room.players.map(p => {
       const uid = getUserIdForPlayer(p);
       return {
@@ -446,7 +385,8 @@ function sanitize(room) {
         breaks: p.breaks ?? 0,
         liberado: p.liberado ?? false,
         pendingDiscards: p.pendingDiscards ?? [],
-        score: uid ? (playerStats[uid]?.score ?? 0) : null,
+        score: p.isBot ? null : (playerStats[uid]?.score ?? 0),
+        inDesempate: p.inDesempate ?? false,
       };
     }),
   };
@@ -502,6 +442,10 @@ function startRound(room) {
 }
 
 function applyRoundLoss(room, loser) {
+  if (room.desempate) {
+    room.desempate = false;
+    for (const p of room.players) p.inDesempate = false;
+  }
   room.roundLoserId = loser.id;
   room.nextStarterId = loser.id;
   if (loser.breaks >= 3) {
@@ -577,8 +521,10 @@ function finishTurn(room, player) {
 }
 
 function endRound(room) {
-  // Solo participan en ganador/perdedor los no-liberados que jugaron la ronda
-  const participants = room.players.filter(p => p.hand);
+  // En desempate solo compiten los jugadores marcados con inDesempate
+  const participants = room.desempate
+    ? room.players.filter(p => p.inDesempate && p.hand)
+    : room.players.filter(p => p.hand);
   const liberadoWinner = room.players.find(p => p.liberado);
   const nonLiberado = room.players.filter(p => !p.liberado);
 
@@ -622,11 +568,14 @@ function endRound(room) {
     const provisionalWinner = notTied.length > 0
       ? notTied.reduce((best, p) => compareHands(p.hand, best.hand) > 0 ? p : best)
       : winner;
-    startTiebreak(room, tiedLosers.map(p => p.id), provisionalWinner.id);
+    startDesempate(room, tiedLosers.map(p => p.id), provisionalWinner.id);
     return;
   }
 
-  room.roundWinnerId = winner.id;
+  // En desempate el roundWinnerId ya apunta al ganador provisional de la ronda completa
+  if (!room.desempate) {
+    room.roundWinnerId = winner.id;
+  }
   if (loser.id === winner.id && participants.length > 1) {
     loser = participants.find(p => p.id !== winner.id);
   }
@@ -860,29 +809,6 @@ io.on('connection', (socket) => {
     if (!bot?.isBot) return cb?.({ ok: false });
     cb?.({ ok: true });
     botAct(code);
-  });
-
-  socket.on('tiebreak_roll', (cb) => {
-    const room = rooms[socket.data.roomCode];
-    if (!room || room.phase !== 'tiebreak' || !room.tiebreaker) return cb?.({ ok: false });
-    const tb = room.tiebreaker;
-    const currentPlayerId = tb.playerIds[tb.currentIdx];
-    if (socket.id !== currentPlayerId) return cb?.({ ok: false });
-
-    clearTiebreakerTimer(room);
-    tb.results[currentPlayerId] = rollDie();
-    tb.rollSeeds[currentPlayerId] = Math.floor(Math.random() * 0xFFFFFFFF);
-    tb.currentIdx++;
-
-    if (tb.currentIdx >= tb.playerIds.length) {
-      resolveTiebreak(room);
-    } else {
-      scheduleTiebreakerTimeout(room);
-      scheduleNextTiebreakerBot(room);
-    }
-
-    cb?.({ ok: true });
-    broadcast(room.code);
   });
 
   socket.on('next_round', (cb) => {
