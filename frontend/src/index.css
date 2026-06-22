@@ -450,7 +450,12 @@ body {
 .modal__text {
   font-size: 17px;
   line-height: 1.4;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
+}
+.modal__text--warning {
+  font-size: 13px;
+  color: #ef4444;
+  margin-bottom: 24px;
 }
 
 .modal__actions {
@@ -1620,11 +1625,11 @@ body {
   flex-shrink: 0;
   background: #f2f2f2;
   border-radius: 20px;
-  margin: 6px 16px 12px;
-  padding: 18px 20px 20px;
+  margin: 0 16px 6px;
+  padding: 10px 20px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 .rl__page-card--solo { background: #111; }
 .rl__page-card--solo .rl__page-label { color: #fff; }

@@ -766,6 +766,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           <div className="modal" role="alertdialog" aria-modal="true">
             <h2 className="modal__title">Abandonar la partida</h2>
             <p className="modal__text">¿Estás seguro de que quieres abandonar la partida?</p>
+            <p className="modal__text modal__text--warning">La puntuación acumulada en esta partida se perderá.</p>
             <div className="modal__actions">
               <button className="btn btn--secondary" onClick={() => setLeaveIntent(null)}>Seguir jugando</button>
               <button className="btn btn--primary" onClick={confirmLeave}>Abandonar</button>
