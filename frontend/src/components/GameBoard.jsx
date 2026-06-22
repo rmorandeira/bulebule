@@ -513,7 +513,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               const iCanAdvance = room.roundLoserId === myId || loserIsBot
               return iCanAdvance
                 ? <button className="btn btn--primary btn--full" onClick={handleNextRound}>
-                    {!loserIsBot && continueSecondsLeft !== null ? `Nueva ronda (${continueSecondsLeft}s)` : 'Nueva ronda'}
+                    {!loserIsBot && continueSecondsLeft !== null ? `Siguiente ronda (${continueSecondsLeft}s)` : 'Siguiente ronda'}
                   </button>
                 : <p className="waiting-label">
                     {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
