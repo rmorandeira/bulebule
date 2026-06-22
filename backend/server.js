@@ -133,7 +133,7 @@ function ensureStats(userId) {
 
 const commitGamePoints = db.transaction((uid, roundDelta, result) => {
   const row = stmts.getStats.get(uid);
-  if (!row) return;
+  if (!row) return 0;
   let score = Math.max(0, row.score + roundDelta);
   let gamesWon = row.games_won;
   if (result === 'win')  { score += POINTS.GAME_WIN; gamesWon++; }
@@ -142,6 +142,7 @@ const commitGamePoints = db.transaction((uid, roundDelta, result) => {
   const delta = score - row.score;
   stmts.updateStats.run(score, row.games_played + 1, gamesWon, uid);
   stmts.insertSession.run(uid, result, delta);
+  return delta;
 });
 
 function getUserIdForPlayer(player) {
@@ -176,13 +177,15 @@ function awardRoundPoints(room, loserId) {
 }
 
 function awardGamePoints(room, gameWinnerId, gameLoserId) {
-  if (!room.pendingScores) room.pendingScores = {};
+  if (!room.pendingScores)   room.pendingScores   = {};
+  if (!room.lastGameScores)  room.lastGameScores  = {};
   for (const player of room.players) {
     if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
     if (uid) {
       const result = player.id === gameWinnerId ? 'win' : player.id === gameLoserId ? 'loss' : 'participate';
-      commitGamePoints(uid, room.pendingScores[uid] ?? 0, result);
+      const delta = commitGamePoints(uid, room.pendingScores[uid] ?? 0, result);
+      room.lastGameScores[uid] = delta; // shown on finished screen
     } else {
       // Guest: session score only (never persisted)
       if (player.id === gameWinnerId)     { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_WIN; }
@@ -490,7 +493,9 @@ function sanitize(room) {
         liberado: p.liberado ?? false,
         pendingDiscards: p.pendingDiscards ?? [],
         score: p.isBot ? null : (uid
-          ? (room.pendingScores?.[uid] ?? 0)
+          ? (room.phase === 'finished'
+              ? (room.lastGameScores?.[uid] ?? 0)
+              : (room.pendingScores?.[uid] ?? 0))
           : (p.sessionScore ?? 0)),
         inDesempate: p.inDesempate ?? false,
       };
@@ -943,7 +948,8 @@ io.on('connection', (socket) => {
     room.endReason = null;
     for (const p of room.players) { p.breaks = 0; p.liberado = false; p.sessionScore = undefined; }
     room.roundNumber = 0;
-    room.pendingScores = {};
+    room.pendingScores  = {};
+    room.lastGameScores = {};
     startRound(room);
     cb?.({ ok: true });
     broadcast(room.code);
