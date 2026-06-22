@@ -44,6 +44,82 @@ async function trackEvent(name, data = {}) {
 }
 
 const registeredUsers = {};
+const playerStats = {};
+
+// Puntos por ronda: base + rank * multiplicador (rank 0–7)
+const ROUND_PTS_BASE = 8;
+const ROUND_PTS_MULT = 4;   // pareja=12, dos pares=16, trío=20, full=24, póker=28, repóker=32
+const POINTS = { ROUND_LOSS: -6, GAME_WIN: 80, GAME_LOSS: -15, GAME_PARTICIPATE: 10 };
+const TIERS = [
+  { name: 'Diamante', min: 700 },
+  { name: 'Oro',      min: 300 },
+  { name: 'Plata',    min: 100 },
+  { name: 'Bronce',   min: 0   },
+];
+
+function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
+
+function ensureStats(userId) {
+  if (!playerStats[userId]) playerStats[userId] = { score: 0, gamesPlayed: 0, gamesWon: 0, roundsWon: 0 };
+  return playerStats[userId];
+}
+
+function getUserIdForPlayer(player) {
+  if (player.isBot) return null;
+  // Only returns an id for registered (logged-in) players
+  return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? null;
+}
+
+function awardRoundPoints(room, loserId) {
+  const winner = room.players.find(p => p.id === room.roundWinnerId);
+  const handRank = winner?.hand?.rank ?? 0;
+  const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
+  for (const player of room.players) {
+    if (player.isBot) continue;
+    const uid = getUserIdForPlayer(player);
+    const isWinner = player.id === room.roundWinnerId;
+    const isLoser  = player.id === loserId;
+    if (!isWinner && !isLoser) continue;
+    if (uid) {
+      const s = ensureStats(uid);
+      if (isWinner) { s.score += roundPts; s.roundsWon++; }
+      else          { s.score = Math.max(0, s.score + POINTS.ROUND_LOSS); }
+    } else {
+      // Guest: track score only for this session, on the player object
+      if (isWinner) { player.sessionScore = (player.sessionScore ?? 0) + roundPts; }
+      else          { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.ROUND_LOSS); }
+    }
+  }
+}
+
+function awardGamePoints(room, gameWinnerId, gameLoserId) {
+  for (const player of room.players) {
+    if (player.isBot) continue;
+    const uid = getUserIdForPlayer(player);
+    if (uid) {
+      const s = ensureStats(uid);
+      s.gamesPlayed++;
+      if (player.id === gameWinnerId)     { s.score += POINTS.GAME_WIN; s.gamesWon++; }
+      else if (player.id === gameLoserId) { s.score = Math.max(0, s.score + POINTS.GAME_LOSS); }
+      else                                { s.score += POINTS.GAME_PARTICIPATE; }
+    } else {
+      // Guest: session score only
+      if (player.id === gameWinnerId)     { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_WIN; }
+      else if (player.id === gameLoserId) { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.GAME_LOSS); }
+      else                                { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_PARTICIPATE; }
+    }
+  }
+}
+
+function buildRankings() {
+  return Object.entries(playerStats)
+    .map(([userId, s]) => {
+      const u = registeredUsers[userId];
+      return { userId, name: u?.name ?? 'Desconocido', picture: u?.picture ?? null, ...s, tier: getTier(s.score).name };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((e, i) => ({ ...e, rank: i + 1 }));
+}
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -59,8 +135,9 @@ const io = new Server(server, {
 const rooms = {};
 
 const { VALUE_RANK } = require('./gameLogic');
-const TURN_TIMEOUT = 30_000;
-const CONTINUE_TIMEOUT = 30_000;
+const TURN_TIMEOUT      = 30_000;
+const CONTINUE_TIMEOUT  = 30_000;
+const TIEBREAK_TIMEOUT  = 30_000;
 const BOT_ID = '__bot__';
 const BOT_NAME = 'Bot';
 
@@ -188,6 +265,45 @@ function clearContinueTimer(room) {
   }
 }
 
+function clearTiebreakerTimer(room) {
+  if (room.tiebreakerTimerId) {
+    clearTimeout(room.tiebreakerTimerId);
+    room.tiebreakerTimerId = null;
+  }
+}
+
+// ── Desempate a la caída (mini-ronda con los dados normales) ──────────────────
+
+function startDesempate(room, playerIds, provisionalWinnerId) {
+  clearTurnTimer(room);
+  room.roundWinnerId = provisionalWinnerId;
+  room.desempate = true;
+
+  for (const p of room.players) {
+    if (playerIds.includes(p.id)) {
+      p.inDesempate = true;
+      p.done        = false;
+      p.rollCount   = 0;
+      p.currentDice = [];
+      p.hand        = null;
+      p.pendingDiscards  = [];
+      p.rollHistory      = [];
+      p.rollDiscardHistory = [];
+    } else {
+      p.inDesempate = false;
+      // non-desempate players keep done=true from the main round
+    }
+  }
+
+  const firstIdx = room.players.findIndex(p => p.id === playerIds[0]);
+  room.startingPlayerIndex = firstIdx !== -1 ? firstIdx : 0;
+  room.currentPlayerIndex  = room.startingPlayerIndex;
+  room.maxRolls    = null;
+  room.turnDeadline = null;
+
+  awaitContinue(room);
+}
+
 // Pausa entre jugadores: el siguiente (bot o humano) no empieza hasta que
 // alguien pulse Continuar o expire el contador de 30s
 const BOT_CONTINUE_TIMEOUT = 3_000;
@@ -267,22 +383,28 @@ function sanitize(room) {
     awaitingContinue: room.awaitingContinue ?? false,
     continueDeadline: room.continueDeadline ?? null,
     maxRounds: room.maxRounds ?? 0,
-    players: room.players.map(p => ({
-      id: p.id,
-      name: p.name,
-      isBot: p.isBot ?? false,
-      currentDice: p.currentDice,
-      rollHistory: p.rollHistory,
-      rollDiscardHistory: p.rollDiscardHistory ?? [],
-      rollCount: p.rollCount,
-      rollSeed: p.rollSeed ?? null,
-      done: p.done,
-      hand: p.hand,
-      wins: p.wins,
-      breaks: p.breaks ?? 0,
-      liberado: p.liberado ?? false,
-      pendingDiscards: p.pendingDiscards ?? [],
-    })),
+    desempate: room.desempate ?? false,
+    players: room.players.map(p => {
+      const uid = getUserIdForPlayer(p);
+      return {
+        id: p.id,
+        name: p.name,
+        isBot: p.isBot ?? false,
+        currentDice: p.currentDice,
+        rollHistory: p.rollHistory,
+        rollDiscardHistory: p.rollDiscardHistory ?? [],
+        rollCount: p.rollCount,
+        rollSeed: p.rollSeed ?? null,
+        done: p.done,
+        hand: p.hand,
+        wins: p.wins,
+        breaks: p.breaks ?? 0,
+        liberado: p.liberado ?? false,
+        pendingDiscards: p.pendingDiscards ?? [],
+        score: p.isBot ? null : (uid ? (playerStats[uid]?.score ?? 0) : (p.sessionScore ?? 0)),
+        inDesempate: p.inDesempate ?? false,
+      };
+    }),
   };
 }
 
@@ -336,6 +458,10 @@ function startRound(room) {
 }
 
 function applyRoundLoss(room, loser) {
+  if (room.desempate) {
+    room.desempate = false;
+    for (const p of room.players) p.inDesempate = false;
+  }
   room.roundLoserId = loser.id;
   room.nextStarterId = loser.id;
   if (loser.breaks >= 3) {
@@ -343,6 +469,8 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'capilla';
     const gameWinner = room.players.find(p => p.id === room.roundWinnerId);
     if (gameWinner) gameWinner.wins += 1;
+    awardRoundPoints(room, loser.id);
+    awardGamePoints(room, room.roundWinnerId, loser.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'capilla', rounds: room.roundNumber, playerCount: room.players.length });
     return;
@@ -355,9 +483,12 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'rounds';
     const gameWinner = room.players.filter(p => p.id !== worst.id).sort((a, b) => a.breaks - b.breaks)[0];
     if (gameWinner) gameWinner.wins += 1;
+    awardRoundPoints(room, loser.id);
+    awardGamePoints(room, gameWinner?.id ?? null, worst.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
+    awardRoundPoints(room, loser.id);
     room.phase = 'results';
     clearContinueTimer(room);
     room.continueDeadline = Date.now() + CONTINUE_TIMEOUT;
@@ -406,8 +537,10 @@ function finishTurn(room, player) {
 }
 
 function endRound(room) {
-  // Solo participan en ganador/perdedor los no-liberados que jugaron la ronda
-  const participants = room.players.filter(p => p.hand);
+  // En desempate solo compiten los jugadores marcados con inDesempate
+  const participants = room.desempate
+    ? room.players.filter(p => p.inDesempate && p.hand)
+    : room.players.filter(p => p.hand);
   const liberadoWinner = room.players.find(p => p.liberado);
   const nonLiberado = room.players.filter(p => !p.liberado);
 
@@ -419,6 +552,7 @@ function endRound(room) {
       room.gameLoserId = nonLiberado[0].id;
       room.endReason = 'liberado';
     }
+    awardGamePoints(room, liberadoWinner.id, nonLiberado[0]?.id ?? null);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: room.endReason ?? 'liberado', rounds: room.roundNumber, playerCount: room.players.length });
     return;
@@ -436,19 +570,45 @@ function endRound(room) {
   }
 
   let winner = participants[0];
-  let loser = participants[0];
+  let loser  = participants[0];
   for (const p of participants) {
     if (compareHands(p.hand, winner.hand) > 0) winner = p;
-    if (compareHands(p.hand, loser.hand) < 0) loser = p;
+    if (compareHands(p.hand, loser.hand)  < 0) loser  = p;
   }
-  room.roundWinnerId = winner.id;
+
+  // Detect tie for last place → desempate a la caída
+  const worstHand  = loser.hand;
+  const tiedLosers = participants.filter(p => compareHands(p.hand, worstHand) === 0);
+  if (tiedLosers.length > 1) {
+    const notTied = participants.filter(p => !tiedLosers.includes(p));
+    const provisionalWinner = notTied.length > 0
+      ? notTied.reduce((best, p) => compareHands(p.hand, best.hand) > 0 ? p : best)
+      : winner;
+    startDesempate(room, tiedLosers.map(p => p.id), provisionalWinner.id);
+    return;
+  }
+
+  // En desempate el roundWinnerId ya apunta al ganador provisional de la ronda completa
+  if (!room.desempate) {
+    room.roundWinnerId = winner.id;
+  }
   if (loser.id === winner.id && participants.length > 1) {
     loser = participants.find(p => p.id !== winner.id);
   }
   applyRoundLoss(room, loser);
 }
 
+app.get('/api/rankings', (_, res) => res.json({ rankings: buildRankings().slice(0, 100) }));
+
 io.on('connection', (socket) => {
+
+  socket.on('get_stats', (cb) => {
+    const uid = socket.data.userId;
+    const rankings = buildRankings().slice(0, 100);
+    const myRank   = uid ? (rankings.findIndex(r => r.userId === uid) + 1) || null : null;
+    const stats    = uid ? { ...ensureStats(uid), tier: getTier(ensureStats(uid).score).name } : null;
+    cb?.({ ok: true, stats, rankings, myRank, total: rankings.length });
+  });
 
   socket.on('list_rooms', (cb) => {
     cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList) });
@@ -546,6 +706,7 @@ io.on('connection', (socket) => {
     if (!room) return cb?.({ ok: false });
 
     clearTurnTimer(room);
+    clearTiebreakerTimer(room);
     const leavingPlayer = room.players.find(p => p.id === socket.id);
     room.players = room.players.filter(p => p.id !== socket.id);
     socket.leave(code);
@@ -742,6 +903,7 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     if (room.vsBot) {
+      clearTiebreakerTimer(room);
       delete rooms[code];
       return;
     }

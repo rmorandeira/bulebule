@@ -45,7 +45,10 @@ async function setupPush(userId) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('list') // 'list' | 'create' | 'settings'
+  const [screen, setScreen] = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('join')
+    return p ? 'list' : 'intro'
+  }) // 'intro' | 'list' | 'create' | 'settings'
   const [room, setRoom] = useState(null)
   const [myId, setMyId] = useState(null)
   const [user, setUser] = useState(loadUser)
@@ -55,6 +58,19 @@ export default function App() {
     if (p) window.history.replaceState({}, '', '/')
     return p?.toUpperCase() || null
   })
+  const [introBgVisible, setIntroBgVisible] = useState(false)
+  const [introLogoPhase, setIntroLogoPhase] = useState('hidden')
+  const [introLeaving, setIntroLeaving] = useState(false)
+  useEffect(() => {
+    if (screen !== 'intro') return
+    const r = requestAnimationFrame(() => setIntroBgVisible(true))
+    const t1 = setTimeout(() => setIntroLogoPhase('center'), 300)
+    return () => { cancelAnimationFrame(r); clearTimeout(t1) }
+  }, [screen])
+  function handleComenzar() {
+    setIntroLeaving(true)
+    setTimeout(() => setScreen('list'), 500)
+  }
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
   const [abandonedBy, setAbandonedBy] = useState(null)
   const swRegistered       = useRef(false)
@@ -250,6 +266,43 @@ export default function App() {
   function handleLeave() {
     setRoom(null)
     setScreen('list')
+  }
+
+  if (screen === 'intro') {
+    return (
+      <div className={`intro${introLeaving ? ' intro--leaving' : ''}`}>
+        <div className="intro__bg-wrapper">
+          <div className={`intro__bg${introBgVisible ? ' intro__bg--visible' : ''}`} />
+        </div>
+        <button className="intro__music-btn" onClick={toggleMusic} aria-label={musicOn ? 'Silenciar música' : 'Activar música'}>
+          {musicOn ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          )}
+        </button>
+        <img
+          className={`intro__logo intro__logo--${introLogoPhase}`}
+          src="/assets/logo-bulebule.png"
+          alt="Bule Bule"
+          draggable={false}
+        />
+        <button
+          className={`intro__btn${introLogoPhase === 'center' ? ' intro__btn--visible' : ''}`}
+          onClick={handleComenzar}
+        >
+          Comenzar
+        </button>
+      </div>
+    )
   }
 
   if (room) {

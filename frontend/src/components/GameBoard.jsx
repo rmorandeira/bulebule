@@ -10,6 +10,7 @@ import DiceRollerScene from './DiceRollerScene'
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
 const DIE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
+const handPts = rank => 8 + (rank ?? 0) * 4
 const sortDice = arr => [...arr].sort((a, b) => (DIE_RANK[b] ?? 0) - (DIE_RANK[a] ?? 0))
 
 function playDiscardSound() {
@@ -48,6 +49,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
   const [rolling, setRolling] = useState(false)
   const [nextPlayerVisible, setNextPlayerVisible] = useState(false)
+  const [scoreDeltas, setScoreDeltas] = useState({})  // { [playerId]: deltaValue }
+  const prevScoresRef = useRef({})                    // { [playerId]: score }
 
   // animacion_next_player: el servidor pausa el turno (awaitingContinue) hasta
   // que alguien pulsa Continuar o expira su contador de 30s
@@ -62,12 +65,28 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   useEffect(() => {
     const prev = prevPhaseRef.current
     prevPhaseRef.current = room.phase
-    if (prev === 'playing' && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
+    if ((prev === 'playing' || prev === 'tiebreak') && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
       setPalilloRotoShowing(true)
       new Audio('/assets/romper_palillo.mp3').play().catch(() => {})
     }
-    if (room.phase === 'playing') setPalilloRotoShowing(false)
+    if (room.phase === 'playing' || room.phase === 'tiebreak') setPalilloRotoShowing(false)
   }, [room.phase, room.roundLoserId, room.gameLoserId])
+
+  // Detecta cambios de puntuación y muestra badge flotante +/- pts
+  useEffect(() => {
+    const deltas = {}
+    for (const p of room.players) {
+      if (p.score === null) continue
+      const prev = prevScoresRef.current[p.id]
+      if (prev !== undefined && p.score !== prev) deltas[p.id] = p.score - prev
+      prevScoresRef.current[p.id] = p.score
+    }
+    if (Object.keys(deltas).length === 0) return
+    setScoreDeltas(deltas)
+    const t = setTimeout(() => setScoreDeltas({}), 2500)
+    return () => clearTimeout(t)
+  }, [room.players])
+
   const allowUnloadRef        = useRef(false)
   const lastFacesRef          = useRef(null)
   const gameEndTrackedRef     = useRef(false)
@@ -384,16 +403,29 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             <div className="results__scores">
               <div className="results__scores-header">
                 <p className="results__scores-title">Clasificación</p>
-                <span className="scoreboard__trophy">🏆</span>
-              </div>
-              {sorted.map((p, i) => (
-                <div key={p.id} className="results__score-row">
-                  <span className="results__pos">{i + 1}.</span>
-                  <span className="results__sname">{p.name}</span>
-                  <PalilloState player={p} />
-                  <span className="scoreboard__wins">{p.wins}</span>
+                <div className="scoreboard__col-headers">
+                  <span className="scoreboard__col-pts">Puntos</span>
+                  <span className="scoreboard__trophy">🏆</span>
                 </div>
-              ))}
+              </div>
+              {sorted.map((p) => {
+                const delta = scoreDeltas[p.id]
+                return (
+                  <div key={p.id} className="results__score-row">
+                    <PalilloState player={p} />
+                    <span className="results__sname">{p.name}</span>
+                    <span className="scoreboard__pts-num" style={{ position: 'relative' }}>
+                      {p.score != null ? p.score.toLocaleString() : '—'}
+                      {delta !== undefined && (
+                        <span className={`score-delta${delta >= 0 ? ' score-delta--pos' : ' score-delta--neg'}`}>
+                          {delta >= 0 ? '+' : ''}{delta}
+                        </span>
+                      )}
+                    </span>
+                    <span className="scoreboard__wins-num">{p.wins}</span>
+                  </div>
+                )
+              })}
             </div>
             {room.hostId === myId
               ? <button className="btn btn--primary btn--full" onClick={handleRematch}>Revancha</button>
@@ -408,7 +440,10 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             <div className="results__winner">
               <p className="results__winner-label">🏆 Ganador 🏆</p>
               <h2 className="results__name">{winner?.name}</h2>
-              <p className="results__hand">{winner?.hand?.desc}</p>
+              <p className="results__hand">
+                {winner?.hand?.desc}
+                {winner?.hand?.rank != null && <span className="results__hand-pts">+{handPts(winner.hand.rank)} pts</span>}
+              </p>
             </div>
             {(() => {
               const rl = room.players.find(p => p.id === room.roundLoserId)
@@ -429,7 +464,12 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   <div className="results__dice">
                     {sortDice(p.currentDice ?? []).map((v, i) => <Die key={i} value={v} small />)}
                   </div>
-                  <span className="results__desc">{p.hand?.desc}</span>
+                  <span className="results__desc">
+                    {p.hand?.desc}
+                    {p.id === room.roundWinnerId && p.hand?.rank != null && (
+                      <span className="results__hand-pts">+{handPts(p.hand.rank)} pts</span>
+                    )}
+                  </span>
                 </div>
               ))}
             </div>
@@ -442,16 +482,29 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 : <>
                     <div className="results__scores-header">
                       <p className="results__scores-title">Clasificación</p>
-                      <span className="scoreboard__trophy">🏆</span>
-                    </div>
-                    {sorted.map((p, i) => (
-                      <div key={p.id} className="results__score-row">
-                        <span className="results__pos">{i + 1}.</span>
-                        <span className="results__sname">{p.name}</span>
-                        <PalilloState player={p} />
-                        <span className="scoreboard__wins">{p.wins}</span>
+                      <div className="scoreboard__col-headers">
+                        <span className="scoreboard__col-pts">Puntos</span>
+                        <span className="scoreboard__trophy">🏆</span>
                       </div>
-                    ))}
+                    </div>
+                    {sorted.map((p) => {
+                      const delta = scoreDeltas[p.id]
+                      return (
+                        <div key={p.id} className="results__score-row">
+                          <PalilloState player={p} />
+                          <span className="results__sname">{p.name}</span>
+                          <span className="scoreboard__pts-num" style={{ position: 'relative' }}>
+                            {p.score != null ? p.score.toLocaleString() : '—'}
+                            {delta !== undefined && (
+                              <span className={`score-delta${delta >= 0 ? ' score-delta--pos' : ' score-delta--neg'}`}>
+                                {delta >= 0 ? '+' : ''}{delta}
+                              </span>
+                            )}
+                          </span>
+                          <span className="scoreboard__wins-num">{p.wins}</span>
+                        </div>
+                      )
+                    })}
                   </>
               }
             </div>
@@ -468,54 +521,140 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             })()}
           </div>
         )
+      })() : room.phase === 'tiebreak' ? (() => {
+        const tb = room.tiebreaker
+        if (!tb) return null
+        const meInTiebreak = tb.playerIds.includes(myId)
+        const isMyTiebreakerTurn = tb.currentPlayerId === myId
+
+        function handleTiebreakRoll() {
+          socket.emit('tiebreak_roll', {}, (res) => {
+            if (!res?.ok) alert('Error en el desempate')
+          })
+        }
+
+        return (
+          <div className="results">
+            <div className="results__winner">
+              <p className="results__winner-label">
+                {tb.round > 1 ? `Desempate · Ronda ${tb.round}` : 'Desempate a la caída'}
+              </p>
+              <h2 className="results__name">¡Empate!</h2>
+              <p className="results__hand">Cada jugador tira un dado — el peor rompe un palillo</p>
+            </div>
+
+            <div className="tiebreak__players">
+              {tb.playerIds.map(playerId => {
+                const player = room.players.find(p => p.id === playerId)
+                const result = tb.results[playerId]
+                const isCurrent = tb.currentPlayerId === playerId
+                return (
+                  <div key={playerId} className={`tiebreak__row${isCurrent ? ' tiebreak__row--active' : ''}`}>
+                    <span className="tiebreak__name">
+                      {player?.name}{playerId === myId ? ' (tú)' : ''}
+                    </span>
+                    <div className="tiebreak__die-slot">
+                      {result
+                        ? <Die value={result} />
+                        : <span className="tiebreak__pending">{isCurrent ? '🎲' : '·  ·  ·'}</span>
+                      }
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="actions">
+              {isMyTiebreakerTurn && (
+                <div className="actions__row">
+                  <button className="btn btn--primary btn--full" onClick={handleTiebreakRoll}>
+                    Tirar un dado
+                  </button>
+                </div>
+              )}
+              {!isMyTiebreakerTurn && tb.currentPlayerId && (() => {
+                const waiting = room.players.find(p => p.id === tb.currentPlayerId)
+                return (
+                  <p className="waiting-label">
+                    Esperando a {waiting?.name ?? '…'}
+                  </p>
+                )
+              })()}
+              {!meInTiebreak && !tb.currentPlayerId && (
+                <p className="waiting-label">Calculando desempate…</p>
+              )}
+            </div>
+          </div>
+        )
       })() : (
         <>
           <div className="scoreboard">
             <div className="scoreboard__header">
-              <p className="scoreboard__title">Clasificación</p>
-              <span className="scoreboard__trophy">🏆</span>
+              <p className="scoreboard__title">
+                {room.desempate ? 'Desempate' : 'Clasificación'}
+              </p>
+              <div className="scoreboard__col-headers">
+                <span className="scoreboard__col-pts">Puntos</span>
+                <span className="scoreboard__trophy">🏆</span>
+              </div>
             </div>
-            {[...room.players].sort((a, b) => b.wins - a.wins).map((p, i) => {
-              const isRolling = rollingIndices.length > 0 && p.id === currentPlayer?.id
+            {[...room.players].sort((a, b) => b.wins - a.wins).map((p) => {
+              const isActive = p.id === currentPlayer?.id
+              const isRolling = rollingIndices.length > 0 && isActive
               const dice = isRolling
                 ? (scoreboardDice[p.id] ?? [])
-                : (p.currentDice ?? [])
+                : (p.inDesempate ? (p.currentDice ?? []) : [])
+              const delta = scoreDeltas[p.id]
               return (
-                <div key={p.id} className={`scoreboard__row ${p.id === currentPlayer?.id ? 'scoreboard__row--active' : ''}`}>
-                  <span className="scoreboard__pos">{i + 1}.</span>
-                  <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                <div key={p.id} className={`scoreboard__row ${isActive ? 'scoreboard__row--active' : ''}`}>
                   <PalilloState player={p} />
+                  <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                  {p.inDesempate && <span className="tag tag--desempate">DESEMPATE</span>}
                   {dice.length > 0 && (
                     <div className="scoreboard__dice">
                       {sortDice(dice).map((v, j) => <Die key={j} value={v} small />)}
                     </div>
                   )}
-                  <span className="scoreboard__wins">{p.wins}</span>
+                  <span className="scoreboard__pts-num" style={{ position: 'relative' }}>
+                    {p.score != null ? p.score.toLocaleString() : '—'}
+                    {delta !== undefined && (
+                      <span className={`score-delta${delta >= 0 ? ' score-delta--pos' : ' score-delta--neg'}`}>
+                        {delta >= 0 ? '+' : ''}{delta}
+                      </span>
+                    )}
+                  </span>
+                  <span className="scoreboard__wins-num">{p.wins}</span>
                 </div>
               )
             })}
           </div>
 
-          {(() => {
+          {room.desempate && !me?.inDesempate ? (
+            <div className="dice-box dice-box--waiting">
+              <p className="dice-box__waiting-label">Esperando resultado del desempate…</p>
+              <p className="dice-box__waiting-sub">
+                {[...room.players].filter(p => p.inDesempate).map(p => p.name).join(' · ')}
+              </p>
+            </div>
+          ) : (() => {
             const rollNum = displayPlayer?.rollCount ?? 0
             let toBeat = null
             for (const p of room.players) {
-              if (p.done && p.hand && (!toBeat || p.hand.rank > toBeat.hand.rank ||
-                (p.hand.rank === toBeat.hand.rank && (p.hand.topKey ?? '') > (toBeat.hand.topKey ?? '')))) toBeat = p
+              if (p.inDesempate ? (p.done && p.hand) : (p.done && p.hand && !room.desempate)) {
+                if (!toBeat || p.hand.rank > toBeat.hand.rank ||
+                  (p.hand.rank === toBeat.hand.rank && (p.hand.topKey ?? '') > (toBeat.hand.topKey ?? ''))) toBeat = p
+              }
             }
             return (
               <div className="dice-box">
                 <div className="dice-box__header">
-                  {toBeat ? (
-                    <>
-                      <span className="dice-box__label">Supera</span>
-                      <span className="dice-box__beat">
-                        {toBeat.hand.desc} en {toBeat.rollCount} {toBeat.rollCount === 1 ? 'ronda' : 'rondas'}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="dice-box__label">
-                      {isMyTurn ? 'Tu jugada' : `Turno de ${currentPlayer?.name}`}
+                  <span className="dice-box__label">
+                    {isMyTurn ? 'Tu jugada' : `Turno de ${currentPlayer?.name}`}
+                  </span>
+                  {displayPlayer?.hand?.rank != null && (
+                    <span className="dice-box__hand">
+                      {displayPlayer.hand.desc}
+                      <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} pts</span>
                     </span>
                   )}
                 </div>
@@ -554,9 +693,13 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 </div>
                 <div className="dice-box__footer">
                   <span className="dice-box__tirada">
-                    {rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar'}
+                    {toBeat ? 'Jugada a superar' : (rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar')}
                   </span>
-                  <span className="dice-box__hand">{displayPlayer?.hand?.desc ?? ''}</span>
+                  {toBeat && (
+                    <span className="dice-box__beat">
+                      {toBeat.hand.desc} en {toBeat.rollCount} {toBeat.rollCount === 1 ? 'ronda' : 'rondas'}
+                    </span>
+                  )}
                 </div>
               </div>
             )
@@ -596,6 +739,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             {me?.done && (
               <p className="waiting-label">
                 {`Tu mano: ${me?.hand?.desc}`}
+                {me?.hand?.rank != null && <span className="dice-box__hand-pts">+{handPts(me.hand.rank)} pts</span>}
               </p>
             )}
             {!isMyTurn && !me?.done && waitTimeLeft !== null && (
@@ -605,7 +749,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             )}
           </div>
         </>
-      )}
+      )})}
 
       {nextPlayerVisible && (
         <AnimacionNextPlayer
