@@ -168,11 +168,8 @@ function awardRoundPoints(room, loserId) {
       const base = stmts.getStats.get(uid)?.score ?? 0;
       if (isWinner) { room.pendingScores[uid] = prev + roundPts; }
       else          { room.pendingScores[uid] = Math.max(-base, prev + POINTS.ROUND_LOSS); }
-    } else {
-      // Guest: session score only (never persisted)
-      if (isWinner) { player.sessionScore = (player.sessionScore ?? 0) + roundPts; }
-      else          { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.ROUND_LOSS); }
     }
+    // Guests: no score tracking (shown as — in UI)
   }
 }
 
@@ -186,12 +183,8 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
       const result = player.id === gameWinnerId ? 'win' : player.id === gameLoserId ? 'loss' : 'participate';
       const delta = commitGamePoints(uid, room.pendingScores[uid] ?? 0, result);
       room.lastGameScores[uid] = delta; // shown on finished screen
-    } else {
-      // Guest: session score only (never persisted)
-      if (player.id === gameWinnerId)     { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_WIN; }
-      else if (player.id === gameLoserId) { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.GAME_LOSS); }
-      else                                { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_PARTICIPATE; }
     }
+    // Guests: not persisted, shown as — in UI
   }
   room.pendingScores = {};
 }
@@ -492,11 +485,9 @@ function sanitize(room) {
         breaks: p.breaks ?? 0,
         liberado: p.liberado ?? false,
         pendingDiscards: p.pendingDiscards ?? [],
-        score: p.isBot ? null : (uid
-          ? (room.phase === 'finished'
-              ? (room.lastGameScores?.[uid] ?? 0)
-              : (room.pendingScores?.[uid] ?? 0))
-          : (p.sessionScore ?? 0)),
+        score: (!uid || p.isBot) ? null : (room.phase === 'finished'
+          ? (room.lastGameScores?.[uid] ?? 0)
+          : (room.pendingScores?.[uid] ?? 0)),
         inDesempate: p.inDesempate ?? false,
       };
     }),
@@ -946,7 +937,7 @@ io.on('connection', (socket) => {
     room.nextStarterId = loser.id;
     room.gameLoserId = null;
     room.endReason = null;
-    for (const p of room.players) { p.breaks = 0; p.liberado = false; p.sessionScore = undefined; }
+    for (const p of room.players) { p.breaks = 0; p.liberado = false; }
     room.roundNumber = 0;
     room.pendingScores  = {};
     room.lastGameScores = {};
