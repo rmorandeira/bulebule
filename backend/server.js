@@ -66,8 +66,8 @@ function ensureStats(userId) {
 
 function getUserIdForPlayer(player) {
   if (player.isBot) return null;
-  // Return Google userId for registered players, or socket ID as fallback for guests
-  return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? player.id;
+  // Only returns an id for registered (logged-in) players
+  return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? null;
 }
 
 function awardRoundPoints(room, loserId) {
@@ -75,23 +75,39 @@ function awardRoundPoints(room, loserId) {
   const handRank = winner?.hand?.rank ?? 0;
   const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
   for (const player of room.players) {
+    if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
-    if (!uid) continue;
-    const s = ensureStats(uid);
-    if (player.id === room.roundWinnerId) { s.score += roundPts; s.roundsWon++; }
-    else if (player.id === loserId)        { s.score = Math.max(0, s.score + POINTS.ROUND_LOSS); }
+    const isWinner = player.id === room.roundWinnerId;
+    const isLoser  = player.id === loserId;
+    if (!isWinner && !isLoser) continue;
+    if (uid) {
+      const s = ensureStats(uid);
+      if (isWinner) { s.score += roundPts; s.roundsWon++; }
+      else          { s.score = Math.max(0, s.score + POINTS.ROUND_LOSS); }
+    } else {
+      // Guest: track score only for this session, on the player object
+      if (isWinner) { player.sessionScore = (player.sessionScore ?? 0) + roundPts; }
+      else          { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.ROUND_LOSS); }
+    }
   }
 }
 
 function awardGamePoints(room, gameWinnerId, gameLoserId) {
   for (const player of room.players) {
+    if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
-    if (!uid) continue;
-    const s = ensureStats(uid);
-    s.gamesPlayed++;
-    if (player.id === gameWinnerId)      { s.score += POINTS.GAME_WIN; s.gamesWon++; }
-    else if (player.id === gameLoserId)  { s.score = Math.max(0, s.score + POINTS.GAME_LOSS); }
-    else                                  { s.score += POINTS.GAME_PARTICIPATE; }
+    if (uid) {
+      const s = ensureStats(uid);
+      s.gamesPlayed++;
+      if (player.id === gameWinnerId)     { s.score += POINTS.GAME_WIN; s.gamesWon++; }
+      else if (player.id === gameLoserId) { s.score = Math.max(0, s.score + POINTS.GAME_LOSS); }
+      else                                { s.score += POINTS.GAME_PARTICIPATE; }
+    } else {
+      // Guest: session score only
+      if (player.id === gameWinnerId)     { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_WIN; }
+      else if (player.id === gameLoserId) { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.GAME_LOSS); }
+      else                                { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_PARTICIPATE; }
+    }
   }
 }
 
@@ -385,7 +401,7 @@ function sanitize(room) {
         breaks: p.breaks ?? 0,
         liberado: p.liberado ?? false,
         pendingDiscards: p.pendingDiscards ?? [],
-        score: p.isBot ? null : (playerStats[uid]?.score ?? 0),
+        score: p.isBot ? null : (uid ? (playerStats[uid]?.score ?? 0) : (p.sessionScore ?? 0)),
         inDesempate: p.inDesempate ?? false,
       };
     }),
