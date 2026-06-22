@@ -20,45 +20,64 @@ const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
 const SOLO_PLAYERS_OPTIONS = [2, 3, 4, 5]
 const CLOSE_DURATION = 260
 
-// Pages in swipe order
 const PAGES = [
-  { id: 'clasificacion', emoji: '🏆', label: 'Clasificación', desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
-  { id: 'online',        emoji: '🎲', label: 'Juego online',  desc: 'Juega una partida tú sólo o contra la máquina' },
-  { id: 'solo',          emoji: '🤖', label: 'Solo play',     desc: 'Juega una partida rápida contra los bots' },
+  { id: 'clasificacion', emoji: '🏆', label: 'Clasificación',  desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
+  { id: 'online',        emoji: '🎲', label: 'Juego online',   desc: 'Juega una partida tú sólo o contra la máquina' },
+  { id: 'tienda',        emoji: '🎁', label: 'Tienda online',  desc: 'Utiliza tus puntos para comprar objetos y regalos' },
 ]
 const DEFAULT_PAGE = 'online'
 
-// ── Sheet: crear sala (solo multijugador) ────────────────────────────────────
+// ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
 function CreateSheet({ playerName, closing, onClose }) {
+  const [mode, setMode]             = useState('multi') // 'multi' | 'solo'
   const [roomName, setRoomName]     = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
+  const [soloPlayers, setSoloPlayers] = useState(2)
   const [isPrivate, setIsPrivate]   = useState(false)
   const [error, setError]           = useState('')
   const [loading, setLoading]       = useState(false)
   const inputRef = useRef(null)
 
   useEffect(() => {
-    if (window.matchMedia('(pointer: fine)').matches) inputRef.current?.focus()
-  }, [])
+    if (mode === 'multi' && window.matchMedia('(pointer: fine)').matches) {
+      inputRef.current?.focus()
+    }
+  }, [mode])
 
   function create() {
     if (!playerName?.trim()) return setError('Introduce tu nombre primero')
-    if (!roomName.trim())    return setError('Ponle un nombre a la sala')
+    if (mode === 'multi' && !roomName.trim()) return setError('Ponle un nombre a la sala')
     setLoading(true)
-    socket.emit('create_room', {
-      playerName: playerName.trim(),
-      roomName: roomName.trim(),
-      maxPlayers,
-      vsBot: false,
-      maxRounds: 0,
-      isPrivate,
-    }, (res) => {
-      setLoading(false)
-      if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
-      track('room_create', { isPrivate })
-      onClose()
-    })
+    if (mode === 'solo') {
+      socket.emit('create_room', {
+        playerName: playerName.trim(),
+        roomName: 'Solo Play',
+        maxPlayers: soloPlayers,
+        vsBot: true,
+        maxRounds: 0,
+        isPrivate: false,
+      }, (res) => {
+        setLoading(false)
+        if (!res?.ok) return setError(res?.error || 'Error al crear la partida')
+        track('room_create', { vsBot: true })
+        onClose()
+      })
+    } else {
+      socket.emit('create_room', {
+        playerName: playerName.trim(),
+        roomName: roomName.trim(),
+        maxPlayers,
+        vsBot: false,
+        maxRounds: 0,
+        isPrivate,
+      }, (res) => {
+        setLoading(false)
+        if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
+        track('room_create', { isPrivate })
+        onClose()
+      })
+    }
   }
 
   return (
@@ -66,73 +85,55 @@ function CreateSheet({ playerName, closing, onClose }) {
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
       <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
         <div className="bs__handle" />
-        <p className="bs__label">NOMBRE DE LA SALA</p>
-        <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi"
-          value={roomName} maxLength={20}
-          onChange={e => { setRoomName(e.target.value); setError('') }}
-          onKeyDown={e => e.key === 'Enter' && create()} />
-        <div className="bs__private-row">
-          <span className="bs__label" style={{ margin: 0 }}>SALA PRIVADA</span>
-          <button type="button" role="switch" aria-checked={isPrivate}
-            className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
-            onClick={() => setIsPrivate(v => !v)} />
+
+        {/* Mode selector */}
+        <div className="bs__mode-row">
+          <button className={`bs__mode-btn${mode === 'multi' ? ' bs__mode-btn--active' : ''}`}
+            onClick={() => { setMode('multi'); setError('') }}>
+            Multijugador
+          </button>
+          <button className={`bs__mode-btn${mode === 'solo' ? ' bs__mode-btn--active' : ''}`}
+            onClick={() => { setMode('solo'); setError('') }}>
+            Solo Play
+          </button>
         </div>
-        <p className="bs__label">JUGADORES MÁXIMOS</p>
-        <div className="bs__pills">
-          {MAX_PLAYERS_OPTIONS.map(n => (
-            <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
-              onClick={() => setMaxPlayers(n)}>{n}</button>
-          ))}
-        </div>
+
+        {mode === 'multi' ? (
+          <>
+            <p className="bs__label">NOMBRE DE LA SALA</p>
+            <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi"
+              value={roomName} maxLength={20}
+              onChange={e => { setRoomName(e.target.value); setError('') }}
+              onKeyDown={e => e.key === 'Enter' && create()} />
+            <div className="bs__private-row">
+              <span className="bs__label" style={{ margin: 0 }}>SALA PRIVADA</span>
+              <button type="button" role="switch" aria-checked={isPrivate}
+                className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
+                onClick={() => setIsPrivate(v => !v)} />
+            </div>
+            <p className="bs__label">JUGADORES MÁXIMOS</p>
+            <div className="bs__pills">
+              {MAX_PLAYERS_OPTIONS.map(n => (
+                <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
+                  onClick={() => setMaxPlayers(n)}>{n}</button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="bs__label">JUGADORES</p>
+            <div className="bs__pills">
+              {SOLO_PLAYERS_OPTIONS.map(n => (
+                <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
+                  onClick={() => setSoloPlayers(n)}>{n}</button>
+              ))}
+            </div>
+          </>
+        )}
+
         {error && <p className="bs__error">{error}</p>}
         <button className="bs__submit" onClick={create} disabled={loading}>
-          {loading ? 'Creando...' : 'Crear sala'}
-        </button>
-      </div>
-    </>
-  )
-}
-
-// ── Sheet: solo play (vs bots) ───────────────────────────────────────────────
-
-function SoloSheet({ playerName, closing, onClose }) {
-  const [soloPlayers, setSoloPlayers] = useState(2)
-  const [error, setError]             = useState('')
-  const [loading, setLoading]         = useState(false)
-
-  function create() {
-    if (!playerName?.trim()) return setError('Introduce tu nombre primero')
-    setLoading(true)
-    socket.emit('create_room', {
-      playerName: playerName.trim(),
-      roomName: 'Solo Play',
-      maxPlayers: soloPlayers,
-      vsBot: true,
-      maxRounds: 0,
-      isPrivate: false,
-    }, (res) => {
-      setLoading(false)
-      if (!res?.ok) return setError(res?.error || 'Error al crear la partida')
-      track('room_create', { vsBot: true })
-      onClose()
-    })
-  }
-
-  return (
-    <>
-      <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
-      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-        <div className="bs__handle" />
-        <p className="bs__label">JUGADORES</p>
-        <div className="bs__pills">
-          {SOLO_PLAYERS_OPTIONS.map(n => (
-            <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
-              onClick={() => setSoloPlayers(n)}>{n}</button>
-          ))}
-        </div>
-        {error && <p className="bs__error">{error}</p>}
-        <button className="bs__submit" onClick={create} disabled={loading}>
-          {loading ? 'Creando...' : 'Jugar'}
+          {loading ? 'Creando...' : mode === 'solo' ? 'Jugar' : 'Crear sala'}
         </button>
       </div>
     </>
@@ -147,6 +148,8 @@ export default function RoomList({
 }) {
   const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
   const [rooms, setRooms]                   = useState([])
+  const [roomSearch, setRoomSearch]         = useState('')
+  const [rankSearch, setRankSearch]         = useState('')
   const [error, setError]                   = useState('')
   const [joiningCode, setJoiningCode]       = useState(null)
   const [connected, setConnected]           = useState(socket.connected)
@@ -155,8 +158,6 @@ export default function RoomList({
   const [codeError, setCodeError]           = useState('')
   const [createSheet, setCreateSheet]       = useState(false)
   const [createClosing, setCreateClosing]   = useState(false)
-  const [soloSheet, setSoloSheet]           = useState(false)
-  const [soloClosing, setSoloClosing]       = useState(false)
   const [settingsOpen, setSettingsOpen]     = useState(false)
   const [settingsClosing, setSettingsClosing] = useState(false)
   const [myStats, setMyStats]   = useState(null)
@@ -168,7 +169,6 @@ export default function RoomList({
   const scrollTimerRef   = useRef(null)
   const progScrollRef    = useRef(false)
   const closeCreateRef   = useRef(null)
-  const closeSoloRef     = useRef(null)
   const closeSettingsRef = useRef(null)
   const didInitRef       = useRef(false)
 
@@ -202,7 +202,6 @@ export default function RoomList({
       socket.off('disconnect', onDisconnect)
       socket.off('rooms_list', onRoomsList)
       clearTimeout(closeCreateRef.current)
-      clearTimeout(closeSoloRef.current)
       clearTimeout(closeSettingsRef.current)
       clearTimeout(scrollTimerRef.current)
     }
@@ -266,16 +265,6 @@ export default function RoomList({
     closeCreateRef.current = setTimeout(() => { setCreateSheet(false); setCreateClosing(false) }, CLOSE_DURATION)
   }
 
-  function openSolo() {
-    clearTimeout(closeSoloRef.current)
-    setSoloClosing(false)
-    setSoloSheet(true)
-  }
-  function closeSolo() {
-    setSoloClosing(true)
-    closeSoloRef.current = setTimeout(() => { setSoloSheet(false); setSoloClosing(false) }, CLOSE_DURATION)
-  }
-
   function openSettings() {
     clearTimeout(closeSettingsRef.current)
     setSettingsClosing(false)
@@ -321,9 +310,14 @@ export default function RoomList({
   }
 
   const isFull = r => r.playerCount >= r.maxPlayers
-  const initials = user
-    ? user.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-    : ''
+
+  const filteredRankings = rankSearch.trim()
+    ? rankings.filter(r => r.name.toLowerCase().includes(rankSearch.trim().toLowerCase()))
+    : rankings
+
+  const filteredRooms = roomSearch.trim()
+    ? rooms.filter(r => r.name.toLowerCase().includes(roomSearch.trim().toLowerCase()))
+    : rooms
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -359,13 +353,24 @@ export default function RoomList({
         ))}
       </div>
 
+      {/* Thin divider */}
+      <div className="rl__divider" />
+
       {/* Content area — only active tab is shown */}
       <div className="rl__content">
 
+        {/* ── Clasificación ── */}
         {activeTab === 'clasificacion' && (
           <>
-            <div className="rl__ranking-header">
-              <h2 className="rl__ranking-title">Clasificación</h2>
+            <div className="rl__toolbar">
+              <div className="rl__search-wrap">
+                <svg className="rl__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input className="rl__search" placeholder="Buscar jugador"
+                  value={rankSearch}
+                  onChange={e => setRankSearch(e.target.value)} />
+              </div>
               <button className="rl__icon-btn" aria-label="Actualizar" onClick={fetchStats}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="23 4 23 10 17 10"/>
@@ -373,9 +378,11 @@ export default function RoomList({
                 </svg>
               </button>
             </div>
-            {rankings.length === 0 ? (
-              <p className="rl__empty">Juega partidas para aparecer en la clasificación</p>
-            ) : rankings.map(r => (
+            {filteredRankings.length === 0 ? (
+              <p className="rl__empty">
+                {rankSearch ? 'No se encontró ningún jugador' : 'Juega partidas para aparecer en la clasificación'}
+              </p>
+            ) : filteredRankings.map(r => (
               <div key={r.userId} className={`rl__rank-row${r.userId === user?.email ? ' rl__rank-row--me' : ''}`}>
                 <span className="rl__rank-pos">{r.rank}</span>
                 <span className="rl__rank-name">{r.name}<TierDot tier={r.tier} /></span>
@@ -385,6 +392,7 @@ export default function RoomList({
           </>
         )}
 
+        {/* ── Juego online ── */}
         {activeTab === 'online' && (
           <>
             {error && <p className="rl__error">{error}</p>}
@@ -397,13 +405,28 @@ export default function RoomList({
                 />
               </div>
             )}
-            <button className="rl__create-btn" onClick={openCreate} disabled={!connected}>
-              Crear sala
-            </button>
+            <div className="rl__toolbar">
+              <div className="rl__search-wrap">
+                <svg className="rl__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input className="rl__search" placeholder="Buscar sala"
+                  value={roomSearch}
+                  onChange={e => setRoomSearch(e.target.value)} />
+              </div>
+              <button className="rl__create-inline-btn" onClick={openCreate} disabled={!connected}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Crear sala
+              </button>
+            </div>
             <div className="rl__rooms">
-              {rooms.length === 0 ? (
-                <p className="rl__empty">No hay partidas abiertas ahora mismo</p>
-              ) : rooms.map(room => {
+              {filteredRooms.length === 0 ? (
+                <p className="rl__empty">
+                  {roomSearch ? 'No se encontró ninguna sala' : 'No hay partidas abiertas ahora mismo'}
+                </p>
+              ) : filteredRooms.map(room => {
                 const canJoin = room.phase === 'lobby' && !isFull(room)
                 return (
                   <div key={room.code} className="rl__room">
@@ -434,10 +457,12 @@ export default function RoomList({
           </>
         )}
 
-        {activeTab === 'solo' && (
-          <button className="rl__create-btn" onClick={openSolo} disabled={!connected}>
-            Jugar
-          </button>
+        {/* ── Tienda ── */}
+        {activeTab === 'tienda' && (
+          <div className="rl__coming-soon">
+            <p className="rl__coming-title">Ooops...esta sección aún no está acabada!</p>
+            <p className="rl__coming-sub">Estamos trabajando en ello</p>
+          </div>
         )}
 
       </div>
@@ -491,14 +516,9 @@ export default function RoomList({
         </>
       )}
 
-      {/* Create room sheet */}
+      {/* Create / Solo play sheet */}
       {createSheet && (
         <CreateSheet playerName={playerName} closing={createClosing} onClose={closeCreate} />
-      )}
-
-      {/* Solo play sheet */}
-      {soloSheet && (
-        <SoloSheet playerName={playerName} closing={soloClosing} onClose={closeSolo} />
       )}
 
       {/* Private room code modal */}

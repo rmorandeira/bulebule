@@ -1655,6 +1655,14 @@ body {
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 
+/* Thin divider below carousel */
+.rl__divider {
+  height: 1px;
+  background: #f0f0f0;
+  flex-shrink: 0;
+  margin: 0 20px;
+}
+
 /* Google login row */
 .rl__login-row {
   display: flex;
@@ -1671,24 +1679,85 @@ body {
   font-weight: 500;
 }
 
-/* Create button */
-.rl__create-btn {
-  display: inline-block;
-  padding: 14px 28px;
+/* Toolbar row: search + action button */
+.rl__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.rl__search-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.rl__search-icon {
+  position: absolute;
+  left: 12px;
+  color: #bbb;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.rl__search {
+  width: 100%;
+  height: 40px;
+  border-radius: 100px;
+  border: none;
+  background: #f2f2f2;
+  padding: 0 14px 0 36px;
+  font-size: 14px;
+  color: #111;
+  outline: none;
+  -webkit-appearance: none;
+}
+.rl__search::placeholder { color: #bbb; }
+
+/* Inline "+ Crear sala" button */
+.rl__create-inline-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 0 14px;
+  height: 40px;
   border-radius: 100px;
   border: none;
   background: #111;
   color: #fff;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  margin: 4px 0 18px;
+  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition: opacity 0.15s;
 }
-.rl__create-btn:disabled { opacity: 0.4; cursor: default; }
-.rl__create-btn:active:not(:disabled) { opacity: 0.78; }
+.rl__create-inline-btn:disabled { opacity: 0.4; cursor: default; }
+.rl__create-inline-btn:active:not(:disabled) { opacity: 0.78; }
+
+/* Coming soon (Tienda) */
+.rl__coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 60px 20px;
+  text-align: center;
+}
+.rl__coming-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.3;
+}
+.rl__coming-sub {
+  font-size: 15px;
+  color: #aaa;
+  font-weight: 500;
+}
 
 /* Ranking */
 .rl__ranking-header {
@@ -1942,6 +2011,31 @@ body {
   align-self: center;
   margin-bottom: 4px;
   flex-shrink: 0;
+}
+
+/* Mode selector (Multijugador / Solo Play) */
+.bs__mode-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.bs__mode-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 100px;
+  border: 1.5px solid #e0e0e0;
+  background: transparent;
+  color: #aaa;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bs__mode-btn--active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
 }
 
 .bs__label {
