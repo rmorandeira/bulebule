@@ -22,9 +22,9 @@ const CLOSE_DURATION = 260
 
 // Pages in swipe order
 const PAGES = [
-  { id: 'clasificacion', label: 'Clasificación', desc: 'Consulta el ranking de jugadores' },
-  { id: 'online',        label: 'Juego online',  desc: 'Únete a una partida o crea la tuya' },
-  { id: 'solo',          label: 'Solo Play',      desc: 'Reta a la máquina en una partida rápida' },
+  { id: 'clasificacion', emoji: '🏆', label: 'Clasificación', desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
+  { id: 'online',        emoji: '🎲', label: 'Juego online',  desc: 'Juega una partida tú sólo o contra la máquina' },
+  { id: 'solo',          emoji: '🤖', label: 'Solo play',     desc: 'Juega una partida rápida contra los bots' },
 ]
 const DEFAULT_PAGE = 'online'
 
@@ -208,7 +208,7 @@ export default function RoomList({
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scroll pager to default page on mount (no animation)
+  // Scroll carousel to default card on mount (no animation)
   useEffect(() => {
     if (didInitRef.current) return
     const pager = pagerRef.current
@@ -216,13 +216,14 @@ export default function RoomList({
     const idx = PAGES.findIndex(p => p.id === DEFAULT_PAGE)
     requestAnimationFrame(() => {
       progScrollRef.current = true
-      pager.scrollLeft = pager.offsetWidth * idx
+      const card = pager.children[idx]
+      if (card) pager.scrollLeft = card.offsetLeft - (pager.offsetWidth - card.offsetWidth) / 2
       requestAnimationFrame(() => { progScrollRef.current = false })
     })
     didInitRef.current = true
   }, [])
 
-  // ── Pager ↔ tab sync ─────────────────────────────────────────────────────
+  // ── Carousel ↔ tab sync ───────────────────────────────────────────────────
 
   function handlePagerScroll() {
     if (progScrollRef.current) return
@@ -230,8 +231,13 @@ export default function RoomList({
     scrollTimerRef.current = setTimeout(() => {
       const pager = pagerRef.current
       if (!pager) return
-      const idx = Math.round(pager.scrollLeft / pager.offsetWidth)
-      const page = PAGES[Math.min(idx, PAGES.length - 1)]
+      const center = pager.scrollLeft + pager.offsetWidth / 2
+      let closest = 0, minDist = Infinity
+      Array.from(pager.children).forEach((card, i) => {
+        const dist = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center)
+        if (dist < minDist) { minDist = dist; closest = i }
+      })
+      const page = PAGES[closest]
       if (page && page.id !== activeTab) setActiveTab(page.id)
     }, 150)
   }
@@ -242,7 +248,8 @@ export default function RoomList({
     const pager = pagerRef.current
     if (!pager) return
     progScrollRef.current = true
-    pager.scrollTo({ left: pager.offsetWidth * idx, behavior: 'smooth' })
+    const card = pager.children[idx]
+    if (card) pager.scrollTo({ left: card.offsetLeft - (pager.offsetWidth - card.offsetWidth) / 2, behavior: 'smooth' })
     setActiveTab(id)
     setTimeout(() => { progScrollRef.current = false }, 600)
   }
@@ -339,16 +346,24 @@ export default function RoomList({
         </div>
       </header>
 
-      {/* Horizontal pager — each child is a full-width page */}
-      <div className="rl__pager" ref={pagerRef} onScroll={handlePagerScroll}>
-
-        {/* Page 0: Clasificación */}
-        <div className="rl__page">
-          <div className="rl__page-card">
-            <span className="rl__page-label">Clasificación</span>
-            <span className="rl__page-desc">Consulta el ranking de jugadores</span>
+      {/* Horizontal card carousel — peek mode */}
+      <div className="rl__carousel" ref={pagerRef} onScroll={handlePagerScroll}>
+        {PAGES.map(page => (
+          <div key={page.id}
+            className={`rl__card${activeTab === page.id ? ' rl__card--active' : ''}`}
+            onClick={() => goToPage(page.id)}>
+            <span className="rl__card-emoji">{page.emoji}</span>
+            <span className="rl__card-label">{page.label}</span>
+            <span className="rl__card-desc">{page.desc}</span>
           </div>
-          <div className="rl__page-body">
+        ))}
+      </div>
+
+      {/* Content area — only active tab is shown */}
+      <div className="rl__content">
+
+        {activeTab === 'clasificacion' && (
+          <>
             <div className="rl__ranking-header">
               <h2 className="rl__ranking-title">Clasificación</h2>
               <button className="rl__icon-btn" aria-label="Actualizar" onClick={fetchStats}>
@@ -367,16 +382,11 @@ export default function RoomList({
                 <span className="rl__rank-score">{r.score.toLocaleString()}</span>
               </div>
             ))}
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* Page 1: Juego online */}
-        <div className="rl__page">
-          <div className="rl__page-card">
-            <span className="rl__page-label">Juego online</span>
-            <span className="rl__page-desc">Únete a una partida o crea la tuya</span>
-          </div>
-          <div className="rl__page-body">
+        {activeTab === 'online' && (
+          <>
             {error && <p className="rl__error">{error}</p>}
             {!user && (
               <div className="rl__login-row">
@@ -421,21 +431,14 @@ export default function RoomList({
                 )
               })}
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* Page 2: Solo Play */}
-        <div className="rl__page">
-          <div className="rl__page-card rl__page-card--solo">
-            <span className="rl__page-label">Solo Play</span>
-            <span className="rl__page-desc">Reta a la máquina en una partida rápida</span>
-          </div>
-          <div className="rl__page-body">
-            <button className="rl__create-btn" onClick={openSolo} disabled={!connected}>
-              Jugar
-            </button>
-          </div>
-        </div>
+        {activeTab === 'solo' && (
+          <button className="rl__create-btn" onClick={openSolo} disabled={!connected}>
+            Jugar
+          </button>
+        )}
 
       </div>
 
