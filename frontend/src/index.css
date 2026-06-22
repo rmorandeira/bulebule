@@ -1521,6 +1521,19 @@ body {
 }
 .intro__btn:active { background: #e2e8f0; transform: scale(0.96); }
 
+.intro__version {
+  position: absolute;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: 'Manrope', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
 .intro__music-btn {
   position: absolute;
   top: max(16px, env(safe-area-inset-top) + 12px);
@@ -1889,17 +1902,6 @@ body {
 }
 
 /* ── Navbar ─────────────────────────────────────────────── */
-.rl__version {
-  flex-shrink: 0;
-  text-align: center;
-  font-family: 'Manrope', sans-serif;
-  font-size: 12px;
-  font-weight: 400;
-  color: rgba(0, 0, 0, 0.2);
-  padding: 6px 0;
-  pointer-events: none;
-}
-
 .rl__navbar {
   display: flex;
   align-items: center;

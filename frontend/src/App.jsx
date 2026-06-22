@@ -306,6 +306,7 @@ export default function App() {
         >
           Comenzar
         </button>
+        <p className="intro__version">v{__APP_VERSION__}</p>
       </div>
     )
   }
