@@ -96,6 +96,7 @@ function awardRoundPoints(room, loserId) {
   const winner = room.players.find(p => p.id === room.roundWinnerId);
   const handRank = winner?.hand?.rank ?? 0;
   const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
+  if (!room.pendingScores) room.pendingScores = {};
   for (const player of room.players) {
     if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
@@ -103,24 +104,29 @@ function awardRoundPoints(room, loserId) {
     const isLoser  = player.id === loserId;
     if (!isWinner && !isLoser) continue;
     if (uid) {
-      const s = ensureStats(uid);
-      if (isWinner) { s.score += roundPts; s.roundsWon++; }
-      else          { s.score = Math.max(0, s.score + POINTS.ROUND_LOSS); }
+      // Registered: accumulate in pendingScores — committed to playerStats only at game end
+      const prev = room.pendingScores[uid] ?? 0;
+      const base = playerStats[uid]?.score ?? 0;
+      if (isWinner) { room.pendingScores[uid] = prev + roundPts; }
+      else          { room.pendingScores[uid] = Math.max(-base, prev + POINTS.ROUND_LOSS); }
     } else {
-      // Guest: track score only for this session, on the player object
+      // Guest: session score only (never persisted)
       if (isWinner) { player.sessionScore = (player.sessionScore ?? 0) + roundPts; }
       else          { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.ROUND_LOSS); }
     }
   }
-  saveStats();
 }
 
 function awardGamePoints(room, gameWinnerId, gameLoserId) {
+  if (!room.pendingScores) room.pendingScores = {};
   for (const player of room.players) {
     if (player.isBot) continue;
     const uid = getUserIdForPlayer(player);
     if (uid) {
+      // Flush pending round deltas + game bonus into persistent stats
       const s = ensureStats(uid);
+      const roundDelta = room.pendingScores[uid] ?? 0;
+      s.score = Math.max(0, s.score + roundDelta);
       s.gamesPlayed++;
       if (player.id === gameWinnerId)     { s.score += POINTS.GAME_WIN; s.gamesWon++; }
       else if (player.id === gameLoserId) { s.score = Math.max(0, s.score + POINTS.GAME_LOSS); }
@@ -132,6 +138,7 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
       else                                { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_PARTICIPATE; }
     }
   }
+  room.pendingScores = {};
   saveStats();
 }
 
@@ -426,7 +433,9 @@ function sanitize(room) {
         breaks: p.breaks ?? 0,
         liberado: p.liberado ?? false,
         pendingDiscards: p.pendingDiscards ?? [],
-        score: p.isBot ? null : (uid ? (playerStats[uid]?.score ?? 0) : (p.sessionScore ?? 0)),
+        score: p.isBot ? null : (uid
+          ? (playerStats[uid]?.score ?? 0) + (room.pendingScores?.[uid] ?? 0)
+          : (p.sessionScore ?? 0)),
         inDesempate: p.inDesempate ?? false,
       };
     }),
@@ -872,8 +881,9 @@ io.on('connection', (socket) => {
     room.nextStarterId = loser.id;
     room.gameLoserId = null;
     room.endReason = null;
-    for (const p of room.players) { p.breaks = 0; p.liberado = false; }
+    for (const p of room.players) { p.breaks = 0; p.liberado = false; p.sessionScore = undefined; }
     room.roundNumber = 0;
+    room.pendingScores = {};
     startRound(room);
     cb?.({ ok: true });
     broadcast(room.code);
