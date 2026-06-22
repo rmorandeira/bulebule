@@ -98,8 +98,9 @@ function CreateSheet({ playerName, closing, onClose }) {
           </button>
         </div>
 
-        {mode === 'multi' ? (
-          <>
+        {/* Multijugador fields — always rendered, collapsed in solo mode */}
+        <div className={`bs__collapse${mode === 'multi' ? ' bs__collapse--open' : ''}`}>
+          <div className="bs__collapse-inner">
             <p className="bs__label">NOMBRE DE LA SALA</p>
             <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi"
               value={roomName} maxLength={20}
@@ -118,9 +119,12 @@ function CreateSheet({ playerName, closing, onClose }) {
                   onClick={() => setMaxPlayers(n)}>{n}</button>
               ))}
             </div>
-          </>
-        ) : (
-          <>
+          </div>
+        </div>
+
+        {/* Solo play fields — always rendered, collapsed in multi mode */}
+        <div className={`bs__collapse${mode === 'solo' ? ' bs__collapse--open' : ''}`}>
+          <div className="bs__collapse-inner">
             <p className="bs__label">JUGADORES</p>
             <div className="bs__pills">
               {SOLO_PLAYERS_OPTIONS.map(n => (
@@ -128,8 +132,8 @@ function CreateSheet({ playerName, closing, onClose }) {
                   onClick={() => setSoloPlayers(n)}>{n}</button>
               ))}
             </div>
-          </>
-        )}
+          </div>
+        </div>
 
         {error && <p className="bs__error">{error}</p>}
         <button className="bs__submit" onClick={create} disabled={loading}>
@@ -517,7 +521,7 @@ export default function RoomList({
       {settingsOpen && (
         <>
           <div className={`bs-overlay${settingsClosing ? ' bs-overlay--closing' : ''}`} onClick={closeSettings} />
-          <div className={`rl__settings-sheet${settingsClosing ? ' rl__settings-sheet--closing' : ''}`} role="dialog" aria-modal="true">
+          <div className={`bs${settingsClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
             <div className="bs__handle" />
             <UserSettings
               user={user}

@@ -2,8 +2,8 @@ import { useState, useRef } from 'react'
 import { googleLogout } from '@react-oauth/google'
 
 export default function UserSettings({ user, onBack, onUpdate, onLogout, onDeleteAccount }) {
-  const [name, setName] = useState(user?.name || '')
-  const [nameSaved, setNameSaved] = useState(false)
+  const [name, setName]               = useState(user?.name || '')
+  const [nameSaved, setNameSaved]     = useState(false)
   const [notifications, setNotifications] = useState(user?.notifications ?? false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const fileInputRef = useRef()
@@ -23,124 +23,69 @@ export default function UserSettings({ user, onBack, onUpdate, onLogout, onDelet
     reader.readAsDataURL(file)
   }
 
-  function toggleNotifications(checked) {
-    setNotifications(checked)
-    onUpdate({ notifications: checked })
-  }
-
   function handleLogout() {
     googleLogout()
     onLogout()
   }
 
   return (
-    <div className="screen settings">
-      <div className="settings__header">
-        <button className="btn-back" onClick={onBack}>← Volver</button>
-        <h2 className="settings__title">Mi cuenta</h2>
-      </div>
-
-      <div className="settings__avatar-section">
-        <div className="settings__avatar-wrap">
-          <img
-            className="settings__avatar"
-            src={user?.picture}
-            alt={user?.name}
-            referrerPolicy="no-referrer"
-          />
-          <button
-            className="settings__avatar-btn"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Cambiar foto"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <>
+      {/* Avatar row */}
+      <div className="us__avatar-row">
+        <div className="us__avatar-wrap">
+          <img className="us__avatar" src={user?.picture} alt={user?.name} referrerPolicy="no-referrer" />
+          <button className="us__avatar-btn" onClick={() => fileInputRef.current?.click()} aria-label="Cambiar foto">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
               <circle cx="12" cy="13" r="4"/>
             </svg>
           </button>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handlePictureChange}
-        />
-        <div className="settings__avatar-info">
-          <span className="settings__display-name">{user?.name}</span>
-          <span className="settings__email">{user?.email}</span>
+        <div className="us__avatar-info">
+          <span className="us__name">{user?.name}</span>
+          <span className="us__email">{user?.email}</span>
         </div>
       </div>
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePictureChange} />
 
-      <div className="settings__body">
-
-        <div className="settings__section">
-          <p className="settings__section-title">Perfil</p>
-          <div className="settings__row settings__row--col">
-            <label className="settings__label">Nombre en partida</label>
-            <div className="settings__input-row">
-              <input
-                className="input"
-                value={name}
-                maxLength={12}
-                onChange={e => { setName(e.target.value); setNameSaved(false) }}
-                onKeyDown={e => e.key === 'Enter' && saveName()}
-              />
-              <button
-                className="btn btn--secondary btn--sm"
-                onClick={saveName}
-                disabled={!name.trim() || name.trim() === user?.name}
-              >
-                {nameSaved ? 'Guardado' : 'Guardar'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="settings__section">
-          <p className="settings__section-title">Preferencias</p>
-          <div className="settings__row">
-            <div className="settings__row-info">
-              <span className="settings__label">Notificaciones</span>
-              <span className="settings__hint">Avisos al inicio de tu turno</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={notifications}
-                onChange={e => toggleNotifications(e.target.checked)}
-              />
-              <span className="toggle__track">
-                <span className="toggle__thumb" />
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div className="settings__section">
-          <p className="settings__section-title">Cuenta</p>
-          <div className="settings__account-actions">
-            <button className="btn btn--secondary btn--full" onClick={handleLogout}>
-              Cerrar sesión
-            </button>
-
-            {!confirmDelete ? (
-              <button className="btn btn--danger btn--full" onClick={() => setConfirmDelete(true)}>
-                Eliminar cuenta
-              </button>
-            ) : (
-              <div className="settings__confirm">
-                <p className="settings__confirm-text">Esta acción es irreversible. ¿Seguro que quieres eliminar tu cuenta?</p>
-                <div className="settings__confirm-btns">
-                  <button className="btn btn--secondary" onClick={() => setConfirmDelete(false)}>Cancelar</button>
-                  <button className="btn btn--danger" onClick={onDeleteAccount}>Eliminar</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
+      {/* Name field */}
+      <p className="bs__label">NOMBRE EN PARTIDA</p>
+      <div className="us__name-row">
+        <input className="bs__input" value={name} maxLength={12}
+          onChange={e => { setName(e.target.value); setNameSaved(false) }}
+          onKeyDown={e => e.key === 'Enter' && saveName()} />
+        <button className="us__save-btn" onClick={saveName}
+          disabled={!name.trim() || name.trim() === user?.name}>
+          {nameSaved ? '✓' : 'Guardar'}
+        </button>
       </div>
-    </div>
+
+      {/* Notifications */}
+      <div className="bs__private-row">
+        <span className="bs__label" style={{ margin: 0 }}>NOTIFICACIONES</span>
+        <button type="button" role="switch" aria-checked={notifications}
+          className={`bs__toggle${notifications ? ' bs__toggle--on' : ''}`}
+          onClick={() => { const next = !notifications; setNotifications(next); onUpdate({ notifications: next }) }} />
+      </div>
+
+      {/* Account actions */}
+      <button className="bs__submit bs__submit--secondary" onClick={handleLogout}>
+        Cerrar sesión
+      </button>
+
+      {!confirmDelete ? (
+        <button className="bs__submit bs__submit--danger" onClick={() => setConfirmDelete(true)}>
+          Eliminar cuenta
+        </button>
+      ) : (
+        <>
+          <p className="us__confirm-text">Esta acción es irreversible. ¿Seguro?</p>
+          <div className="us__confirm-row">
+            <button className="bs__submit bs__submit--secondary" style={{ flex: 1 }} onClick={() => setConfirmDelete(false)}>Cancelar</button>
+            <button className="bs__submit bs__submit--danger"    style={{ flex: 1 }} onClick={onDeleteAccount}>Eliminar</button>
+          </div>
+        </>
+      )}
+    </>
   )
 }
