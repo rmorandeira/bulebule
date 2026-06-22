@@ -3,6 +3,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const webpush = require('web-push');
+const fs = require('fs');
+const path = require('path');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
 
 let VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
@@ -44,7 +46,27 @@ async function trackEvent(name, data = {}) {
 }
 
 const registeredUsers = {};
-const playerStats = {};
+
+const STATS_FILE = path.join(__dirname, 'data', 'playerStats.json');
+
+function loadStats() {
+  try {
+    fs.mkdirSync(path.dirname(STATS_FILE), { recursive: true });
+    return JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+let persistTimer = null;
+function saveStats() {
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    try { fs.writeFileSync(STATS_FILE, JSON.stringify(playerStats), 'utf8'); } catch {}
+  }, 2000);
+}
+
+const playerStats = loadStats();
 
 // Puntos por ronda: base + rank * multiplicador (rank 0–7)
 const ROUND_PTS_BASE = 8;
@@ -90,6 +112,7 @@ function awardRoundPoints(room, loserId) {
       else          { player.sessionScore = Math.max(0, (player.sessionScore ?? 0) + POINTS.ROUND_LOSS); }
     }
   }
+  saveStats();
 }
 
 function awardGamePoints(room, gameWinnerId, gameLoserId) {
@@ -109,6 +132,7 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
       else                                { player.sessionScore = (player.sessionScore ?? 0) + POINTS.GAME_PARTICIPATE; }
     }
   }
+  saveStats();
 }
 
 function buildRankings() {

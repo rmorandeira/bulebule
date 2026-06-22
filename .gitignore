@@ -4,3 +4,4 @@ dist/
 .env.local
 frontend/.env
 frontend/.env.local
+backend/data/*.json
