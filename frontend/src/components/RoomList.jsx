@@ -533,6 +533,9 @@ export default function RoomList({
 
       </div>
 
+      {/* Version */}
+      <p className="rl__version">v{__APP_VERSION__}</p>
+
       {/* Crear sala — full-width bar, only in online tab */}
       {activeTab === 'online' && (
         <div className="rl__create-bar">

@@ -1889,6 +1889,17 @@ body {
 }
 
 /* ── Navbar ─────────────────────────────────────────────── */
+.rl__version {
+  flex-shrink: 0;
+  text-align: center;
+  font-family: 'Manrope', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.2);
+  padding: 6px 0;
+  pointer-events: none;
+}
+
 .rl__navbar {
   display: flex;
   align-items: center;
