@@ -113,9 +113,10 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
 
 function buildRankings() {
   return Object.entries(playerStats)
+    .filter(([userId]) => registeredUsers[userId])
     .map(([userId, s]) => {
       const u = registeredUsers[userId];
-      return { userId, name: u?.name ?? 'Desconocido', picture: u?.picture ?? null, ...s, tier: getTier(s.score).name };
+      return { userId, name: u.name, picture: u.picture ?? null, ...s, tier: getTier(s.score).name };
     })
     .sort((a, b) => b.score - a.score)
     .map((e, i) => ({ ...e, rank: i + 1 }));
