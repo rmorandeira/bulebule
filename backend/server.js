@@ -55,15 +55,32 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    user_id    TEXT PRIMARY KEY,
+    name       TEXT NOT NULL DEFAULT '',
+    email      TEXT,
+    picture    TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    user_id    TEXT PRIMARY KEY REFERENCES users(user_id),
+    endpoint   TEXT NOT NULL,
+    p256dh     TEXT NOT NULL,
+    auth       TEXT NOT NULL,
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
   CREATE TABLE IF NOT EXISTS player_stats (
-    user_id     TEXT PRIMARY KEY,
-    name        TEXT NOT NULL DEFAULT '',
-    picture     TEXT,
-    score       INTEGER NOT NULL DEFAULT 0,
+    user_id      TEXT PRIMARY KEY,
+    name         TEXT NOT NULL DEFAULT '',
+    picture      TEXT,
+    score        INTEGER NOT NULL DEFAULT 0,
     games_played INTEGER NOT NULL DEFAULT 0,
     games_won    INTEGER NOT NULL DEFAULT 0,
-    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
-    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
   );
 
   CREATE TABLE IF NOT EXISTS game_sessions (
@@ -72,7 +89,7 @@ db.exec(`
     result      TEXT    NOT NULL,
     score_delta INTEGER NOT NULL DEFAULT 0,
     played_at   INTEGER NOT NULL DEFAULT (unixepoch()),
-    FOREIGN KEY (user_id) REFERENCES player_stats(user_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
   );
 `);
 
@@ -82,13 +99,12 @@ db.exec(`
   if (!fs.existsSync(jsonFile)) return;
   try {
     const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
-    const ins = db.prepare(`
-      INSERT OR IGNORE INTO player_stats (user_id, name, score, games_played, games_won)
-      VALUES (?, ?, ?, ?, ?)
-    `);
+    const insUser  = db.prepare(`INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)`);
+    const insStats = db.prepare(`INSERT OR IGNORE INTO player_stats (user_id, score, games_played, games_won) VALUES (?, ?, ?, ?)`);
     db.transaction(() => {
       for (const [uid, s] of Object.entries(data)) {
-        ins.run(uid, uid, s.score ?? 0, s.gamesPlayed ?? 0, s.gamesWon ?? 0);
+        insUser.run(uid, uid);
+        insStats.run(uid, s.score ?? 0, s.gamesPlayed ?? 0, s.gamesWon ?? 0);
       }
     })();
     fs.renameSync(jsonFile, jsonFile + '.migrated');
@@ -96,6 +112,33 @@ db.exec(`
   } catch (e) {
     console.error('JSON→SQLite migration failed:', e);
   }
+})();
+
+// ── Migrate player_stats name/picture → users (one-time) ──────────────────────
+(function migratePlayerStatsToUsers() {
+  const hasNameCol = db.prepare("PRAGMA table_info(player_stats)").all().some(c => c.name === 'name');
+  if (!hasNameCol) return;
+  const { changes } = db.prepare(`
+    INSERT OR IGNORE INTO users (user_id, name, picture, created_at)
+    SELECT user_id, COALESCE(NULLIF(name,''), user_id), picture, created_at
+    FROM player_stats
+  `).run();
+  if (changes > 0) console.log(`Migrated ${changes} users from player_stats to users table`);
+})();
+
+// ── Load persisted users + push subscriptions into memory ─────────────────────
+(function loadPersistedData() {
+  for (const u of db.prepare('SELECT user_id, name, email, picture FROM users').all()) {
+    registeredUsers[u.user_id] = { userId: u.user_id, name: u.name, email: u.email ?? null, picture: u.picture ?? null, socketId: null, pushSubscription: null };
+  }
+  let subCount = 0;
+  for (const s of db.prepare('SELECT user_id, endpoint, p256dh, auth FROM push_subscriptions').all()) {
+    if (registeredUsers[s.user_id]) {
+      registeredUsers[s.user_id].pushSubscription = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } };
+      subCount++;
+    }
+  }
+  console.log(`Loaded ${Object.keys(registeredUsers).length} users, ${subCount} push subscriptions from DB`);
 })();
 
 // Puntos por ronda: base + rank * multiplicador (rank 0–7)
@@ -112,22 +155,31 @@ const TIERS = [
 function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
 
 const stmts = {
-  upsertUser:   db.prepare(`INSERT INTO player_stats (user_id, name, picture)
-                              VALUES (?, ?, ?)
-                              ON CONFLICT(user_id) DO UPDATE
-                                SET name = excluded.name, picture = excluded.picture, updated_at = unixepoch()`),
-  ensureUser:   db.prepare(`INSERT OR IGNORE INTO player_stats (user_id, name, picture) VALUES (?, ?, ?)`),
-  getStats:     db.prepare(`SELECT * FROM player_stats WHERE user_id = ?`),
-  updateStats:  db.prepare(`UPDATE player_stats
-                              SET score = ?, games_played = ?, games_won = ?, updated_at = unixepoch()
-                              WHERE user_id = ?`),
-  insertSession:db.prepare(`INSERT INTO game_sessions (user_id, result, score_delta) VALUES (?, ?, ?)`),
-  rankings:     db.prepare(`SELECT user_id, name, picture, score, games_played, games_won
-                              FROM player_stats ORDER BY score DESC LIMIT 100`),
+  upsertUser:    db.prepare(`INSERT INTO users (user_id, name, email, picture)
+                               VALUES (?, ?, ?, ?)
+                               ON CONFLICT(user_id) DO UPDATE
+                                 SET name=excluded.name, email=excluded.email, picture=excluded.picture, updated_at=unixepoch()`),
+  ensureUser:    db.prepare(`INSERT OR IGNORE INTO users (user_id, name, picture) VALUES (?, ?, ?)`),
+  ensureStats:   db.prepare(`INSERT OR IGNORE INTO player_stats (user_id) VALUES (?)`),
+  getStats:      db.prepare(`SELECT * FROM player_stats WHERE user_id = ?`),
+  updateStats:   db.prepare(`UPDATE player_stats
+                               SET score=?, games_played=?, games_won=?, updated_at=unixepoch()
+                               WHERE user_id=?`),
+  insertSession: db.prepare(`INSERT INTO game_sessions (user_id, result, score_delta) VALUES (?, ?, ?)`),
+  upsertPushSub: db.prepare(`INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+                               VALUES (?, ?, ?, ?)
+                               ON CONFLICT(user_id) DO UPDATE
+                                 SET endpoint=excluded.endpoint, p256dh=excluded.p256dh, auth=excluded.auth, updated_at=unixepoch()`),
+  deletePushSub: db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`),
+  rankings:      db.prepare(`SELECT ps.user_id, u.name, u.picture, ps.score, ps.games_played, ps.games_won
+                               FROM player_stats ps JOIN users u ON ps.user_id=u.user_id
+                               ORDER BY ps.score DESC LIMIT 100`),
 };
 
 function ensureStats(userId) {
-  stmts.ensureUser.run(userId, registeredUsers[userId]?.name ?? userId, registeredUsers[userId]?.picture ?? null);
+  const u = registeredUsers[userId];
+  stmts.ensureUser.run(userId, u?.name ?? userId, u?.picture ?? null);
+  stmts.ensureStats.run(userId);
   return stmts.getStats.get(userId);
 }
 
@@ -938,14 +990,17 @@ io.on('connection', (socket) => {
 
   socket.on('register_user', ({ userId, name, email, picture }) => {
     if (!userId || !name) return;
-    registeredUsers[userId] = { ...(registeredUsers[userId] || {}), userId, name, email, picture, socketId: socket.id };
+    registeredUsers[userId] = { ...(registeredUsers[userId] || {}), userId, name, email: email ?? null, picture: picture ?? null, socketId: socket.id };
     socket.data.userId = userId;
-    stmts.upsertUser.run(userId, name, picture ?? null);
+    stmts.upsertUser.run(userId, name, email ?? null, picture ?? null);
+    stmts.ensureStats.run(userId);
   });
 
   socket.on('subscribe_push', ({ userId, subscription }) => {
     if (!userId || !subscription) return;
     if (registeredUsers[userId]) registeredUsers[userId].pushSubscription = subscription;
+    const { endpoint, keys: { p256dh, auth } = {} } = subscription;
+    if (endpoint && p256dh && auth) stmts.upsertPushSub.run(userId, endpoint, p256dh, auth);
   });
 
   socket.on('search_users', ({ query = '' }, cb) => {
@@ -972,7 +1027,14 @@ io.on('connection', (socket) => {
         body: `${inviterName} te invita a "${roomName}"`,
         url: `/?join=${roomCode}`,
       });
-      webpush.sendNotification(invitee.pushSubscription, payload).catch(err => console.error('Push error:', err));
+      webpush.sendNotification(invitee.pushSubscription, payload).catch(err => {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          if (registeredUsers[toUserId]) registeredUsers[toUserId].pushSubscription = null;
+          stmts.deletePushSub.run(toUserId);
+        } else {
+          console.error('Push error:', err);
+        }
+      });
     }
     cb?.({ ok: true });
   });
