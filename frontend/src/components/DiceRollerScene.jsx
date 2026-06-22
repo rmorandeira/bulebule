@@ -183,7 +183,7 @@ export default function DiceRollerScene({
 
     const scene  = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(52, W / H, 0.1, 100)
-    camera.position.set(0, 5.4, 12.6)
+    camera.position.set(0, 7.5, 11.5)
     camera.lookAt(0, FY + 1.5, 0)
 
     // FXAA post-process composer
@@ -273,7 +273,7 @@ export default function DiceRollerScene({
       renderer, scene, camera, dice,
       RAPIER: null, world: null,
       pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null, tempBodies: [],
-      camCurPos:  new THREE.Vector3(0, 5.4, 12.6),
+      camCurPos:  new THREE.Vector3(0, 7.5, 11.5),
       camCurLook: new THREE.Vector3(0, FY + 1.5, 0),
       camTween: null,
     }
@@ -376,7 +376,7 @@ export default function DiceRollerScene({
       const extra = nDiscard - 3  // 1 for 4 dice, 2 for 5 dice
       ctx.camTween = {
         fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-        toPos: new THREE.Vector3(0, 5.5 + extra * 1.75, 4.3 + extra * 1.35),
+        toPos: new THREE.Vector3(0, 6.2 + extra * 1.75, 3.3 + extra * 1.35),
         toLook: new THREE.Vector3(0, FY + 1.5, 0),
         ts: now, dur: 350,
       }
@@ -384,7 +384,7 @@ export default function DiceRollerScene({
       // Fewer discards: snap back to normal settled zoom
       ctx.camTween = {
         fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-        toPos: new THREE.Vector3(0, 5.5, 4.3),
+        toPos: new THREE.Vector3(0, 6.2, 3.3),
         toLook: new THREE.Vector3(0, FY + 1.5, 0),
         ts: now, dur: 350,
       }
@@ -420,7 +420,7 @@ export default function DiceRollerScene({
     if (!ctx) return
     ctx.camTween = {
       fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-      toPos: new THREE.Vector3(0, 5.4, 12.6), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+      toPos: new THREE.Vector3(0, 7.5, 11.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
       ts: performance.now(), dur: 350,
     }
     ctx.dice.forEach(d => {
@@ -583,7 +583,7 @@ function step(ctx, now, propsRef) {
       propsRef.current.onSettled?.(faces)
       ctx.camTween = {
         fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-        toPos: new THREE.Vector3(0, 5.5, 4.3), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+        toPos: new THREE.Vector3(0, 6.2, 3.3), toLook: new THREE.Vector3(0, FY + 1.5, 0),
         ts: now, dur: 700,
       }
       // Return any corner-parked dice to their home slots
@@ -683,7 +683,7 @@ function rollWithSounds(ctx, values, rollingIndices, seed) {
   const myId = ctx.rollId
   ctx.camTween = {
     fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
-    toPos: new THREE.Vector3(0, 5.4, 12.6), toLook: new THREE.Vector3(0, FY + 1.5, 0),
+    toPos: new THREE.Vector3(0, 7.5, 11.5), toLook: new THREE.Vector3(0, FY + 1.5, 0),
     ts: performance.now(), dur: 350,
   }
 

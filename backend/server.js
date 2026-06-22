@@ -44,6 +44,65 @@ async function trackEvent(name, data = {}) {
 }
 
 const registeredUsers = {};
+const playerStats = {};
+
+// Puntos por ronda: base + rank * multiplicador (rank 0–7)
+const ROUND_PTS_BASE = 8;
+const ROUND_PTS_MULT = 4;   // pareja=12, dos pares=16, trío=20, full=24, póker=28, repóker=32
+const POINTS = { ROUND_LOSS: -6, GAME_WIN: 80, GAME_LOSS: -15, GAME_PARTICIPATE: 10 };
+const TIERS = [
+  { name: 'Diamante', min: 700 },
+  { name: 'Oro',      min: 300 },
+  { name: 'Plata',    min: 100 },
+  { name: 'Bronce',   min: 0   },
+];
+
+function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
+
+function ensureStats(userId) {
+  if (!playerStats[userId]) playerStats[userId] = { score: 0, gamesPlayed: 0, gamesWon: 0, roundsWon: 0 };
+  return playerStats[userId];
+}
+
+function getUserIdForPlayer(player) {
+  if (player.isBot) return null;
+  return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? null;
+}
+
+function awardRoundPoints(room, loserId) {
+  const winner = room.players.find(p => p.id === room.roundWinnerId);
+  const handRank = winner?.hand?.rank ?? 0;
+  const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
+  for (const player of room.players) {
+    const uid = getUserIdForPlayer(player);
+    if (!uid) continue;
+    const s = ensureStats(uid);
+    if (player.id === room.roundWinnerId) { s.score += roundPts; s.roundsWon++; }
+    else if (player.id === loserId)        { s.score = Math.max(0, s.score + POINTS.ROUND_LOSS); }
+  }
+}
+
+function awardGamePoints(room, gameWinnerId, gameLoserId) {
+  for (const player of room.players) {
+    const uid = getUserIdForPlayer(player);
+    if (!uid) continue;
+    const s = ensureStats(uid);
+    s.gamesPlayed++;
+    if (player.id === gameWinnerId)      { s.score += POINTS.GAME_WIN; s.gamesWon++; }
+    else if (player.id === gameLoserId)  { s.score = Math.max(0, s.score + POINTS.GAME_LOSS); }
+    else                                  { s.score += POINTS.GAME_PARTICIPATE; }
+  }
+}
+
+function buildRankings() {
+  return Object.entries(playerStats)
+    .map(([userId, s]) => {
+      const u = registeredUsers[userId];
+      return { userId, name: u?.name ?? 'Desconocido', picture: u?.picture ?? null, ...s, tier: getTier(s.score).name };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((e, i) => ({ ...e, rank: i + 1 }));
+}
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -59,8 +118,9 @@ const io = new Server(server, {
 const rooms = {};
 
 const { VALUE_RANK } = require('./gameLogic');
-const TURN_TIMEOUT = 30_000;
-const CONTINUE_TIMEOUT = 30_000;
+const TURN_TIMEOUT      = 30_000;
+const CONTINUE_TIMEOUT  = 30_000;
+const TIEBREAK_TIMEOUT  = 30_000;
 const BOT_ID = '__bot__';
 const BOT_NAME = 'Bot';
 
@@ -188,6 +248,101 @@ function clearContinueTimer(room) {
   }
 }
 
+function clearTiebreakerTimer(room) {
+  if (room.tiebreakerTimerId) {
+    clearTimeout(room.tiebreakerTimerId);
+    room.tiebreakerTimerId = null;
+  }
+}
+
+// ── Tiebreaker (desempate a la caída) ─────────────────────────────────────────
+
+function startTiebreak(room, playerIds, winnerId) {
+  room.phase = 'tiebreak';
+  room.roundWinnerId = winnerId;
+  room.tiebreaker = { playerIds, currentIdx: 0, results: {}, rollSeeds: {}, round: 1 };
+  scheduleTiebreakerTimeout(room);
+  scheduleNextTiebreakerBot(room);
+}
+
+function scheduleTiebreakerTimeout(room) {
+  clearTiebreakerTimer(room);
+  const tb = room.tiebreaker;
+  if (!tb || tb.currentIdx >= tb.playerIds.length) return;
+  const currentPlayerId = tb.playerIds[tb.currentIdx];
+  const currentPlayer = room.players.find(p => p.id === currentPlayerId);
+  if (currentPlayer?.isBot) return;
+
+  const code = room.code;
+  room.tiebreakerTimerId = setTimeout(() => {
+    const r = rooms[code];
+    if (!r || r.phase !== 'tiebreak' || !r.tiebreaker) return;
+    const rtb = r.tiebreaker;
+    if (rtb.playerIds[rtb.currentIdx] !== currentPlayerId) return;
+    rtb.results[currentPlayerId] = rollDie();
+    rtb.rollSeeds[currentPlayerId] = Math.floor(Math.random() * 0xFFFFFFFF);
+    rtb.currentIdx++;
+    if (rtb.currentIdx >= rtb.playerIds.length) {
+      resolveTiebreak(r);
+    } else {
+      scheduleTiebreakerTimeout(r);
+      scheduleNextTiebreakerBot(r);
+    }
+    broadcast(code);
+  }, TIEBREAK_TIMEOUT);
+}
+
+function scheduleNextTiebreakerBot(room) {
+  if (room.phase !== 'tiebreak' || !room.tiebreaker) return;
+  const tb = room.tiebreaker;
+  if (tb.currentIdx >= tb.playerIds.length) return;
+  const currentPlayerId = tb.playerIds[tb.currentIdx];
+  const currentPlayer = room.players.find(p => p.id === currentPlayerId);
+  if (!currentPlayer?.isBot) return;
+
+  const code = room.code;
+  setTimeout(() => {
+    const r = rooms[code];
+    if (!r || r.phase !== 'tiebreak' || !r.tiebreaker) return;
+    const rtb = r.tiebreaker;
+    if (rtb.playerIds[rtb.currentIdx] !== currentPlayerId) return;
+    rtb.results[currentPlayerId] = rollDie();
+    rtb.rollSeeds[currentPlayerId] = Math.floor(Math.random() * 0xFFFFFFFF);
+    rtb.currentIdx++;
+    if (rtb.currentIdx >= rtb.playerIds.length) {
+      resolveTiebreak(r);
+    } else {
+      scheduleNextTiebreakerBot(r);
+      scheduleTiebreakerTimeout(r);
+    }
+    broadcast(code);
+  }, 1500);
+}
+
+function resolveTiebreak(room) {
+  clearTiebreakerTimer(room);
+  const tb = room.tiebreaker;
+
+  let minRank = Infinity;
+  for (const id of tb.playerIds) {
+    const rank = VALUE_RANK[tb.results[id]] ?? 0;
+    if (rank < minRank) minRank = rank;
+  }
+  const stillTied = tb.playerIds.filter(id => (VALUE_RANK[tb.results[id]] ?? 0) === minRank);
+
+  if (stillTied.length === 1) {
+    const loser = room.players.find(p => p.id === stillTied[0]);
+    room.tiebreaker = null;
+    applyRoundLoss(room, loser);
+  } else {
+    const savedWinnerId = room.roundWinnerId;
+    room.tiebreaker = { playerIds: stillTied, currentIdx: 0, results: {}, rollSeeds: {}, round: (tb.round || 1) + 1 };
+    room.roundWinnerId = savedWinnerId;
+    scheduleTiebreakerTimeout(room);
+    scheduleNextTiebreakerBot(room);
+  }
+}
+
 // Pausa entre jugadores: el siguiente (bot o humano) no empieza hasta que
 // alguien pulse Continuar o expire el contador de 30s
 const BOT_CONTINUE_TIMEOUT = 3_000;
@@ -267,22 +422,33 @@ function sanitize(room) {
     awaitingContinue: room.awaitingContinue ?? false,
     continueDeadline: room.continueDeadline ?? null,
     maxRounds: room.maxRounds ?? 0,
-    players: room.players.map(p => ({
-      id: p.id,
-      name: p.name,
-      isBot: p.isBot ?? false,
-      currentDice: p.currentDice,
-      rollHistory: p.rollHistory,
-      rollDiscardHistory: p.rollDiscardHistory ?? [],
-      rollCount: p.rollCount,
-      rollSeed: p.rollSeed ?? null,
-      done: p.done,
-      hand: p.hand,
-      wins: p.wins,
-      breaks: p.breaks ?? 0,
-      liberado: p.liberado ?? false,
-      pendingDiscards: p.pendingDiscards ?? [],
-    })),
+    tiebreaker: room.tiebreaker ? {
+      playerIds:     room.tiebreaker.playerIds,
+      currentPlayerId: room.tiebreaker.playerIds[room.tiebreaker.currentIdx] ?? null,
+      results:       { ...room.tiebreaker.results },
+      rollSeeds:     { ...(room.tiebreaker.rollSeeds ?? {}) },
+      round:         room.tiebreaker.round,
+    } : null,
+    players: room.players.map(p => {
+      const uid = getUserIdForPlayer(p);
+      return {
+        id: p.id,
+        name: p.name,
+        isBot: p.isBot ?? false,
+        currentDice: p.currentDice,
+        rollHistory: p.rollHistory,
+        rollDiscardHistory: p.rollDiscardHistory ?? [],
+        rollCount: p.rollCount,
+        rollSeed: p.rollSeed ?? null,
+        done: p.done,
+        hand: p.hand,
+        wins: p.wins,
+        breaks: p.breaks ?? 0,
+        liberado: p.liberado ?? false,
+        pendingDiscards: p.pendingDiscards ?? [],
+        score: uid ? (playerStats[uid]?.score ?? 0) : null,
+      };
+    }),
   };
 }
 
@@ -343,6 +509,8 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'capilla';
     const gameWinner = room.players.find(p => p.id === room.roundWinnerId);
     if (gameWinner) gameWinner.wins += 1;
+    awardRoundPoints(room, loser.id);
+    awardGamePoints(room, room.roundWinnerId, loser.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'capilla', rounds: room.roundNumber, playerCount: room.players.length });
     return;
@@ -355,9 +523,12 @@ function applyRoundLoss(room, loser) {
     room.endReason = 'rounds';
     const gameWinner = room.players.filter(p => p.id !== worst.id).sort((a, b) => a.breaks - b.breaks)[0];
     if (gameWinner) gameWinner.wins += 1;
+    awardRoundPoints(room, loser.id);
+    awardGamePoints(room, gameWinner?.id ?? null, worst.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
+    awardRoundPoints(room, loser.id);
     room.phase = 'results';
     clearContinueTimer(room);
     room.continueDeadline = Date.now() + CONTINUE_TIMEOUT;
@@ -419,6 +590,7 @@ function endRound(room) {
       room.gameLoserId = nonLiberado[0].id;
       room.endReason = 'liberado';
     }
+    awardGamePoints(room, liberadoWinner.id, nonLiberado[0]?.id ?? null);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: room.endReason ?? 'liberado', rounds: room.roundNumber, playerCount: room.players.length });
     return;
@@ -436,11 +608,24 @@ function endRound(room) {
   }
 
   let winner = participants[0];
-  let loser = participants[0];
+  let loser  = participants[0];
   for (const p of participants) {
     if (compareHands(p.hand, winner.hand) > 0) winner = p;
-    if (compareHands(p.hand, loser.hand) < 0) loser = p;
+    if (compareHands(p.hand, loser.hand)  < 0) loser  = p;
   }
+
+  // Detect tie for last place → desempate a la caída
+  const worstHand  = loser.hand;
+  const tiedLosers = participants.filter(p => compareHands(p.hand, worstHand) === 0);
+  if (tiedLosers.length > 1) {
+    const notTied = participants.filter(p => !tiedLosers.includes(p));
+    const provisionalWinner = notTied.length > 0
+      ? notTied.reduce((best, p) => compareHands(p.hand, best.hand) > 0 ? p : best)
+      : winner;
+    startTiebreak(room, tiedLosers.map(p => p.id), provisionalWinner.id);
+    return;
+  }
+
   room.roundWinnerId = winner.id;
   if (loser.id === winner.id && participants.length > 1) {
     loser = participants.find(p => p.id !== winner.id);
@@ -448,7 +633,17 @@ function endRound(room) {
   applyRoundLoss(room, loser);
 }
 
+app.get('/api/rankings', (_, res) => res.json({ rankings: buildRankings().slice(0, 100) }));
+
 io.on('connection', (socket) => {
+
+  socket.on('get_stats', (cb) => {
+    const uid = socket.data.userId;
+    const rankings = buildRankings().slice(0, 100);
+    const myRank   = uid ? (rankings.findIndex(r => r.userId === uid) + 1) || null : null;
+    const stats    = uid ? { ...ensureStats(uid), tier: getTier(ensureStats(uid).score).name } : null;
+    cb?.({ ok: true, stats, rankings, myRank, total: rankings.length });
+  });
 
   socket.on('list_rooms', (cb) => {
     cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList) });
@@ -546,6 +741,7 @@ io.on('connection', (socket) => {
     if (!room) return cb?.({ ok: false });
 
     clearTurnTimer(room);
+    clearTiebreakerTimer(room);
     const leavingPlayer = room.players.find(p => p.id === socket.id);
     room.players = room.players.filter(p => p.id !== socket.id);
     socket.leave(code);
@@ -666,6 +862,29 @@ io.on('connection', (socket) => {
     botAct(code);
   });
 
+  socket.on('tiebreak_roll', (cb) => {
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.phase !== 'tiebreak' || !room.tiebreaker) return cb?.({ ok: false });
+    const tb = room.tiebreaker;
+    const currentPlayerId = tb.playerIds[tb.currentIdx];
+    if (socket.id !== currentPlayerId) return cb?.({ ok: false });
+
+    clearTiebreakerTimer(room);
+    tb.results[currentPlayerId] = rollDie();
+    tb.rollSeeds[currentPlayerId] = Math.floor(Math.random() * 0xFFFFFFFF);
+    tb.currentIdx++;
+
+    if (tb.currentIdx >= tb.playerIds.length) {
+      resolveTiebreak(room);
+    } else {
+      scheduleTiebreakerTimeout(room);
+      scheduleNextTiebreakerBot(room);
+    }
+
+    cb?.({ ok: true });
+    broadcast(room.code);
+  });
+
   socket.on('next_round', (cb) => {
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'results') return cb?.({ ok: false });
@@ -742,6 +961,7 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     if (room.vsBot) {
+      clearTiebreakerTimer(room);
       delete rooms[code];
       return;
     }

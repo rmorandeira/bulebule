@@ -48,6 +48,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
   const [rolling, setRolling] = useState(false)
   const [nextPlayerVisible, setNextPlayerVisible] = useState(false)
+  const [scoreDeltas, setScoreDeltas] = useState({})  // { [playerId]: deltaValue }
+  const prevScoresRef = useRef({})                    // { [playerId]: score }
 
   // animacion_next_player: el servidor pausa el turno (awaitingContinue) hasta
   // que alguien pulsa Continuar o expira su contador de 30s
@@ -62,12 +64,28 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   useEffect(() => {
     const prev = prevPhaseRef.current
     prevPhaseRef.current = room.phase
-    if (prev === 'playing' && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
+    if ((prev === 'playing' || prev === 'tiebreak') && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
       setPalilloRotoShowing(true)
       new Audio('/assets/romper_palillo.mp3').play().catch(() => {})
     }
-    if (room.phase === 'playing') setPalilloRotoShowing(false)
+    if (room.phase === 'playing' || room.phase === 'tiebreak') setPalilloRotoShowing(false)
   }, [room.phase, room.roundLoserId, room.gameLoserId])
+
+  // Detecta cambios de puntuación y muestra badge flotante +/- pts
+  useEffect(() => {
+    const deltas = {}
+    for (const p of room.players) {
+      if (p.score === null) continue
+      const prev = prevScoresRef.current[p.id]
+      if (prev !== undefined && p.score !== prev) deltas[p.id] = p.score - prev
+      prevScoresRef.current[p.id] = p.score
+    }
+    if (Object.keys(deltas).length === 0) return
+    setScoreDeltas(deltas)
+    const t = setTimeout(() => setScoreDeltas({}), 2500)
+    return () => clearTimeout(t)
+  }, [room.players])
+
   const allowUnloadRef        = useRef(false)
   const lastFacesRef          = useRef(null)
   const gameEndTrackedRef     = useRef(false)
@@ -386,14 +404,23 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 <p className="results__scores-title">Clasificación</p>
                 <span className="scoreboard__trophy">🏆</span>
               </div>
-              {sorted.map((p, i) => (
-                <div key={p.id} className="results__score-row">
-                  <span className="results__pos">{i + 1}.</span>
-                  <span className="results__sname">{p.name}</span>
-                  <PalilloState player={p} />
-                  <span className="scoreboard__wins">{p.wins}</span>
-                </div>
-              ))}
+              {sorted.map((p, i) => {
+                const delta = scoreDeltas[p.id]
+                return (
+                  <div key={p.id} className="results__score-row">
+                    <span className="results__pos">{i + 1}.</span>
+                    <span className="results__sname">{p.name}</span>
+                    <PalilloState player={p} />
+                    <span className="scoreboard__wins">{p.wins}</span>
+                    {p.score != null && <span className="results__pts">{p.score.toLocaleString()} pts</span>}
+                    {delta !== undefined && (
+                      <span className={`score-delta${delta >= 0 ? ' score-delta--pos' : ' score-delta--neg'}`}>
+                        {delta >= 0 ? '+' : ''}{delta}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
             {room.hostId === myId
               ? <button className="btn btn--primary btn--full" onClick={handleRematch}>Revancha</button>
@@ -444,14 +471,23 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       <p className="results__scores-title">Clasificación</p>
                       <span className="scoreboard__trophy">🏆</span>
                     </div>
-                    {sorted.map((p, i) => (
-                      <div key={p.id} className="results__score-row">
-                        <span className="results__pos">{i + 1}.</span>
-                        <span className="results__sname">{p.name}</span>
-                        <PalilloState player={p} />
-                        <span className="scoreboard__wins">{p.wins}</span>
-                      </div>
-                    ))}
+                    {sorted.map((p, i) => {
+                      const delta = scoreDeltas[p.id]
+                      return (
+                        <div key={p.id} className="results__score-row">
+                          <span className="results__pos">{i + 1}.</span>
+                          <span className="results__sname">{p.name}</span>
+                          <PalilloState player={p} />
+                          <span className="scoreboard__wins">{p.wins}</span>
+                          {p.score != null && <span className="results__pts">{p.score.toLocaleString()} pts</span>}
+                          {delta !== undefined && (
+                            <span className={`score-delta${delta >= 0 ? ' score-delta--pos' : ' score-delta--neg'}`}>
+                              {delta >= 0 ? '+' : ''}{delta}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
                   </>
               }
             </div>
@@ -468,6 +504,71 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             })()}
           </div>
         )
+      })() : room.phase === 'tiebreak' ? (() => {
+        const tb = room.tiebreaker
+        if (!tb) return null
+        const meInTiebreak = tb.playerIds.includes(myId)
+        const isMyTiebreakerTurn = tb.currentPlayerId === myId
+
+        function handleTiebreakRoll() {
+          socket.emit('tiebreak_roll', {}, (res) => {
+            if (!res?.ok) alert('Error en el desempate')
+          })
+        }
+
+        return (
+          <div className="results">
+            <div className="results__winner">
+              <p className="results__winner-label">
+                {tb.round > 1 ? `Desempate · Ronda ${tb.round}` : 'Desempate a la caída'}
+              </p>
+              <h2 className="results__name">¡Empate!</h2>
+              <p className="results__hand">Cada jugador tira un dado — el peor rompe un palillo</p>
+            </div>
+
+            <div className="tiebreak__players">
+              {tb.playerIds.map(playerId => {
+                const player = room.players.find(p => p.id === playerId)
+                const result = tb.results[playerId]
+                const isCurrent = tb.currentPlayerId === playerId
+                return (
+                  <div key={playerId} className={`tiebreak__row${isCurrent ? ' tiebreak__row--active' : ''}`}>
+                    <span className="tiebreak__name">
+                      {player?.name}{playerId === myId ? ' (tú)' : ''}
+                    </span>
+                    <div className="tiebreak__die-slot">
+                      {result
+                        ? <Die value={result} />
+                        : <span className="tiebreak__pending">{isCurrent ? '🎲' : '·  ·  ·'}</span>
+                      }
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="actions">
+              {isMyTiebreakerTurn && (
+                <div className="actions__row">
+                  <button className="btn btn--primary btn--full" onClick={handleTiebreakRoll}>
+                    Tirar un dado
+                  </button>
+                </div>
+              )}
+              {!isMyTiebreakerTurn && tb.currentPlayerId && (() => {
+                const waiting = room.players.find(p => p.id === tb.currentPlayerId)
+                return (
+                  <p className="waiting-label">
+                    Esperando a {waiting?.name ?? '…'}
+                  </p>
+                )
+              })()}
+              {!meInTiebreak && !tb.currentPlayerId && (
+                <p className="waiting-label">Calculando desempate…</p>
+              )}
+            </div>
+          </div>
+        )
       })() : (
         <>
           <div className="scoreboard">
@@ -480,6 +581,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               const dice = isRolling
                 ? (scoreboardDice[p.id] ?? [])
                 : (p.currentDice ?? [])
+              const delta = scoreDeltas[p.id]
               return (
                 <div key={p.id} className={`scoreboard__row ${p.id === currentPlayer?.id ? 'scoreboard__row--active' : ''}`}>
                   <span className="scoreboard__pos">{i + 1}.</span>
@@ -490,7 +592,17 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       {sortDice(dice).map((v, j) => <Die key={j} value={v} small />)}
                     </div>
                   )}
-                  <span className="scoreboard__wins">{p.wins}</span>
+                  <div className="scoreboard__right">
+                    <span className="scoreboard__wins">{p.wins}</span>
+                    {p.score != null && (
+                      <span className="scoreboard__score">{p.score.toLocaleString()} pts</span>
+                    )}
+                    {delta !== undefined && (
+                      <span className={`score-delta${delta >= 0 ? ' score-delta--pos' : ' score-delta--neg'}`}>
+                        {delta >= 0 ? '+' : ''}{delta}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )
             })}
