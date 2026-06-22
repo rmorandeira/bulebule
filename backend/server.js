@@ -165,9 +165,8 @@ function awardRoundPoints(room, loserId) {
     if (uid) {
       // Registered: accumulate in pendingScores — committed to DB only at game end
       const prev = room.pendingScores[uid] ?? 0;
-      const base = stmts.getStats.get(uid)?.score ?? 0;
       if (isWinner) { room.pendingScores[uid] = prev + roundPts; }
-      else          { room.pendingScores[uid] = Math.max(-base, prev + POINTS.ROUND_LOSS); }
+      else          { room.pendingScores[uid] = prev + POINTS.ROUND_LOSS; }
     }
     // Guests: no score tracking (shown as — in UI)
   }
@@ -599,10 +598,11 @@ function finishTurn(room, player) {
   if (room.currentPlayerIndex === (room.startingPlayerIndex ?? 0)) {
     room.maxRolls = player.rollCount;
   }
-  // Si acaba de liberarse y solo queda 1 jugador no-liberado en total → fin
+  // Si acaba de liberarse: terminar ronda solo si no quedan no-liberados pendientes de jugar
   if (player.liberado) {
     const nonLiberado = room.players.filter(p => !p.liberado);
-    if (nonLiberado.length <= 1) {
+    const pendingPlay = nonLiberado.some(p => !p.done);
+    if (!pendingPlay && nonLiberado.length <= 1) {
       endRound(room);
       return;
     }
