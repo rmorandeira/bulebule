@@ -24,6 +24,20 @@ html, body {
   overscroll-behavior-y: none;
 }
 
+/* Bloquea la orientación landscape en móvil */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  html {
+    transform: rotate(-90deg);
+    transform-origin: left top;
+    width: 100vh;
+    height: 100vw;
+    overflow-x: hidden;
+    position: absolute;
+    top: 100%;
+    left: 0;
+  }
+}
+
 body {
   font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
   background: #f0ede8;
