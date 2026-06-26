@@ -606,12 +606,17 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               const isRolling = rollingIndices.length > 0 && isActive
               const dice = isRolling
                 ? (scoreboardDice[p.id] ?? [])
-                : (p.inDesempate ? (p.currentDice ?? []) : [])
+                : (p.currentDice?.length > 0 ? p.currentDice : [])
               const delta = scoreDeltas[p.id]
               return (
-                <div key={p.id} className={`scoreboard__row ${isActive ? 'scoreboard__row--active' : ''}`}>
+                <div key={p.id} className={`scoreboard__row ${isActive ? 'scoreboard__row--active' : ''} ${p.done ? 'scoreboard__row--done' : ''}`}>
                   <PalilloState player={p} />
-                  <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                  <div className="scoreboard__player-info">
+                    <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                    {p.done && p.hand && (
+                      <span className="scoreboard__hand-label">{p.hand.desc}</span>
+                    )}
+                  </div>
                   {p.inDesempate && <span className="tag tag--desempate">DESEMPATE</span>}
                   {dice.length > 0 && (
                     <div className="scoreboard__dice">
