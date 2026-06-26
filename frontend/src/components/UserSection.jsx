@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { googleLogout } from '@react-oauth/google'
 import socket from '../socket'
+import { setTheme, getTheme } from '../theme'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
@@ -250,12 +251,24 @@ function ComingSoon() {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
+const THEME_OPTIONS = [
+  { value: 'light',  label: 'Claro' },
+  { value: 'dark',   label: 'Oscuro' },
+  { value: 'system', label: 'Sistema' },
+]
+
 function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
   const [name, setName]               = useState(user?.name || '')
   const [nameSaved, setNameSaved]     = useState(false)
   const [notifications, setNotifications] = useState(user?.notifications ?? false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [theme, setThemeState]        = useState(getTheme)
   const fileInputRef = useRef()
+
+  function handleThemeChange(value) {
+    setThemeState(value)
+    setTheme(value)
+  }
 
   function saveName() {
     if (!name.trim() || name.trim() === user?.name) return
@@ -292,6 +305,21 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
         </div>
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePictureChange} />
+
+      <div className="usec__settings-section">
+        <p className="usec__settings-label">APARIENCIA</p>
+        <div className="usec__theme-seg">
+          {THEME_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              className={`usec__theme-btn${theme === opt.value ? ' usec__theme-btn--active' : ''}`}
+              onClick={() => handleThemeChange(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="usec__settings-section">
         <p className="usec__settings-label">NOMBRE EN PARTIDA</p>
