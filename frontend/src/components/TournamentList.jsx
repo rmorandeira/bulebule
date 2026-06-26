@@ -4,6 +4,7 @@ import socket from '../socket'
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉' }
 const TIER_ORDER = ['Diamante', 'Oro', 'Plata', 'Bronce']
+const TIER_RANK  = { Diamante: 3, Oro: 2, Plata: 1, Bronce: 0 }
 
 export default function TournamentList({ user, myStats, onEnter }) {
   const [tournaments, setTournaments] = useState([])
@@ -19,17 +20,24 @@ export default function TournamentList({ user, myStats, onEnter }) {
     return () => clearInterval(interval)
   }, [])
 
+  const myTier   = myStats?.tier
+  const myRank   = TIER_RANK[myTier] ?? -1
+
   return (
     <div className="tl">
       <p className="tl__hint">Entra en el torneo de tu nivel y reta a otros jugadores</p>
       {TIER_ORDER.map(tierName => {
         const t = tournaments.find(t => t.tier === tierName)
         if (!t) return null
-        const myTier = myStats?.tier
-        const isMyTier = myTier === tierName
-        const color = TIER_COLOR[tierName]
+        const tierRank   = TIER_RANK[tierName]
+        const isMyTier   = myTier === tierName
+        const isLower    = myRank > tierRank
+        const isLocked   = user && myRank < tierRank
+        let cardClass = 'tl__card'
+        if (isMyTier)  cardClass += ' tl__card--mine'
+        if (isLocked)  cardClass += ' tl__card--locked'
         return (
-          <div key={t.id} className={`tl__card${isMyTier ? ' tl__card--mine' : ''}`} onClick={() => onEnter(t)}>
+          <div key={t.id} className={cardClass} onClick={() => !isLocked && onEnter(t)}>
             <span className="tl__card-emoji">{TIER_EMOJI[tierName]}</span>
             <div className="tl__card-body">
               <p className="tl__card-name">{t.name}</p>
@@ -38,7 +46,9 @@ export default function TournamentList({ user, myStats, onEnter }) {
                 {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
               </p>
             </div>
-            {isMyTier && <span className="tl__badge">Tu nivel</span>}
+            {isMyTier  && <span className="tl__badge">Tu nivel</span>}
+            {isLower   && <span className="tl__badge tl__badge--lower">Accesible</span>}
+            {isLocked  && <span className="tl__badge tl__badge--locked">🔒</span>}
           </div>
         )
       })}
