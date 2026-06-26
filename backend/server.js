@@ -91,6 +91,23 @@ db.exec(`
     played_at   INTEGER NOT NULL DEFAULT (unixepoch()),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
   );
+
+  CREATE TABLE IF NOT EXISTS hand_stats (
+    user_id   TEXT    NOT NULL,
+    hand_desc TEXT    NOT NULL,
+    hand_rank INTEGER NOT NULL DEFAULT 0,
+    count     INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (user_id, hand_desc),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS roll_stats (
+    user_id TEXT    NOT NULL,
+    rolls   INTEGER NOT NULL,
+    count   INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (user_id, rolls),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+  );
 `);
 
 // ── Migrate from old JSON file if it exists ───────────────────────────────────
@@ -154,6 +171,37 @@ const TIERS = [
 
 function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
 
+// ── Tournaments ───────────────────────────────────────────────────────────────
+const TOURNAMENT_DEFS = [
+  { id: 'bronce',   name: 'Torneo Bronce',   tier: 'Bronce',   minScore: 0,   maxScore: 99   },
+  { id: 'plata',    name: 'Torneo Plata',     tier: 'Plata',    minScore: 100, maxScore: 299  },
+  { id: 'oro',      name: 'Torneo Oro',       tier: 'Oro',      minScore: 300, maxScore: 699  },
+  { id: 'diamante', name: 'Torneo Diamante',  tier: 'Diamante', minScore: 700, maxScore: Infinity },
+];
+
+const tournamentPlayers = {};
+TOURNAMENT_DEFS.forEach(t => { tournamentPlayers[t.id] = {}; });
+
+function getTournamentDef(id) { return TOURNAMENT_DEFS.find(t => t.id === id); }
+
+function broadcastTournament(tournamentId) {
+  const players = Object.values(tournamentPlayers[tournamentId] ?? {});
+  const tournamentRooms = Object.values(rooms)
+    .filter(r => r.tournamentId === tournamentId)
+    .map(r => ({
+      code: r.code,
+      name: r.name,
+      playerCount: r.players.filter(p => !p.isBot).length,
+      maxPlayers: r.maxPlayers,
+      phase: r.phase,
+    }));
+  io.to(`tournament:${tournamentId}`).emit('tournament_state', {
+    tournamentId,
+    players,
+    rooms: tournamentRooms,
+  });
+}
+
 const stmts = {
   upsertUser:    db.prepare(`INSERT INTO users (user_id, name, email, picture)
                                VALUES (?, ?, ?, ?)
@@ -170,10 +218,18 @@ const stmts = {
                                VALUES (?, ?, ?, ?)
                                ON CONFLICT(user_id) DO UPDATE
                                  SET endpoint=excluded.endpoint, p256dh=excluded.p256dh, auth=excluded.auth, updated_at=unixepoch()`),
-  deletePushSub: db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`),
-  rankings:      db.prepare(`SELECT ps.user_id, u.name, u.picture, ps.score, ps.games_played, ps.games_won
+  deletePushSub:  db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`),
+  rankings:       db.prepare(`SELECT ps.user_id, u.name, u.picture, ps.score, ps.games_played, ps.games_won
                                FROM player_stats ps JOIN users u ON ps.user_id=u.user_id
                                ORDER BY ps.score DESC LIMIT 100`),
+  upsertHandStat: db.prepare(`INSERT INTO hand_stats (user_id, hand_desc, hand_rank, count)
+                               VALUES (?, ?, ?, 1)
+                               ON CONFLICT(user_id, hand_desc) DO UPDATE SET count = count + 1`),
+  upsertRollStat: db.prepare(`INSERT INTO roll_stats (user_id, rolls, count)
+                               VALUES (?, ?, 1)
+                               ON CONFLICT(user_id, rolls) DO UPDATE SET count = count + 1`),
+  getHandStats:   db.prepare(`SELECT hand_desc, hand_rank, count FROM hand_stats WHERE user_id = ? ORDER BY count DESC`),
+  getRollStats:   db.prepare(`SELECT rolls, count FROM roll_stats WHERE user_id = ? ORDER BY rolls`),
 };
 
 function ensureStats(userId) {
@@ -211,6 +267,13 @@ function awardRoundPoints(room) {
     const handRank = player.hand?.rank ?? 0;
     const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
     room.pendingScores[uid] = (room.pendingScores[uid] ?? 0) + roundPts;
+
+    // Track final hand (repóker: hand=null, re-evaluate from dice)
+    const hand = player.hand ?? (player.liberado ? evaluateHand(player.currentDice) : null);
+    if (hand) stmts.upsertHandStat.run(uid, hand.desc, hand.rank);
+
+    // Track rolls used this round
+    if (player.rollCount > 0) stmts.upsertRollStat.run(uid, player.rollCount);
   }
 }
 
@@ -543,6 +606,7 @@ function sanitizeForList(room) {
     maxPlayers: room.maxPlayers,
     phase: room.phase,
     isPrivate: !!room.isPrivate,
+    tournamentId: room.tournamentId ?? null,
   };
 }
 
@@ -552,7 +616,7 @@ function broadcast(code) {
 }
 
 function broadcastRoomList() {
-  const list = Object.values(rooms).filter(r => !r.vsBot && r.phase === 'lobby').map(sanitizeForList);
+  const list = Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId && r.phase === 'lobby').map(sanitizeForList);
   io.emit('rooms_list', list);
 }
 
@@ -735,26 +799,95 @@ io.on('connection', (socket) => {
     const rankings = buildRankings();
     const myRank   = uid ? (rankings.findIndex(r => r.userId === uid) + 1) || null : null;
     let stats = null;
+    let handStats = null;
+    let rollStats = null;
     if (uid) {
       const row = stmts.getStats.get(uid);
       if (row) stats = { score: row.score, gamesPlayed: row.games_played, gamesWon: row.games_won, tier: getTier(row.score).name };
+      handStats = stmts.getHandStats.all(uid);
+      rollStats  = stmts.getRollStats.all(uid);
     }
-    cb?.({ ok: true, stats, rankings, myRank, total: rankings.length });
+    cb?.({ ok: true, stats, rankings, myRank, total: rankings.length, handStats, rollStats });
   });
 
   socket.on('list_rooms', (cb) => {
-    cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot).map(sanitizeForList) });
+    cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId).map(sanitizeForList) });
   });
 
-  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false }, cb) => {
+  socket.on('get_tournaments', (cb) => {
+    const result = TOURNAMENT_DEFS.map(t => ({
+      ...t,
+      playerCount: Object.keys(tournamentPlayers[t.id]).length,
+      openRooms: Object.values(rooms).filter(r => r.tournamentId === t.id && r.phase === 'lobby').length,
+      activeGames: Object.values(rooms).filter(r => r.tournamentId === t.id && r.phase !== 'lobby').length,
+    }));
+    cb?.({ ok: true, tournaments: result });
+  });
+
+  socket.on('join_tournament', ({ tournamentId, userId, name, picture }, cb) => {
+    const def = getTournamentDef(tournamentId);
+    if (!def) return cb?.({ ok: false, error: 'Torneo no encontrado' });
+
+    // Leave current tournament if any
+    const prevTid = socket.data.tournamentId;
+    if (prevTid && prevTid !== tournamentId) {
+      delete tournamentPlayers[prevTid][socket.id];
+      socket.leave(`tournament:${prevTid}`);
+      broadcastTournament(prevTid);
+    }
+
+    let score = 0;
+    let tier = 'Bronce';
+    let canPlay = false;
+    if (userId) {
+      const row = stmts.getStats.get(userId);
+      if (row) {
+        score = row.score;
+        tier = getTier(score).name;
+        canPlay = score >= def.minScore && score <= def.maxScore;
+      }
+    }
+
+    tournamentPlayers[tournamentId][socket.id] = { socketId: socket.id, name, tier, score, picture: picture ?? null, canPlay };
+    socket.join(`tournament:${tournamentId}`);
+    socket.data.tournamentId = tournamentId;
+
+    broadcastTournament(tournamentId);
+    cb?.({ ok: true, canPlay, tier, score });
+  });
+
+  socket.on('leave_tournament', (cb) => {
+    const tid = socket.data.tournamentId;
+    if (tid) {
+      delete tournamentPlayers[tid][socket.id];
+      socket.leave(`tournament:${tid}`);
+      socket.data.tournamentId = null;
+      broadcastTournament(tid);
+    }
+    cb?.({ ok: true });
+  });
+
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null }, cb) => {
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     if (!vsBot && !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
+
+    if (tournamentId) {
+      const def = getTournamentDef(tournamentId);
+      if (!def) return cb?.({ ok: false, error: 'Torneo no encontrado' });
+      if (!userId) return cb?.({ ok: false, error: 'Debes iniciar sesión para jugar en torneos' });
+      const row = stmts.getStats.get(userId);
+      const score = row?.score ?? 0;
+      if (score < def.minScore || score > def.maxScore) {
+        return cb?.({ ok: false, error: `Necesitas nivel ${def.tier} para crear salas en este torneo` });
+      }
+    }
+
     let code;
     do { code = genCode(); } while (rooms[code]);
 
     const room = {
       code,
-      name: roomName.trim(),
+      name: roomName?.trim() ?? '',
       maxPlayers: vsBot ? Math.min(Math.max(2, parseInt(maxPlayers) || 2), 5) : Math.min(Math.max(2, parseInt(maxPlayers) || 6), 10),
       vsBot,
       isPrivate: !!isPrivate,
@@ -766,23 +899,25 @@ io.on('connection', (socket) => {
       maxRolls: null,
       roundWinnerId: null,
       turnDeadline: null,
+      tournamentId: tournamentId ?? null,
       players: [makePlayer(socket.id, playerName.trim())],
     };
 
     if (vsBot) {
       const numBots = room.maxPlayers - 1;
       for (let i = 0; i < numBots; i++) room.players.push(makeBotPlayer(i));
-      startRound(room); // skip lobby phase
+      startRound(room);
     }
 
     rooms[code] = room;
     socket.join(code);
     socket.data.roomCode = code;
-    console.log(`create_room: "${roomName}" code="${code}" host="${playerName}" vsBot=${vsBot}`);
+    console.log(`create_room: "${room.name}" code="${code}" host="${playerName}" vsBot=${vsBot} tournament=${tournamentId}`);
     cb?.({ ok: true, code });
-    trackEvent('room_create', { vsBot, isPrivate: !!isPrivate, maxPlayers: room.maxPlayers });
+    trackEvent('room_create', { vsBot, isPrivate: !!isPrivate, maxPlayers: room.maxPlayers, tournamentId });
     broadcast(code);
-    if (!vsBot) broadcastRoomList();
+    if (tournamentId) broadcastTournament(tournamentId);
+    else if (!vsBot) broadcastRoomList();
   });
 
   socket.on('join_room', ({ code, playerName }, cb) => {
@@ -1043,6 +1178,11 @@ io.on('connection', (socket) => {
     if (socket.data.userId && registeredUsers[socket.data.userId]) {
       registeredUsers[socket.data.userId].socketId = null;
     }
+    const tid = socket.data.tournamentId;
+    if (tid && tournamentPlayers[tid]) {
+      delete tournamentPlayers[tid][socket.id];
+      broadcastTournament(tid);
+    }
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
@@ -1062,8 +1202,10 @@ io.on('connection', (socket) => {
         clearContinueTimer(r);
         const byPlayer = r.phase !== 'lobby' ? disconnectingName : null;
         io.to(code).emit('room_destroyed', { byPlayer });
+        const tId = r.tournamentId;
         delete rooms[code];
-        broadcastRoomList();
+        if (tId) broadcastTournament(tId);
+        else broadcastRoomList();
         return;
       }
       if (r.hostId === socket.id) r.hostId = r.players[0].id;

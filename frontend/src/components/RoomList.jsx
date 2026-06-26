@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import socket from '../socket'
 import { track } from '../analytics'
-import UserSettings from './UserSettings'
+import TournamentList from './TournamentList'
+import TournamentLobby from './TournamentLobby'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
@@ -167,8 +168,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RoomList({
-  user, playerName, onNameChange, onLogin,
-  onSettingsUpdate, onSettingsLogout, onSettingsDelete,
+  user, playerName, onNameChange, onLogin, onOpenUser,
 }) {
   const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
   const [rooms, setRooms]                   = useState([])
@@ -182,18 +182,16 @@ export default function RoomList({
   const [codeError, setCodeError]           = useState('')
   const [createSheet, setCreateSheet]       = useState(false)
   const [createClosing, setCreateClosing]   = useState(false)
-  const [settingsOpen, setSettingsOpen]     = useState(false)
-  const [settingsClosing, setSettingsClosing] = useState(false)
   const [myStats, setMyStats]   = useState(null)
   const [myRank, setMyRank]     = useState(null)
   const [rankings, setRankings] = useState([])
   const [rankTotal, setRankTotal] = useState(0)
+  const [activeTournament, setActiveTournament] = useState(null)
 
   const pagerRef         = useRef(null)
   const scrollTimerRef   = useRef(null)
   const progScrollRef    = useRef(false)
   const closeCreateRef   = useRef(null)
-  const closeSettingsRef = useRef(null)
   const didInitRef       = useRef(false)
   const swipeTouchRef    = useRef(null) // {x, y, scrollY} at touchstart
 
@@ -227,7 +225,6 @@ export default function RoomList({
       socket.off('disconnect', onDisconnect)
       socket.off('rooms_list', onRoomsList)
       clearTimeout(closeCreateRef.current)
-      clearTimeout(closeSettingsRef.current)
       clearTimeout(scrollTimerRef.current)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -269,6 +266,7 @@ export default function RoomList({
   function goToPage(id) {
     const idx = PAGES.findIndex(p => p.id === id)
     if (idx < 0) return
+    if (id !== 'challenge') setActiveTournament(null)
     const pager = pagerRef.current
     if (!pager) return
     progScrollRef.current = true
@@ -288,16 +286,6 @@ export default function RoomList({
   function closeCreate() {
     setCreateClosing(true)
     closeCreateRef.current = setTimeout(() => { setCreateSheet(false); setCreateClosing(false) }, CLOSE_DURATION)
-  }
-
-  function openSettings() {
-    clearTimeout(closeSettingsRef.current)
-    setSettingsClosing(false)
-    setSettingsOpen(true)
-  }
-  function closeSettings() {
-    setSettingsClosing(true)
-    closeSettingsRef.current = setTimeout(() => { setSettingsOpen(false); setSettingsClosing(false) }, CLOSE_DURATION)
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -523,6 +511,24 @@ export default function RoomList({
           </>
         )}
 
+        {/* ── Challenge ── */}
+        {activeTab === 'challenge' && (
+          activeTournament ? (
+            <TournamentLobby
+              tournament={activeTournament}
+              user={user}
+              playerName={playerName}
+              onBack={() => setActiveTournament(null)}
+            />
+          ) : (
+            <TournamentList
+              user={user}
+              myStats={myStats}
+              onEnter={setActiveTournament}
+            />
+          )
+        )}
+
         {/* ── Tienda ── */}
         {activeTab === 'tienda' && (
           <div className="rl__coming-soon">
@@ -562,7 +568,7 @@ export default function RoomList({
         </button>
 
         <button className="rl__nav-btn" aria-label="Usuario"
-          onClick={() => user ? openSettings() : goToPage('online')}>
+          onClick={() => user ? onOpenUser?.() : goToPage('online')}>
           {user?.picture ? (
             <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="rl__nav-avatar" />
           ) : (
@@ -573,23 +579,6 @@ export default function RoomList({
           )}
         </button>
       </nav>
-
-      {/* Settings sheet */}
-      {settingsOpen && (
-        <>
-          <div className={`bs-overlay${settingsClosing ? ' bs-overlay--closing' : ''}`} onClick={closeSettings} />
-          <div className={`bs${settingsClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-            <div className="bs__handle" />
-            <UserSettings
-              user={user}
-              onBack={closeSettings}
-              onUpdate={onSettingsUpdate}
-              onLogout={() => { closeSettings(); onSettingsLogout() }}
-              onDeleteAccount={() => { closeSettings(); onSettingsDelete() }}
-            />
-          </div>
-        </>
-      )}
 
       {/* Create / Solo play sheet */}
       {createSheet && (
