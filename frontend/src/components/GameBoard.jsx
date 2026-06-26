@@ -6,6 +6,7 @@ import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 
 import DiceRollerScene from './DiceRollerScene'
+import AdBanner from './AdBanner'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
@@ -606,12 +607,17 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               const isRolling = rollingIndices.length > 0 && isActive
               const dice = isRolling
                 ? (scoreboardDice[p.id] ?? [])
-                : (p.inDesempate ? (p.currentDice ?? []) : [])
+                : (p.currentDice?.length > 0 ? p.currentDice : [])
               const delta = scoreDeltas[p.id]
               return (
-                <div key={p.id} className={`scoreboard__row ${isActive ? 'scoreboard__row--active' : ''}`}>
+                <div key={p.id} className={`scoreboard__row ${isActive ? 'scoreboard__row--active' : ''} ${p.done ? 'scoreboard__row--done' : ''}`}>
                   <PalilloState player={p} />
-                  <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                  <div className="scoreboard__player-info">
+                    <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                    {p.done && p.hand && (
+                      <span className="scoreboard__hand-label">{p.hand.desc}</span>
+                    )}
+                  </div>
                   {p.inDesempate && <span className="tag tag--desempate">DESEMPATE</span>}
                   {dice.length > 0 && (
                     <div className="scoreboard__dice">
@@ -641,13 +647,21 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             </div>
           ) : (() => {
             const rollNum = displayPlayer?.rollCount ?? 0
-            let toBeat = null
+
+            // Jugada mínima = la peor mano de los jugadores ya terminados (la que hay que superar para no perder)
+            let minHand = null
             for (const p of room.players) {
               if (p.inDesempate ? (p.done && p.hand) : (p.done && p.hand && !room.desempate)) {
-                if (!toBeat || p.hand.rank > toBeat.hand.rank ||
-                  (p.hand.rank === toBeat.hand.rank && (p.hand.topKey ?? '') > (toBeat.hand.topKey ?? ''))) toBeat = p
+                if (!minHand || p.hand.rank < minHand.hand.rank ||
+                  (p.hand.rank === minHand.hand.rank && (p.hand.topKey ?? '') < (minHand.hand.topKey ?? ''))) minHand = p
               }
             }
+
+            // Si el jugador activo ya ha terminado y su mano es la mínima, es él quien lleva la peor
+            const myHandIsBelowMin = me?.done && minHand && isMyTurn === false && me?.hand &&
+              (me.hand.rank < minHand.hand.rank ||
+               (me.hand.rank === minHand.hand.rank && (me.hand.topKey ?? '') <= (minHand.hand.topKey ?? '')))
+
             return (
               <div className="dice-box">
                 <div className="dice-box__header">
@@ -695,12 +709,17 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   />
                 </div>
                 <div className="dice-box__footer">
-                  <span className="dice-box__tirada">
-                    {toBeat ? 'Jugada a superar' : (rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar')}
-                  </span>
-                  {toBeat && (
-                    <span className="dice-box__beat">
-                      {toBeat.hand.desc} en {toBeat.rollCount} {toBeat.rollCount === 1 ? 'ronda' : 'rondas'}
+                  {minHand ? (
+                    <>
+                      <span className="dice-box__tirada">Jugada mínima a superar</span>
+                      <span className="dice-box__beat">
+                        {minHand.hand.desc}
+                        <span className="dice-box__beat-who"> · {minHand.name}</span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="dice-box__tirada">
+                      {rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar'}
                     </span>
                   )}
                 </div>
@@ -750,6 +769,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 Esperando la tirada del otro jugador ({waitTimeLeft}s)
               </p>
             )}
+          </div>
+          <div className="game-ad-bottom">
+            <AdBanner />
           </div>
         </>
       )})}

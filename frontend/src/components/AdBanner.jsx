@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-export default function AdBanner() {
+export default function AdBanner({ slot = '3181703270' }) {
   const ref = useRef(null)
   const pushed = useRef(false)
 
@@ -20,7 +20,7 @@ export default function AdBanner() {
         className="adsbygoogle"
         style={{ display: 'block' }}
         data-ad-client="ca-pub-4894674675461010"
-        data-ad-slot="3181703270"
+        data-ad-slot={slot}
         data-ad-format="auto"
         data-full-width-responsive="true"
       />

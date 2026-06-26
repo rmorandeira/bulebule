@@ -90,16 +90,14 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
           )}
           {!exitPhase && toBeat && (
             <div className="next-player-hand">
-              <p className="next-player-hand__title">Jugada a superar</p>
+              <p className="next-player-hand__title">Jugada mínima a superar</p>
               <div className="next-player-hand__dice">
                 {[...(toBeat.currentDice ?? [])].sort((a, b) => (VALUE_RANK[b] ?? 0) - (VALUE_RANK[a] ?? 0)).map((v, i) => <Die key={i} value={v} />)}
               </div>
-              <div className="next-player-hand__row">
-                <span className="next-player-hand__name">{toBeat.hand.desc}</span>
-                <span className="next-player-hand__rolls">
-                  en {toBeat.rollCount} {toBeat.rollCount === 1 ? 'ronda' : 'rondas'}
-                </span>
-              </div>
+              <span className="next-player-hand__name">{toBeat.hand.desc}</span>
+              <span className="next-player-hand__rolls">
+                {toBeat.rollCount} {toBeat.rollCount === 1 ? 'ronda' : 'rondas'}
+              </span>
             </div>
           )}
         </div>
@@ -118,11 +116,16 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
           </>
         )}
         {!exitPhase && isMyTurn && (
-          <div className="next-player-footer">
-            <button className="btn btn--primary next-player-continue" onClick={onContinue}>
-              {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
-            </button>
-          </div>
+          <>
+            <div className="next-player-ad next-player-ad--top">
+              <AdBanner />
+            </div>
+            <div className="next-player-footer">
+              <button className="btn btn--primary next-player-continue" onClick={onContinue}>
+                {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </>

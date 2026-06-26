@@ -401,16 +401,8 @@ body {
   justify-content: center;
 }
 
-.next-player-hand__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  width: 100%;
-  font-size: 22px;
-}
-
-.next-player-hand__name { font-weight: 800; }
-.next-player-hand__rolls { font-weight: 400; }
+.next-player-hand__name { font-size: 22px; font-weight: 800; }
+.next-player-hand__rolls { font-size: 18px; font-weight: 400; margin-top: -14px; }
 
 .next-player-footer {
   position: absolute;
@@ -455,11 +447,27 @@ body {
   animation: next-player-btn-in 0.25s ease-out 0.45s both;
 }
 
+.next-player-ad--top {
+  top: env(safe-area-inset-top, 0);
+  bottom: unset;
+}
+
+.game-ad-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0);
+  z-index: 5;
+  background: var(--bg);
+}
+
 .ad-banner {
   width: 100%;
   max-width: 480px;
+  min-height: 60px;
   margin: 0 auto;
   padding: 0 16px;
+  background: var(--bg);
 }
 
 /* ── Modal de confirmación ───────────────────────────────── */
@@ -1099,8 +1107,11 @@ body {
 }
 
 .scoreboard__row--active { background: var(--active-row); padding-left: 6px; padding-right: 6px; margin: 0 -6px; }
+.scoreboard__row--done { opacity: 0.75; }
 
-.scoreboard__name { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scoreboard__player-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.scoreboard__name { font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scoreboard__hand-label { font-size: 10px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scoreboard__dice { display: flex; gap: 3px; }
 .scoreboard__pts-num { font-size: 13px; font-weight: 700; flex-shrink: 0; white-space: nowrap; min-width: 42px; text-align: right; }
 .scoreboard__wins-num { font-size: 13px; font-weight: 700; flex-shrink: 0; width: 20px; text-align: center; }
@@ -1182,6 +1193,11 @@ body {
 
 .dice-box__beat {
   font-size: 13px;
+  font-weight: 700;
+  color: #ef4444;
+}
+.dice-box__beat-who {
+  font-weight: 400;
   color: var(--text-subtle);
 }
 
@@ -1357,8 +1373,8 @@ body {
 .results__row--winner { background: var(--winner-bg); font-weight: 700; }
 
 .results__player { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results__dice { display: flex; gap: 3px; flex-shrink: 0; }
-.results__desc { font-size: 12px; color: var(--text-subtle); white-space: nowrap; margin-left: 6px; flex-shrink: 0; display: flex; align-items: baseline; gap: 5px; }
+.results__dice { display: flex; gap: 3px; flex-shrink: 0; width: 152px; justify-content: flex-end; }
+.results__desc { font-size: 12px; color: var(--text-subtle); white-space: nowrap; flex-shrink: 0; width: 90px; display: flex; align-items: baseline; gap: 5px; }
 
 .results__scores {
   padding: 16px 20px;
