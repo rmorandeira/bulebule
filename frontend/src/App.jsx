@@ -5,7 +5,6 @@ import RoomList from './components/RoomList'
 import CreateRoom from './components/CreateRoom'
 import WaitingRoom from './components/WaitingRoom'
 import GameBoard from './components/GameBoard'
-import UserSection from './components/UserSection'
 
 function loadUser() {
   try { return JSON.parse(localStorage.getItem('bule_user')) } catch { return null }
@@ -351,7 +350,9 @@ export default function App() {
         playerName={playerName}
         onNameChange={handleGuestNameChange}
         onLogin={handleLogin}
-        onOpenUser={() => setScreen('user')}
+        onUpdate={handleUpdateUser}
+        onLogout={handleLogout}
+        onDeleteAccount={handleDeleteAccount}
       />
       {abandonedBy && (
         <div className="modal-overlay">

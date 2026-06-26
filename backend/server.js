@@ -268,7 +268,7 @@ function awardRoundPoints(room) {
     const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
     room.pendingScores[uid] = (room.pendingScores[uid] ?? 0) + roundPts;
 
-    // Track final hand (repóker: hand=null, re-evaluate from dice)
+    // Track final hand (repóker players have hand=null, re-evaluate from dice)
     const hand = player.hand ?? (player.liberado ? evaluateHand(player.currentDice) : null);
     if (hand) stmts.upsertHandStat.run(uid, hand.desc, hand.rank);
 

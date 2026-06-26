@@ -1921,7 +1921,7 @@ body {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #ccc;
+  color: #888;
   -webkit-tap-highlight-color: transparent;
   border-radius: 14px;
   transition: color 0.15s, background 0.12s;

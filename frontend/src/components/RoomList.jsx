@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import socket from '../socket'
 import { track } from '../analytics'
+import UserSection from './UserSection'
 import TournamentList from './TournamentList'
 import TournamentLobby from './TournamentLobby'
 
@@ -23,6 +24,7 @@ const CLOSE_DURATION = 260
 
 const PAGES = [
   { id: 'clasificacion', emoji: '🏆', label: 'Clasificación',  desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
+  { id: 'challenge',     emoji: '🔥', label: 'Challengue',     desc: 'Reta a otros jugadores en duelos 1vs1 y demuestra quién es el mejor' },
   { id: 'online',        emoji: '🎲', label: 'Juego online',   desc: 'Juega una partida tú sólo o contra la máquina' },
   { id: 'tienda',        emoji: '🎁', label: 'Tienda online',  desc: 'Utiliza tus puntos para comprar objetos y regalos' },
 ]
@@ -168,7 +170,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RoomList({
-  user, playerName, onNameChange, onLogin, onOpenUser,
+  user, playerName, onNameChange, onLogin, onUpdate, onLogout, onDeleteAccount,
 }) {
   const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
   const [rooms, setRooms]                   = useState([])
@@ -194,6 +196,24 @@ export default function RoomList({
   const closeCreateRef   = useRef(null)
   const didInitRef       = useRef(false)
   const swipeTouchRef    = useRef(null) // {x, y, scrollY} at touchstart
+  const prevTabRef       = useRef(activeTab)
+
+  useEffect(() => {
+    if (!user && activeTab === 'user') setActiveTab(DEFAULT_PAGE)
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When returning from the user tab, snap the carousel to the active page
+  useEffect(() => {
+    if (prevTabRef.current === 'user' && activeTab !== 'user') {
+      const pager = pagerRef.current
+      if (pager) {
+        const idx = PAGES.findIndex(p => p.id === activeTab)
+        const card = pager.children[idx]
+        if (card) pager.scrollLeft = card.offsetLeft - (pager.offsetWidth - card.offsetWidth) / 2
+      }
+    }
+    prevTabRef.current = activeTab
+  }, [activeTab])
 
   function fetchStats() {
     socket.emit('get_stats', (res) => {
@@ -267,12 +287,12 @@ export default function RoomList({
     const idx = PAGES.findIndex(p => p.id === id)
     if (idx < 0) return
     if (id !== 'challenge') setActiveTournament(null)
+    setActiveTab(id)
     const pager = pagerRef.current
     if (!pager) return
     progScrollRef.current = true
     const card = pager.children[idx]
     if (card) pager.scrollTo({ left: card.offsetLeft - (pager.offsetWidth - card.offsetWidth) / 2, behavior: 'smooth' })
-    setActiveTab(id)
     setTimeout(() => { progScrollRef.current = false }, 600)
   }
 
@@ -374,21 +394,23 @@ export default function RoomList({
         </div>
       </header>
 
-      {/* Horizontal card carousel — peek mode */}
-      <div className="rl__carousel" ref={pagerRef} onScroll={handlePagerScroll}>
-        {PAGES.map(page => (
-          <div key={page.id}
-            className={`rl__card${activeTab === page.id ? ' rl__card--active' : ''}`}
-            onClick={() => goToPage(page.id)}>
-            <span className="rl__card-emoji">{page.emoji}</span>
-            <span className="rl__card-label">{page.label}</span>
-            <span className="rl__card-desc">{page.desc}</span>
+      {/* Horizontal card carousel — peek mode (hidden on user tab) */}
+      {activeTab !== 'user' && (
+        <>
+          <div className="rl__carousel" ref={pagerRef} onScroll={handlePagerScroll}>
+            {PAGES.map(page => (
+              <div key={page.id}
+                className={`rl__card${activeTab === page.id ? ' rl__card--active' : ''}`}
+                onClick={() => goToPage(page.id)}>
+                <span className="rl__card-emoji">{page.emoji}</span>
+                <span className="rl__card-label">{page.label}</span>
+                <span className="rl__card-desc">{page.desc}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* Thin divider */}
-      <div className="rl__divider" />
+          <div className="rl__divider" />
+        </>
+      )}
 
       {/* Content area — only active tab is shown; swipe to navigate */}
       <div className="rl__content"
@@ -537,6 +559,17 @@ export default function RoomList({
           </div>
         )}
 
+        {/* ── Usuario ── */}
+        {activeTab === 'user' && user && (
+          <UserSection
+            embedded
+            user={user}
+            onUpdate={onUpdate}
+            onLogout={onLogout}
+            onDeleteAccount={onDeleteAccount}
+          />
+        )}
+
       </div>
 
       {/* Crear sala — full-width bar, only in online tab */}
@@ -550,6 +583,7 @@ export default function RoomList({
 
       {/* Navbar */}
       <nav className="rl__navbar">
+        {/* Ranking */}
         <button className={`rl__nav-btn${activeTab === 'clasificacion' ? ' rl__nav-btn--active' : ''}`}
           onClick={() => goToPage('clasificacion')} aria-label="Clasificación">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -559,18 +593,44 @@ export default function RoomList({
           </svg>
         </button>
 
-        <button className={`rl__nav-btn${activeTab === 'online' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => goToPage('online')} aria-label="Juego online">
+        {/* Challenge */}
+        <button className={`rl__nav-btn${activeTab === 'challenge' ? ' rl__nav-btn--active' : ''}`}
+          onClick={() => goToPage('challenge')} aria-label="Challengue">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
+            <path d="M12 2c0 4-4 6-4 10a4 4 0 0 0 8 0c0-4-4-6-4-10z"/>
+            <path d="M12 12c0 2-2 3-2 5a2 2 0 0 0 4 0c0-2-2-3-2-5z"/>
           </svg>
         </button>
 
-        <button className="rl__nav-btn" aria-label="Usuario"
-          onClick={() => user ? onOpenUser?.() : goToPage('online')}>
+        {/* Home — dado */}
+        <button className={`rl__nav-btn${activeTab === 'online' ? ' rl__nav-btn--active' : ''}`}
+          onClick={() => goToPage('online')} aria-label="Juego online">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <circle cx="8.5"  cy="8.5"  r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="15.5" cy="8.5"  r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="8.5"  cy="15.5" r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
+
+        {/* Shop */}
+        <button className={`rl__nav-btn${activeTab === 'tienda' ? ' rl__nav-btn--active' : ''}`}
+          onClick={() => goToPage('tienda')} aria-label="Tienda">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+        </button>
+
+        {/* User */}
+        <button className={`rl__nav-btn${activeTab === 'user' ? ' rl__nav-btn--active' : ''}`}
+          aria-label="Usuario"
+          onClick={() => user ? setActiveTab('user') : goToPage('online')}>
           {user?.picture ? (
-            <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="rl__nav-avatar" />
+            <img src={user.picture} alt={user.name} referrerPolicy="no-referrer"
+              className={`rl__nav-avatar${activeTab === 'user' ? ' rl__nav-avatar--active' : ''}`} />
           ) : (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
