@@ -23,8 +23,8 @@ const SOLO_PLAYERS_OPTIONS = [2, 3, 4, 5]
 const CLOSE_DURATION = 260
 
 const PAGES = [
-  { id: 'clasificacion', emoji: '🏆', label: 'Clasificación',  desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
-  { id: 'challenge',     emoji: '🔥', label: 'Challengue',     desc: 'Reta a otros jugadores en duelos 1vs1 y demuestra quién es el mejor' },
+  { id: 'clasificacion', emoji: '📊', label: 'Clasificación',  desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
+  { id: 'challenge',     emoji: '🏆', label: 'Challengue',     desc: 'Reta a otros jugadores en duelos 1vs1 y demuestra quién es el mejor' },
   { id: 'online',        emoji: '🎲', label: 'Juego online',   desc: 'Juega una partida tú sólo o contra la máquina' },
   { id: 'tienda',        emoji: '🎁', label: 'Tienda online',  desc: 'Utiliza tus puntos para comprar objetos y regalos' },
 ]
@@ -597,8 +597,12 @@ export default function RoomList({
         <button className={`rl__nav-btn${activeTab === 'challenge' ? ' rl__nav-btn--active' : ''}`}
           onClick={() => goToPage('challenge')} aria-label="Challengue">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2c0 4-4 6-4 10a4 4 0 0 0 8 0c0-4-4-6-4-10z"/>
-            <path d="M12 12c0 2-2 3-2 5a2 2 0 0 0 4 0c0-2-2-3-2-5z"/>
+            <path d="M6 2h12v8c0 3.3-2.7 6-6 6s-6-2.7-6-6V2z"/>
+            <path d="M6 4 Q2 7 6 10"/>
+            <path d="M18 4 Q22 7 18 10"/>
+            <line x1="12" y1="16" x2="12" y2="18"/>
+            <rect x="8" y="18" width="8" height="2"/>
+            <rect x="4" y="20" width="16" height="2"/>
           </svg>
         </button>
 
