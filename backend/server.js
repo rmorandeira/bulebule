@@ -908,7 +908,7 @@ io.on('connection', (socket) => {
       if (row) {
         score = row.score;
         tier = getTier(score).name;
-        canPlay = score >= def.minScore && score <= def.maxScore;
+        canPlay = score >= def.minScore;
       }
     }
 
@@ -941,7 +941,7 @@ io.on('connection', (socket) => {
       if (!userId) return cb?.({ ok: false, error: 'Debes iniciar sesión para jugar en torneos' });
       const row = stmts.getStats.get(userId);
       const score = row?.score ?? 0;
-      if (score < def.minScore || score > def.maxScore) {
+      if (score < def.minScore) {
         return cb?.({ ok: false, error: `Necesitas nivel ${def.tier} para crear salas en este torneo` });
       }
     }
