@@ -4,8 +4,10 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App'
 import './index.css'
 import { initAnalytics } from './analytics'
+import { initTheme } from './theme'
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+initTheme()
 initAnalytics()
 
 // Lock to portrait on devices that support the Screen Orientation API

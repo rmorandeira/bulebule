@@ -176,7 +176,9 @@ export default function DiceRollerScene({
     const renderer = new THREE.WebGLRenderer({ antialias: false })
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setClearColor(0xebebeb)
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+      (document.documentElement.getAttribute('data-theme') === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    renderer.setClearColor(isDark ? 0x2c2c2e : 0xebebeb)
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFShadowMap
     mount.appendChild(renderer.domElement)

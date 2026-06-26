@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { googleLogout } from '@react-oauth/google'
 import socket from '../socket'
+import { setTheme, getTheme } from '../theme'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
@@ -107,7 +108,7 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
       <div className="usec__content">
         {activeTab === 'stats'     && <StatsTab stats={stats} myRank={myRank} rankTotal={rankTotal} handStats={handStats} rollStats={rollStats} />}
         {activeTab === 'historial' && <ComingSoon />}
-        {activeTab === 'items'     && <ComingSoon />}
+        {activeTab === 'items'     && <ItemsTab user={user} />}
         {activeTab === 'ajustes'   && (
           <SettingsTab user={user} onUpdate={onUpdate} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
         )}
@@ -236,6 +237,52 @@ function StatsTab({ stats, myRank, rankTotal, handStats, rollStats }) {
   )
 }
 
+// ── Items tab ─────────────────────────────────────────────────────────────────
+
+function ItemsTab({ user }) {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    socket.emit('get_user_items', (res) => {
+      setLoading(false)
+      if (res?.ok) setItems(res.items ?? [])
+    })
+  }, [])
+
+  if (loading) return <p className="usec__empty">Cargando...</p>
+
+  if (items.length === 0) {
+    return (
+      <div className="usec__coming-soon">
+        <span className="usec__coming-icon">🎁</span>
+        <p className="usec__coming-title">Sin items todavía</p>
+        <p className="usec__coming-sub">Compra items en la tienda con tus puntos</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mkt__grid mkt__grid--usec">
+      {items.map(item => (
+        <div key={item.id} className="mkt__card mkt__card--owned">
+          <div className="mkt__card-img-wrap">
+            <img
+              className="mkt__card-img"
+              src={item.image_url}
+              alt={item.name}
+              onError={e => { e.currentTarget.style.display = 'none' }}
+            />
+            <span className="mkt__owned-badge">Tuyo</span>
+          </div>
+          <p className="mkt__card-name">{item.name}</p>
+          <p className="mkt__card-price">{item.price.toLocaleString()} puntos</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Coming soon ───────────────────────────────────────────────────────────────
 
 function ComingSoon() {
@@ -250,12 +297,24 @@ function ComingSoon() {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
+const THEME_OPTIONS = [
+  { value: 'light',  label: 'Claro' },
+  { value: 'dark',   label: 'Oscuro' },
+  { value: 'system', label: 'Sistema' },
+]
+
 function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
   const [name, setName]               = useState(user?.name || '')
   const [nameSaved, setNameSaved]     = useState(false)
   const [notifications, setNotifications] = useState(user?.notifications ?? false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [theme, setThemeState]        = useState(getTheme)
   const fileInputRef = useRef()
+
+  function handleThemeChange(value) {
+    setThemeState(value)
+    setTheme(value)
+  }
 
   function saveName() {
     if (!name.trim() || name.trim() === user?.name) return
@@ -292,6 +351,21 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
         </div>
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePictureChange} />
+
+      <div className="usec__settings-section">
+        <p className="usec__settings-label">APARIENCIA</p>
+        <div className="usec__theme-seg">
+          {THEME_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              className={`usec__theme-btn${theme === opt.value ? ' usec__theme-btn--active' : ''}`}
+              onClick={() => handleThemeChange(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="usec__settings-section">
         <p className="usec__settings-label">NOMBRE EN PARTIDA</p>
