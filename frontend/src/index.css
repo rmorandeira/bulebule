@@ -2498,25 +2498,24 @@ body {
 .tl__card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border: 1.5px solid #eee;
-  border-radius: 14px;
-  background: #fff;
+  gap: 14px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: #f2f2f7;
+  color-scheme: light;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.12s;
+  transition: background 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
-.tl__card:active { background: #f9f9f9; }
-.tl__card--mine { border-color: #111; }
-.tl__card-left { display: flex; align-items: center; gap: 12px; }
-.tl__tier-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.tl__card-name { font-size: 15px; font-weight: 700; }
-.tl__card-meta { font-size: 12px; color: var(--text-subtle); margin-top: 2px; }
-.tl__card-right { display: flex; align-items: center; gap: 8px; color: var(--text-subtle); }
+.tl__card:active { background: #e8e8ed; }
+.tl__card--mine { outline: 2px solid #111; outline-offset: -2px; }
+.tl__card-emoji { font-size: 32px; line-height: 1; flex-shrink: 0; }
+.tl__card-body { flex: 1; min-width: 0; }
+.tl__card-name { font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.2; }
+.tl__card-meta { font-size: 14px; color: #888; margin-top: 4px; }
 .tl__badge {
   font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
-  background: #111; color: #fff; padding: 3px 8px; border-radius: 20px;
+  background: #111; color: #fff; padding: 3px 8px; border-radius: 20px; flex-shrink: 0;
 }
 .tl__login-hint { font-size: 12px; color: var(--text-subtle); text-align: center; padding: 8px 0 4px; }
 
@@ -2657,16 +2656,13 @@ body {
 .usec__seg {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: #f0f0f0;
+  background: #e5e5ea;
   border-radius: 10px;
   margin: 12px 16px 0;
   padding: 3px;
   gap: 2px;
   flex-shrink: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .usec__seg { background: #2a2a2e; }
+  color-scheme: light;
 }
 
 .usec__seg-btn {
@@ -2676,7 +2672,7 @@ body {
   padding: 7px 4px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-subtle);
+  color: #888;
   cursor: pointer;
   transition: color .15s;
   white-space: nowrap;
@@ -2684,17 +2680,11 @@ body {
 
 .usec__seg-btn--active {
   background: #fff;
-  color: var(--text);
+  color: #1a1a1a;
   font-weight: 600;
   box-shadow: 0 1px 4px rgba(0,0,0,.18);
 }
 
-@media (prefers-color-scheme: dark) {
-  .usec__seg-btn--active {
-    background: #3a3a3e;
-    color: var(--text);
-  }
-}
 
 /* Content area */
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import socket from '../socket'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
+const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉' }
 const TIER_ORDER = ['Diamante', 'Oro', 'Plata', 'Bronce']
 
 export default function TournamentList({ user, myStats, onEnter }) {
@@ -29,22 +30,15 @@ export default function TournamentList({ user, myStats, onEnter }) {
         const color = TIER_COLOR[tierName]
         return (
           <div key={t.id} className={`tl__card${isMyTier ? ' tl__card--mine' : ''}`} onClick={() => onEnter(t)}>
-            <div className="tl__card-left">
-              <span className="tl__tier-dot" style={{ background: color }} />
-              <div>
-                <p className="tl__card-name">{t.name}</p>
-                <p className="tl__card-meta">
-                  {t.playerCount} en sala · {t.openRooms} {t.openRooms === 1 ? 'partida abierta' : 'partidas abiertas'}
-                  {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
-                </p>
-              </div>
+            <span className="tl__card-emoji">{TIER_EMOJI[tierName]}</span>
+            <div className="tl__card-body">
+              <p className="tl__card-name">{t.name}</p>
+              <p className="tl__card-meta">
+                {t.playerCount} en sala. {t.openRooms} {t.openRooms === 1 ? 'Partida abierta' : 'Partidas abiertas'}
+                {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
+              </p>
             </div>
-            <div className="tl__card-right">
-              {isMyTier && <span className="tl__badge">Tu nivel</span>}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </div>
+            {isMyTier && <span className="tl__badge">Tu nivel</span>}
           </div>
         )
       })}
