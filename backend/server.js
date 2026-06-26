@@ -108,6 +108,25 @@ db.exec(`
     PRIMARY KEY (user_id, rolls),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
   );
+
+  CREATE TABLE IF NOT EXISTS items (
+    id          TEXT    PRIMARY KEY,
+    name        TEXT    NOT NULL,
+    description TEXT,
+    price       INTEGER NOT NULL DEFAULT 0,
+    image_url   TEXT,
+    category    TEXT    DEFAULT 'collectible',
+    available   INTEGER DEFAULT 1
+  );
+
+  CREATE TABLE IF NOT EXISTS user_items (
+    user_id   TEXT    NOT NULL,
+    item_id   TEXT    NOT NULL,
+    bought_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    PRIMARY KEY (user_id, item_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (item_id) REFERENCES items(id)
+  );
 `);
 
 // ── Migrate from old JSON file if it exists ───────────────────────────────────
@@ -230,7 +249,24 @@ const stmts = {
                                ON CONFLICT(user_id, rolls) DO UPDATE SET count = count + 1`),
   getHandStats:   db.prepare(`SELECT hand_desc, hand_rank, count FROM hand_stats WHERE user_id = ? ORDER BY count DESC`),
   getRollStats:   db.prepare(`SELECT rolls, count FROM roll_stats WHERE user_id = ? ORDER BY rolls`),
+  getItems:       db.prepare(`SELECT * FROM items WHERE available = 1 ORDER BY price ASC`),
+  getItemById:    db.prepare(`SELECT * FROM items WHERE id = ?`),
+  getUserItems:   db.prepare(`SELECT item_id FROM user_items WHERE user_id = ?`),
+  insertUserItem: db.prepare(`INSERT OR IGNORE INTO user_items (user_id, item_id) VALUES (?, ?)`),
+  deductScore:    db.prepare(`UPDATE player_stats SET score = score - ? WHERE user_id = ? AND score >= ?`),
 };
+
+// ── Seed marketplace items ─────────────────────────────────────────────────────
+;(function seedItems() {
+  const SEED = [
+    { id: 'torre-hercules',  name: 'Torre de Hércules',  description: 'El faro romano más antiguo en uso del mundo, símbolo de A Coruña.', price: 200000, image_url: '/assets/items/torre-hercules.png',  category: 'landmark' },
+    { id: 'maria-pita',      name: 'Maria Pita',          description: 'Heroína coruñesa que defendió la ciudad ante el ataque inglés en 1589.', price: 50000, image_url: '/assets/items/maria-pita.png',      category: 'figure'   },
+    { id: 'plaza-maria-pita',name: 'Pza. Maria Pita',     description: 'La emblemática plaza del ayuntamiento, corazón de A Coruña.', price: 200000, image_url: '/assets/items/plaza-maria-pita.png', category: 'landmark' },
+  ];
+  const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
+  const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));
+  tx();
+})();
 
 function ensureStats(userId) {
   const u = registeredUsers[userId];
@@ -808,6 +844,34 @@ io.on('connection', (socket) => {
       rollStats  = stmts.getRollStats.all(uid);
     }
     cb?.({ ok: true, stats, rankings, myRank, total: rankings.length, handStats, rollStats });
+  });
+
+  socket.on('get_marketplace', (cb) => {
+    const uid       = socket.data.userId;
+    const items     = stmts.getItems.all();
+    const userItems = uid ? stmts.getUserItems.all(uid).map(r => r.item_id) : [];
+    const credits   = uid ? (stmts.getStats.get(uid)?.score ?? 0) : 0;
+    cb?.({ ok: true, items, userItems, credits });
+  });
+
+  socket.on('buy_item', ({ itemId } = {}, cb) => {
+    const uid  = socket.data.userId;
+    if (!uid)    return cb?.({ ok: false, error: 'Debes iniciar sesión' });
+    const item = stmts.getItemById.get(itemId);
+    if (!item)   return cb?.({ ok: false, error: 'Item no encontrado' });
+    const result = stmts.deductScore.run(item.price, uid, item.price);
+    if (result.changes === 0) return cb?.({ ok: false, error: 'Créditos insuficientes' });
+    stmts.insertUserItem.run(uid, itemId);
+    const newCredits = stmts.getStats.get(uid)?.score ?? 0;
+    cb?.({ ok: true, credits: newCredits });
+  });
+
+  socket.on('get_user_items', (cb) => {
+    const uid       = socket.data.userId;
+    if (!uid) return cb?.({ ok: true, items: [] });
+    const itemIds   = stmts.getUserItems.all(uid).map(r => r.item_id);
+    const items     = itemIds.map(id => stmts.getItemById.get(id)).filter(Boolean);
+    cb?.({ ok: true, items });
   });
 
   socket.on('list_rooms', (cb) => {
