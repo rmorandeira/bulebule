@@ -1185,6 +1185,11 @@ body {
 
 .dice-box__beat {
   font-size: 13px;
+  font-weight: 700;
+  color: #ef4444;
+}
+.dice-box__beat-who {
+  font-weight: 400;
   color: var(--text-subtle);
 }
 
