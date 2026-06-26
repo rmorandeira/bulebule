@@ -4,6 +4,7 @@ import socket from '../socket'
 import { track } from '../analytics'
 import UserSection from './UserSection'
 import TournamentList from './TournamentList'
+import Marketplace from './Marketplace'
 import TournamentLobby from './TournamentLobby'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
@@ -553,10 +554,7 @@ export default function RoomList({
 
         {/* ── Tienda ── */}
         {activeTab === 'tienda' && (
-          <div className="rl__coming-soon">
-            <p className="rl__coming-title">Ooops...esta sección aún no está acabada!</p>
-            <p className="rl__coming-sub">Estamos trabajando en ello</p>
-          </div>
+          <Marketplace user={user} />
         )}
 
         {/* ── Usuario ── */}

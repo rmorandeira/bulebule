@@ -108,7 +108,7 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
       <div className="usec__content">
         {activeTab === 'stats'     && <StatsTab stats={stats} myRank={myRank} rankTotal={rankTotal} handStats={handStats} rollStats={rollStats} />}
         {activeTab === 'historial' && <ComingSoon />}
-        {activeTab === 'items'     && <ComingSoon />}
+        {activeTab === 'items'     && <ItemsTab user={user} />}
         {activeTab === 'ajustes'   && (
           <SettingsTab user={user} onUpdate={onUpdate} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
         )}
@@ -233,6 +233,52 @@ function StatsTab({ stats, myRank, rankTotal, handStats, rollStats }) {
       {handStats && handStats.length === 0 && (
         <p className="usec__empty" style={{ marginTop: 8 }}>Juega partidas para ver tus estadísticas de jugadas</p>
       )}
+    </div>
+  )
+}
+
+// ── Items tab ─────────────────────────────────────────────────────────────────
+
+function ItemsTab({ user }) {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    socket.emit('get_user_items', (res) => {
+      setLoading(false)
+      if (res?.ok) setItems(res.items ?? [])
+    })
+  }, [])
+
+  if (loading) return <p className="usec__empty">Cargando...</p>
+
+  if (items.length === 0) {
+    return (
+      <div className="usec__coming-soon">
+        <span className="usec__coming-icon">🎁</span>
+        <p className="usec__coming-title">Sin items todavía</p>
+        <p className="usec__coming-sub">Compra items en la tienda con tus puntos</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mkt__grid mkt__grid--usec">
+      {items.map(item => (
+        <div key={item.id} className="mkt__card mkt__card--owned">
+          <div className="mkt__card-img-wrap">
+            <img
+              className="mkt__card-img"
+              src={item.image_url}
+              alt={item.name}
+              onError={e => { e.currentTarget.style.display = 'none' }}
+            />
+            <span className="mkt__owned-badge">Tuyo</span>
+          </div>
+          <p className="mkt__card-name">{item.name}</p>
+          <p className="mkt__card-price">{item.price.toLocaleString()} puntos</p>
+        </div>
+      ))}
     </div>
   )
 }
