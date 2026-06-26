@@ -624,6 +624,7 @@ export default function RoomList({
                 <span className="rl__rank-name">
                   {r.name}<TierDot tier={r.tier} />
                   {r.isPlaying && <span className="rl__playing-pill">jugando</span>}
+                  {r.userId === user?.email && <span className="rl__you-pill">tú</span>}
                 </span>
                 <span className="rl__rank-score">{r.score.toLocaleString()}</span>
               </div>

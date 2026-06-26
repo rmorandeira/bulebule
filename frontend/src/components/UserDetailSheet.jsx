@@ -162,6 +162,8 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
           </button>
         ) : !user ? (
           <p className="uds__hint">Inicia sesión para retar a este jugador</p>
+        ) : isSelf ? (
+          <p className="uds__hint">Este es tu perfil</p>
         ) : null}
       </div>
     </>

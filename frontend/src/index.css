@@ -1955,6 +1955,16 @@ body {
   border-radius: 20px;
   padding: 2px 7px;
 }
+.rl__you-pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-subtle);
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 2px 7px;
+}
 
 /* Empty state */
 .rl__empty {
