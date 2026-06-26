@@ -4,7 +4,7 @@ import socket from '../socket'
 const TIER_COLOR  = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 const CLOSE_DURATION = 260
 
-export default function TournamentLobby({ tournament, user, playerName, onBack }) {
+export default function TournamentLobby({ tournament, user, playerName, onBack, onViewUser }) {
   const [lobbyState, setLobbyState]   = useState({ players: [], rooms: [] })
   const [canPlay, setCanPlay]         = useState(false)
   const [myTier, setMyTier]           = useState(null)
@@ -118,7 +118,11 @@ export default function TournamentLobby({ tournament, user, playerName, onBack }
         ) : (
           <div className="tlob__players">
             {lobbyState.players.map(p => (
-              <div key={p.socketId} className="tlob__player">
+              <div
+                key={p.socketId}
+                className={`tlob__player${p.userId ? ' tlob__player--clickable' : ''}`}
+                onClick={() => p.userId && onViewUser?.({ userId: p.userId, name: p.name, picture: p.picture ?? null })}
+              >
                 {p.picture ? (
                   <img src={p.picture} alt={p.name} referrerPolicy="no-referrer" className="tlob__avatar" />
                 ) : (

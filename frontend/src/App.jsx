@@ -312,7 +312,7 @@ export default function App() {
 
   if (room) {
     if (room.phase === 'lobby') {
-      return <WaitingRoom room={room} myId={myId || socket.id} onLeave={handleLeave} />
+      return <WaitingRoom room={room} myId={myId || socket.id} onLeave={handleLeave} user={user} playerName={playerName} />
     }
     return <GameBoard room={room} myId={myId || socket.id} onLeave={handleLeave} musicOn={musicOn} onToggleMusic={toggleMusic} />
   }

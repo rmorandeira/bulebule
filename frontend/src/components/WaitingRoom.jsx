@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import socket from '../socket'
+import UserDetailSheet from './UserDetailSheet'
 
-export default function WaitingRoom({ room, myId, onLeave }) {
+export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
   const isHost = room.hostId === myId
+  const [viewingUser, setViewingUser] = useState(null)
 
   function shareWhatsApp() {
     const url = `${window.location.origin}/?join=${room.code}`
@@ -27,6 +30,16 @@ export default function WaitingRoom({ room, myId, onLeave }) {
 
   return (
     <div className="screen waiting-room">
+      {viewingUser && (
+        <UserDetailSheet
+          userId={viewingUser.userId}
+          initialName={viewingUser.name}
+          initialPicture={viewingUser.picture}
+          user={user}
+          playerName={playerName}
+          onClose={() => setViewingUser(null)}
+        />
+      )}
       <div className="waiting-room__top">
         <div className="waiting-room__topbar">
           <button className="btn-back" onClick={leave}>← Salir</button>
@@ -49,7 +62,11 @@ export default function WaitingRoom({ room, myId, onLeave }) {
           Jugadores
         </p>
         {room.players.map(p => (
-          <div key={p.id} className="player-list__item">
+          <div
+            key={p.id}
+            className={`player-list__item${p.userId && p.id !== myId ? ' player-list__item--clickable' : ''}`}
+            onClick={() => p.userId && p.id !== myId && setViewingUser({ userId: p.userId, name: p.name, picture: null })}
+          >
             <span className="player-list__name">{p.name}</span>
             {p.id === room.hostId && <span className="badge">Host</span>}
             {p.id === myId && <span className="badge badge--you">Tú</span>}
