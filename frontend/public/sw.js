@@ -3,8 +3,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'Bule bule', {
       body: data.body || '',
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
+      icon: '/favicon.png',
+      badge: '/favicon.png',
       data: { url: data.url || '/' },
     })
   )

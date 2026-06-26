@@ -612,6 +612,7 @@ function sanitize(room) {
       const uid = getUserIdForPlayer(p);
       return {
         id: p.id,
+        userId: uid ?? null,
         name: p.name,
         isBot: p.isBot ?? false,
         currentDice: p.currentDice,
@@ -912,7 +913,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    tournamentPlayers[tournamentId][socket.id] = { socketId: socket.id, name, tier, score, picture: picture ?? null, canPlay };
+    tournamentPlayers[tournamentId][socket.id] = { socketId: socket.id, userId: userId ?? null, name, tier, score, picture: picture ?? null, canPlay };
     socket.join(`tournament:${tournamentId}`);
     socket.data.tournamentId = tournamentId;
 
@@ -1236,6 +1237,73 @@ io.on('connection', (socket) => {
       });
     }
     cb?.({ ok: true });
+  });
+
+  socket.on('get_user_profile', ({ userId } = {}, cb) => {
+    if (!userId) return cb?.({ ok: false, error: 'Falta userId' });
+    const user = registeredUsers[userId];
+    const row  = stmts.getStats.get(userId);
+    if (!row && !user) return cb?.({ ok: false, error: 'Usuario no encontrado' });
+    const stats = row
+      ? { score: row.score, gamesPlayed: row.games_played, gamesWon: row.games_won, tier: getTier(row.score).name }
+      : null;
+    const itemIds = stmts.getUserItems.all(userId).map(r => r.item_id);
+    const items   = itemIds.map(id => stmts.getItemById.get(id)).filter(Boolean);
+    cb?.({ ok: true, name: user?.name ?? userId, picture: user?.picture ?? null, stats, items });
+  });
+
+  socket.on('challenge_user', ({ toUserId, playerName } = {}, cb) => {
+    const uid = socket.data.userId;
+    if (!uid)     return cb?.({ ok: false, error: 'Debes iniciar sesión para retar a otros jugadores' });
+    const target = registeredUsers[toUserId];
+    if (!target)  return cb?.({ ok: false, error: 'Usuario no disponible' });
+
+    let code;
+    do { code = genCode(); } while (rooms[code]);
+
+    const myName  = playerName?.trim() || registeredUsers[uid]?.name || 'Jugador';
+    const roomName = `Reto de ${myName}`;
+    const room = {
+      code,
+      name: roomName,
+      maxPlayers: 2,
+      vsBot: false,
+      isPrivate: true,
+      maxRounds: 0,
+      hostId: socket.id,
+      phase: 'lobby',
+      roundNumber: 0,
+      currentPlayerIndex: 0,
+      maxRolls: null,
+      roundWinnerId: null,
+      turnDeadline: null,
+      tournamentId: null,
+      players: [makePlayer(socket.id, myName)],
+    };
+
+    rooms[code] = room;
+    socket.join(code);
+    socket.data.roomCode = code;
+
+    if (target.socketId) {
+      io.to(target.socketId).emit('room_invite', { roomCode: code, roomName, inviterName: myName });
+    }
+    if (target.pushSubscription) {
+      const payload = JSON.stringify({
+        title: '¡Te han retado!',
+        body: `${myName} te reta a una partida`,
+        url: `/?join=${code}`,
+      });
+      webpush.sendNotification(target.pushSubscription, payload).catch(err => {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          if (registeredUsers[toUserId]) registeredUsers[toUserId].pushSubscription = null;
+          stmts.deletePushSub.run(toUserId);
+        }
+      });
+    }
+
+    cb?.({ ok: true, code, roomName });
+    broadcast(code);
   });
 
   socket.on('disconnect', () => {

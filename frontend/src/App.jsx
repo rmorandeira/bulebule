@@ -5,6 +5,7 @@ import RoomList from './components/RoomList'
 import CreateRoom from './components/CreateRoom'
 import WaitingRoom from './components/WaitingRoom'
 import GameBoard from './components/GameBoard'
+import ChallengeInvite from './components/ChallengeInvite'
 
 function loadUser() {
   try { return JSON.parse(localStorage.getItem('bule_user')) } catch { return null }
@@ -72,6 +73,7 @@ export default function App() {
   }
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
   const [abandonedBy, setAbandonedBy] = useState(null)
+  const [pendingInvite, setPendingInvite] = useState(null)
   const swRegistered       = useRef(false)
   const sessionTrackedRef  = useRef(false)
   const roomRef            = useRef(null)
@@ -188,13 +190,7 @@ export default function App() {
       if (byPlayer) setAbandonedBy(byPlayer)
     })
     socket.on('room_invite', ({ roomCode, roomName, inviterName }) => {
-      if (window.confirm(`${inviterName} te invita a "${roomName}". ¿Unirse?`)) {
-        const name = loadUser()?.name || playerName
-        if (!name) return alert('Introduce tu nombre primero')
-        socket.emit('join_room', { code: roomCode, playerName: name }, (res) => {
-          if (!res?.ok) alert(res?.error || 'No se pudo unir a la sala')
-        })
-      }
+      setPendingInvite({ roomCode, roomName, inviterName })
     })
     if (socket.connected) setMyId(socket.id)
     return () => {
@@ -272,6 +268,20 @@ export default function App() {
     setScreen('list')
   }
 
+  function acceptInvite() {
+    if (!pendingInvite) return
+    const { roomCode, roomName } = pendingInvite
+    const name = user?.name || playerName
+    setPendingInvite(null)
+    socket.emit('join_room', { code: roomCode, playerName: name }, (res) => {
+      if (!res?.ok) alert(res?.error || 'No se pudo unir a la sala')
+    })
+  }
+
+  function declineInvite() {
+    setPendingInvite(null)
+  }
+
   if (screen === 'intro') {
     return (
       <div className={`intro${introLeaving ? ' intro--leaving' : ''}`}>
@@ -311,10 +321,17 @@ export default function App() {
   }
 
   if (room) {
-    if (room.phase === 'lobby') {
-      return <WaitingRoom room={room} myId={myId || socket.id} onLeave={handleLeave} />
-    }
-    return <GameBoard room={room} myId={myId || socket.id} onLeave={handleLeave} musicOn={musicOn} onToggleMusic={toggleMusic} />
+    return (
+      <>
+        {room.phase === 'lobby'
+          ? <WaitingRoom room={room} myId={myId || socket.id} onLeave={handleLeave} user={user} playerName={playerName} />
+          : <GameBoard room={room} myId={myId || socket.id} onLeave={handleLeave} musicOn={musicOn} onToggleMusic={toggleMusic} />
+        }
+        {pendingInvite && (
+          <ChallengeInvite invite={pendingInvite} onAccept={acceptInvite} onDecline={declineInvite} />
+        )}
+      </>
+    )
   }
 
   if (screen === 'create') {
@@ -364,6 +381,13 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      {pendingInvite && (
+        <ChallengeInvite
+          invite={pendingInvite}
+          onAccept={acceptInvite}
+          onDecline={declineInvite}
+        />
       )}
     </>
   )

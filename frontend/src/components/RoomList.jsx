@@ -6,6 +6,7 @@ import UserSection from './UserSection'
 import TournamentList from './TournamentList'
 import Marketplace from './Marketplace'
 import TournamentLobby from './TournamentLobby'
+import UserDetailSheet from './UserDetailSheet'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
@@ -190,6 +191,7 @@ export default function RoomList({
   const [rankings, setRankings] = useState([])
   const [rankTotal, setRankTotal] = useState(0)
   const [activeTournament, setActiveTournament] = useState(null)
+  const [viewingUser, setViewingUser]           = useState(null) // { userId, name, picture }
 
   const pagerRef         = useRef(null)
   const scrollTimerRef   = useRef(null)
@@ -449,7 +451,11 @@ export default function RoomList({
                 {rankSearch ? 'No se encontró ningún jugador' : 'Juega partidas para aparecer en la clasificación'}
               </p>
             ) : filteredRankings.map(r => (
-              <div key={r.userId} className={`rl__rank-row${r.userId === user?.email ? ' rl__rank-row--me' : ''}`}>
+              <div
+                key={r.userId}
+                className={`rl__rank-row${r.userId === user?.email ? ' rl__rank-row--me' : ''}`}
+                onClick={() => setViewingUser({ userId: r.userId, name: r.name, picture: r.picture })}
+              >
                 <span className="rl__rank-pos">{r.rank}</span>
                 <span className="rl__rank-name">{r.name}<TierDot tier={r.tier} /></span>
                 <span className="rl__rank-score">{r.score.toLocaleString()}</span>
@@ -542,6 +548,7 @@ export default function RoomList({
               user={user}
               playerName={playerName}
               onBack={() => setActiveTournament(null)}
+              onViewUser={setViewingUser}
             />
           ) : (
             <TournamentList
@@ -646,6 +653,18 @@ export default function RoomList({
       {createSheet && (
         <CreateSheet user={user} playerName={playerName} onNameChange={onNameChange}
           closing={createClosing} onClose={closeCreate} />
+      )}
+
+      {/* User detail sheet */}
+      {viewingUser && (
+        <UserDetailSheet
+          userId={viewingUser.userId}
+          initialName={viewingUser.name}
+          initialPicture={viewingUser.picture}
+          user={user}
+          playerName={playerName}
+          onClose={() => setViewingUser(null)}
+        />
       )}
 
       {/* Private room code modal */}
