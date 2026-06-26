@@ -6,6 +6,7 @@ import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 
 import DiceRollerScene from './DiceRollerScene'
+import AdBanner from './AdBanner'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
@@ -768,6 +769,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 Esperando la tirada del otro jugador ({waitTimeLeft}s)
               </p>
             )}
+          </div>
+          <div className="game-ad-bottom">
+            <AdBanner />
           </div>
         </>
       )})}

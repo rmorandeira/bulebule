@@ -447,11 +447,27 @@ body {
   animation: next-player-btn-in 0.25s ease-out 0.45s both;
 }
 
+.next-player-ad--top {
+  top: env(safe-area-inset-top, 0);
+  bottom: unset;
+}
+
+.game-ad-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0);
+  z-index: 5;
+  background: var(--bg);
+}
+
 .ad-banner {
   width: 100%;
   max-width: 480px;
+  min-height: 60px;
   margin: 0 auto;
   padding: 0 16px;
+  background: var(--bg);
 }
 
 /* ── Modal de confirmación ───────────────────────────────── */
