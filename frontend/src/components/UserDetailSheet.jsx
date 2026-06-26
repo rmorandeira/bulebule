@@ -37,6 +37,9 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
     socket.emit('challenge_user', { toUserId: userId, playerName: myName }, (res) => {
       setChallenging(false)
       if (!res?.ok) return setError(res?.error ?? 'Error al crear el reto')
+      const url = `${window.location.origin}/?join=${res.code}`
+      const text = `¡${myName} te reta al Bule Bule! ⚔️🎲\nÚnete aquí: ${url}`
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
       close()
     })
   }
