@@ -401,16 +401,8 @@ body {
   justify-content: center;
 }
 
-.next-player-hand__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  width: 100%;
-  font-size: 22px;
-}
-
-.next-player-hand__name { font-weight: 800; }
-.next-player-hand__rolls { font-weight: 400; }
+.next-player-hand__name { font-size: 22px; font-weight: 800; }
+.next-player-hand__rolls { font-size: 18px; font-weight: 400; margin-top: -14px; }
 
 .next-player-footer {
   position: absolute;
