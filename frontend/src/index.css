@@ -2543,22 +2543,25 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .tl__card:active { background: var(--border); }
-.tl__card--mine { outline: 2px solid var(--text); outline-offset: -2px; }
+.tl__card--mine   { outline: 2px solid var(--text); outline-offset: -2px; }
+.tl__card--locked { opacity: 0.4; cursor: default; }
 .tl__card-emoji { font-size: 32px; line-height: 1; flex-shrink: 0; }
 .tl__card-body { flex: 1; min-width: 0; }
 .tl__card-name { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
 .tl__card-meta { font-size: 14px; color: var(--text-subtle); margin-top: 4px; }
 .tl__badge {
   font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
-  background: #111; color: #fff; padding: 3px 8px; border-radius: 20px; flex-shrink: 0;
+  background: var(--text); color: var(--bg); padding: 3px 8px; border-radius: 20px; flex-shrink: 0;
 }
+.tl__badge--lower { background: #4caf50; color: #fff; }
+.tl__badge--locked { background: transparent; color: var(--text-subtle); padding: 0; }
 .tl__login-hint { font-size: 12px; color: var(--text-subtle); text-align: center; padding: 8px 0 4px; }
 
 /* ── Tournament Lobby (tlob) ──────────────────────────────────────────────── */
 .tlob { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .tlob__header {
   display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .tlob__back {
   display: flex; align-items: center; justify-content: center;
