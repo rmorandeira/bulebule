@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bule Bule — Documentación técnica</title>
+  <style>
+    :root {
+      --accent:      #E87028;
+      --accent-light:#FEF0E4;
+      --accent-mid:  #F4B06B;
+      --accent-dark: #B54B0E;
+      --text:        #111111;
+      --muted:       #646464;
+      --bg:          #F8F7F5;
+      --surface:     #FFFFFF;
+      --border:      #E2DDD8;
+      --code-bg:     #F2F0ED;
+      --red:         #C0392B;
+      --red-bg:      #FDF2F1;
+      --red-border:  #F0C0BC;
+      --amber-bg:    #FFFBF0;
+      --amber-border:#FFE9A0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-size: 10pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── PAGE LAYOUT ── */
+    @page {
+      size: A4 portrait;
+      margin: 18mm 18mm 22mm 18mm;
+      @bottom-center {
+        content: counter(page) " / " counter(pages);
+        font-size: 8pt;
+        color: #999;
+      }
+    }
+
+    .page {
+      background: var(--surface);
+      width: 174mm;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    /* ── COVER ── */
+    .cover {
+      page-break-after: always;
+      min-height: 267mm;
+      display: flex;
+      flex-direction: column;
+      padding: 18mm 16mm 14mm;
+      background: var(--surface);
+      position: relative;
+    }
+    .cover-accent-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 5pt;
+      background: var(--accent);
+    }
+    .cover-label {
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12pt;
+    }
+    .cover h1 {
+      font-size: 42pt;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 6pt;
+    }
+    .cover-subtitle {
+      font-size: 11.5pt;
+      color: var(--muted);
+      max-width: 110mm;
+      line-height: 1.5;
+      margin-bottom: 20pt;
+    }
+    .cover-divider {
+      width: 28pt;
+      height: 2pt;
+      background: var(--accent);
+      margin-bottom: 20pt;
+    }
+    .cover-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10pt 20pt;
+      font-size: 8.5pt;
+    }
+    .cover-meta-item label {
+      display: block;
+      font-size: 7pt;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 2pt;
+    }
+    .cover-meta-item span {
+      font-size: 9pt;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .cover-footer {
+      margin-top: auto;
+      padding-top: 20pt;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      color: var(--muted);
+    }
+
+    /* ── CONTENT SECTIONS ── */
+    .section {
+      padding: 0 0 24pt;
+      page-break-inside: avoid;
+    }
+    .section + .section {
+      border-top: 1px solid var(--border);
+      padding-top: 22pt;
+    }
+    .section-break { page-break-before: always; }
+
+    h2 {
+      font-size: 10pt;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14pt;
+      display: flex;
+      align-items: center;
+      gap: 7pt;
+    }
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 14pt;
+      height: 2pt;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      color: var(--text);
+      margin: 14pt 0 6pt;
+    }
+    h4 {
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin: 12pt 0 5pt;
+    }
+    p { margin-bottom: 7pt; font-size: 9pt; }
+    ul, ol { padding-left: 14pt; margin-bottom: 7pt; }
+    li { margin-bottom: 2.5pt; font-size: 9pt; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5pt;
+      padding: 11pt 13pt;
+      margin-bottom: 8pt;
+      page-break-inside: avoid;
+    }
+    .card h4 { margin-top: 0; }
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8pt;
+    }
+    .card-3col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8pt;
+    }
+    .card-sm {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4pt;
+      padding: 9pt 11pt;
+      page-break-inside: avoid;
+    }
+    .card-sm h3 { font-size: 9.5pt; margin: 0 0 4pt; }
+    .card-sm p  { font-size: 8.5pt; color: var(--muted); margin: 0; }
+
+    /* ── ALERTS ── */
+    .alert {
+      border-radius: 4pt;
+      padding: 8pt 11pt;
+      margin: 8pt 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+    .alert-red {
+      background: var(--red-bg);
+      border-left: 3pt solid var(--red);
+      color: #6b1a16;
+    }
+    .alert-amber {
+      background: var(--amber-bg);
+      border-left: 3pt solid #D4A017;
+      color: #5a4400;
+    }
+    .alert strong { font-weight: 700; }
+
+    /* ── TABLES ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+      margin-bottom: 10pt;
+      page-break-inside: avoid;
+    }
+    th {
+      text-align: left;
+      font-size: 7pt;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 5pt 8pt;
+      border-bottom: 1.5px solid var(--border);
+      background: var(--bg);
+    }
+    td {
+      padding: 5.5pt 8pt;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    /* ── CODE ── */
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 8pt;
+      background: var(--code-bg);
+      padding: .1em .35em;
+      border-radius: 2pt;
+      color: var(--accent-dark);
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4pt;
+      padding: 10pt 12pt;
+      font-size: 7.8pt;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      line-height: 1.5;
+      margin-bottom: 8pt;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+
+    /* ── TIMELINE ── */
+    .timeline { position: relative; padding-left: 14pt; margin-bottom: 10pt; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 4pt; top: 5pt; bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+    .tl-group { margin-bottom: 16pt; }
+    .tl-date {
+      position: relative;
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 7pt;
+      padding-left: 2pt;
+    }
+    .tl-date::before {
+      content: '';
+      position: absolute;
+      left: -12pt; top: 50%;
+      transform: translateY(-50%);
+      width: 8pt; height: 8pt;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+    .tl-item {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 4pt;
+      padding: 6pt 9pt;
+      margin-bottom: 4pt;
+      font-size: 8.5pt;
+      background: var(--surface);
+      page-break-inside: avoid;
+    }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -10pt; top: 50%;
+      transform: translateY(-50%);
+      width: 6pt; height: 6pt;
+      background: var(--border);
+      border-radius: 50%;
+    }
+    .tl-hash {
+      font-family: monospace;
+      font-size: 7.5pt;
+      color: var(--muted);
+      margin-right: 4pt;
+    }
+    .tl-cat {
+      display: inline-block;
+      font-size: 6.5pt;
+      font-weight: 700;
+      padding: .15em .5em;
+      border-radius: 2pt;
+      margin-right: 4pt;
+      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .cat-feat  { background: #e8f4fd; color: #1a6fa0; }
+    .cat-fix   { background: #fef0f0; color: #a01a1a; }
+    .cat-perf  { background: #f0faf4; color: #1a6040; }
+    .cat-infra { background: #f8f0fe; color: #5a1a8a; }
+    .cat-chore { background: var(--code-bg); color: var(--muted); }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-block;
+      font-size: 6.5pt;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .15em .5em;
+      border-radius: 2pt;
+      vertical-align: middle;
+    }
+    .badge-orange { background: var(--accent); color: #fff; }
+    .badge-red    { background: var(--red); color: #fff; }
+
+    /* ── SVG DIAGRAMS ── */
+    .diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5pt;
+      padding: 14pt 12pt 10pt;
+      margin-bottom: 12pt;
+      page-break-inside: avoid;
+      display: flex;
+      justify-content: center;
+    }
+    .diagram-wrap svg {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+    .diagram-label {
+      font-size: 7pt;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 6pt;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    /* ── ROADMAP GRID ── */
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8pt;
+      margin-bottom: 10pt;
+    }
+    .roadmap-col { page-break-inside: avoid; }
+    .roadmap-col h4 { margin-top: 0; }
+    .roadmap-col ul { font-size: 8.5pt; }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: var(--surface); }
+      .page { width: 100%; }
+      .section-break { page-break-before: always; }
+      .no-break { page-break-inside: avoid; }
+    }
+    @media screen {
+      body { padding: 12mm; }
+      .page {
+        box-shadow: 0 2px 24px rgba(0,0,0,.10);
+        padding: 16mm;
+        margin-bottom: 12mm;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<!-- ════════════════ COVER ════════════════ -->
+<div class="cover">
+  <div class="cover-accent-bar"></div>
+  <div class="cover-label">Documentación técnica</div>
+  <h1>Bule<br>Bule</h1>
+  <div class="cover-divider"></div>
+  <p class="cover-subtitle">Juego multijugador online de póker de dados con física 3D, invitaciones por push y modo bot IA.</p>
+
+  <div class="cover-meta">
+    <div class="cover-meta-item"><label>Commits</label><span>85+</span></div>
+    <div class="cover-meta-item"><label>Líneas de código</label><span>~4.500</span></div>
+    <div class="cover-meta-item"><label>Frontend</label><span>Firebase Hosting</span></div>
+    <div class="cover-meta-item"><label>Backend</label><span>Railway (Node.js)</span></div>
+    <div class="cover-meta-item"><label>Días de desarrollo</label><span>6 días activos</span></div>
+    <div class="cover-meta-item"><label>Versión del doc</label><span>v0.1 · junio 2026</span></div>
+  </div>
+
+  <div class="cover-footer">
+    <span>bulebule.web.app</span>
+    <span>Generado: 10 junio 2026</span>
+  </div>
+</div>
+
+<!-- ════════════════ 1. RESUMEN ════════════════ -->
+<div class="section">
+  <h2>1. Resumen del proyecto</h2>
+
+  <p>
+    <strong>Bule Bule</strong> es una webapp multijugador en tiempo real que implementa el juego tradicional
+    de póker de dados (caras AS, K, Q, J, 8, 7). Los jugadores se reúnen en salas con código,
+    turnan para tirar dados, descartar y quedarse con la mejor mano posible.
+    Quien pierde cada ronda rompe un <em>palillo</em>; sin palillos queda <em>en capilla</em>
+    y una derrota más lo elimina. Un repóker (quintilla) libera al jugador de la partida.
+  </p>
+
+  <div class="card-grid" style="margin: 12pt 0;">
+    <div class="card-sm"><h3>Multijugador real</h3><p>Salas con código de 4 caracteres. Hasta 10 jugadores. Lobby de espera con vista en tiempo real vía WebSocket.</p></div>
+    <div class="card-sm"><h3>Física 3D</h3><p>Dados con Three.js y Rapier3D. Sombras PCF, rebotes y colisiones deterministas por semilla de tirada.</p></div>
+    <div class="card-sm"><h3>Bot IA</h3><p>Modo 1 vs Bot. La IA evalúa la mano, decide qué dados guardar y cuándo plantarse según probabilidad.</p></div>
+    <div class="card-sm"><h3>Sistema de vidas</h3><p>Palillos visuales por jugador. Capilla, liberación por quintilla y modo de juego limitado por rondas.</p></div>
+    <div class="card-sm"><h3>Push &amp; invitaciones</h3><p>Web Push VAPID para invitar amigos aunque la app esté cerrada. Búsqueda de usuarios por nombre.</p></div>
+    <div class="card-sm"><h3>Google OAuth</h3><p>Login opcional con Google. Perfil editable (nombre, avatar). Los no registrados juegan como invitado.</p></div>
+    <div class="card-sm"><h3>Diseño sonoro</h3><p>Cubilete, rebotes, descarte, palillo roto, música de lobby y partida. Todo sincronizado con animaciones.</p></div>
+    <div class="card-sm"><h3>Mobile-first PWA</h3><p>Agitar el móvil para tirar, gestos táctiles para descartar dados. Service worker instalable.</p></div>
+  </div>
+
+  <h3>Manos implementadas</h3>
+  <table>
+    <tr><th>Mano</th><th>Rango</th><th>Descripción</th></tr>
+    <tr><td><strong>Quintilla</strong></td><td><span class="badge badge-orange">7</span></td><td>5 iguales → libera al jugador</td></tr>
+    <tr><td>Póker</td><td>6</td><td>4 iguales</td></tr>
+    <tr><td>Full</td><td>5</td><td>3 + 2 iguales</td></tr>
+    <tr><td>Escalera</td><td>4</td><td>5 valores consecutivos</td></tr>
+    <tr><td>Trío</td><td>3</td><td>3 iguales</td></tr>
+    <tr><td>Dobles parejas</td><td>2</td><td>2 pares distintos</td></tr>
+    <tr><td>Pareja</td><td>1</td><td>2 iguales</td></tr>
+    <tr><td>Carta alta</td><td>0</td><td>Sin combinación</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════ 2. ARQUITECTURA ════════════════ -->
+<div class="section section-break">
+  <h2>2. Arquitectura técnica</h2>
+
+  <!-- DIAGRAM 1: Architecture overview -->
+  <div class="diagram-wrap" style="flex-direction: column; align-items: center;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" width="480" height="138">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#E87028"/>
+        </marker>
+        <marker id="arr2" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
+          <polygon points="8 0, 0 3, 8 6" fill="#E87028"/>
+        </marker>
+      </defs>
+
+      <!-- Box: Cliente -->
+      <rect x="10" y="24" width="138" height="104" rx="5" ry="5" fill="#FEF0E4" stroke="#E87028" stroke-width="1.4"/>
+      <rect x="10" y="24" width="138" height="22" rx="5" ry="5" fill="#E87028"/>
+      <rect x="10" y="35" width="138" height="11" fill="#E87028"/>
+      <text x="79" y="39" font-family="system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">CLIENTE</text>
+      <text x="79" y="57" font-family="system-ui,sans-serif" font-size="8" fill="#B54B0E" text-anchor="middle">React 18 · Vite 5</text>
+      <text x="79" y="70" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Three.js + Rapier3D</text>
+      <text x="79" y="82" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Socket.io-client</text>
+      <text x="79" y="94" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Web Audio API</text>
+      <text x="79" y="106" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">@react-oauth/google</text>
+      <text x="79" y="118" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Service Worker</text>
+
+      <!-- Arrow: Cliente ↔ Servidor (WebSocket) -->
+      <line x1="152" y1="72" x2="188" y2="72" stroke="#E87028" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="188" y1="82" x2="152" y2="82" stroke="#E87028" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <rect x="156" y="60" width="28" height="14" rx="3" fill="#FEF0E4" stroke="#E87028" stroke-width="1"/>
+      <text x="170" y="70" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#E87028" text-anchor="middle">WS</text>
+
+      <!-- Box: Servidor -->
+      <rect x="191" y="24" width="138" height="104" rx="5" ry="5" fill="#FFF8F4" stroke="#E2DDD8" stroke-width="1.2"/>
+      <rect x="191" y="24" width="138" height="22" rx="5" ry="5" fill="#1A1A1A"/>
+      <rect x="191" y="35" width="138" height="11" fill="#1A1A1A"/>
+      <text x="260" y="39" font-family="system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">SERVIDOR</text>
+      <text x="260" y="57" font-family="system-ui,sans-serif" font-size="8" fill="#646464" text-anchor="middle">Node.js · Express 4</text>
+      <text x="260" y="70" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Socket.io 4.7</text>
+      <text x="260" y="82" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">web-push (VAPID)</text>
+      <text x="260" y="94" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Estado en memoria</text>
+      <text x="260" y="106" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">gameLogic.js</text>
+      <text x="260" y="118" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">railway.json · Dockerfile</text>
+
+      <!-- Arrow: Servidor → Infra -->
+      <line x1="333" y1="76" x2="369" y2="76" stroke="#E87028" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Box: Infraestructura -->
+      <rect x="372" y="24" width="138" height="104" rx="5" ry="5" fill="#FFF8F4" stroke="#E2DDD8" stroke-width="1.2"/>
+      <rect x="372" y="24" width="138" height="22" rx="5" ry="5" fill="#1A1A1A"/>
+      <rect x="372" y="35" width="138" height="11" fill="#1A1A1A"/>
+      <text x="441" y="39" font-family="system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">INFRAESTRUCTURA</text>
+      <text x="441" y="57" font-family="system-ui,sans-serif" font-size="8" fill="#646464" text-anchor="middle">Cloud · deploy manual</text>
+      <text x="441" y="70" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Firebase Hosting (frontend)</text>
+      <text x="441" y="82" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">Railway (backend)</text>
+      <text x="441" y="94" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">GitHub (main branch)</text>
+      <text x="441" y="106" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">HTTPS automático</text>
+      <text x="441" y="118" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">CDN global</text>
+    </svg>
+    <p class="diagram-label">Arquitectura de tres capas</p>
+  </div>
+
+  <h3>Stack completo</h3>
+  <table>
+    <tr><th>Capa</th><th>Tecnología</th><th>Versión</th><th>Rol</th></tr>
+    <tr><td>UI framework</td><td>React</td><td>18.3</td><td>Gestión de estado y render</td></tr>
+    <tr><td>Bundler</td><td>Vite</td><td>5.4</td><td>Build, HMR, dev server</td></tr>
+    <tr><td>3D render</td><td>Three.js</td><td>0.184</td><td>Escena WebGL, materiales, sombras PCFSoft</td></tr>
+    <tr><td>Física</td><td>Rapier3D (WASM)</td><td>0.19</td><td>Simulación de cuerpos rígidos de dados</td></tr>
+    <tr><td>Tiempo real</td><td>Socket.io</td><td>4.7</td><td>Comunicación bidireccional cliente-servidor</td></tr>
+    <tr><td>Auth</td><td>@react-oauth/google</td><td>0.13</td><td>OAuth 2.0 con Google</td></tr>
+    <tr><td>Backend HTTP</td><td>Express</td><td>4.18</td><td>API REST mínima + VAPID endpoint</td></tr>
+    <tr><td>Push</td><td>web-push</td><td>3.6</td><td>Notificaciones push VAPID/WebPush</td></tr>
+    <tr><td>Hosting frontend</td><td>Firebase Hosting</td><td>—</td><td>CDN global, HTTPS automático</td></tr>
+    <tr><td>Hosting backend</td><td>Railway</td><td>—</td><td>Contenedor Node.js, auto-SSL</td></tr>
+  </table>
+
+  <h3>Flujo de comunicación WebSocket</h3>
+
+  <!-- DIAGRAM 2: Sequence diagram -->
+  <div class="diagram-wrap" style="flex-direction: column; align-items: center;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 310" width="440" height="296">
+      <defs>
+        <marker id="a-r" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#E87028"/>
+        </marker>
+        <marker id="a-l" markerWidth="7" markerHeight="5" refX="1" refY="2.5" orient="auto">
+          <polygon points="7 0, 0 2.5, 7 5" fill="#E87028"/>
+        </marker>
+      </defs>
+
+      <!-- Lifeline headers -->
+      <rect x="20" y="8" width="110" height="26" rx="4" fill="#E87028"/>
+      <text x="75" y="24" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">CLIENTE</text>
+      <rect x="330" y="8" width="110" height="26" rx="4" fill="#1A1A1A"/>
+      <text x="385" y="24" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">SERVIDOR</text>
+
+      <!-- Lifelines -->
+      <line x1="75" y1="34" x2="75" y2="300" stroke="#E2DDD8" stroke-width="1.2" stroke-dasharray="4,3"/>
+      <line x1="385" y1="34" x2="385" y2="300" stroke="#E2DDD8" stroke-width="1.2" stroke-dasharray="4,3"/>
+
+      <!-- Group: Sala -->
+      <rect x="14" y="46" width="432" height="48" rx="3" fill="#FEF0E4" stroke="#F4B06B" stroke-width="1"/>
+      <text x="22" y="57" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#B54B0E" letter-spacing="0.08em">SALA</text>
+
+      <!-- create_room / join_room -->
+      <line x1="75" y1="64" x2="378" y2="64" stroke="#E87028" stroke-width="1.4" marker-end="url(#a-r)"/>
+      <rect x="168" y="56" width="88" height="14" rx="2" fill="#FEF0E4"/>
+      <text x="212" y="66" font-family="'SF Mono',monospace" font-size="7.5" fill="#B54B0E" text-anchor="middle">create_room / join_room</text>
+
+      <!-- room_state broadcast -->
+      <line x1="378" y1="82" x2="82" y2="82" stroke="#E87028" stroke-width="1.4" marker-end="url(#a-l)"/>
+      <rect x="168" y="74" width="88" height="14" rx="2" fill="#FEF0E4"/>
+      <text x="212" y="84" font-family="'SF Mono',monospace" font-size="7.5" fill="#B54B0E" text-anchor="middle">room_state (broadcast)</text>
+
+      <!-- Group: Tirada -->
+      <rect x="14" y="102" width="432" height="64" rx="3" fill="#F8F7F5" stroke="#E2DDD8" stroke-width="1"/>
+      <text x="22" y="113" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#646464" letter-spacing="0.08em">TIRADA</text>
+
+      <!-- roll -->
+      <line x1="75" y1="120" x2="378" y2="120" stroke="#1A1A1A" stroke-width="1.4" marker-end="url(#a-r)"/>
+      <rect x="176" y="112" width="72" height="14" rx="2" fill="#fff" stroke="#E2DDD8"/>
+      <text x="212" y="122" font-family="'SF Mono',monospace" font-size="7.5" fill="#111" text-anchor="middle">roll { keptIndices }</text>
+
+      <!-- room_state -->
+      <line x1="378" y1="138" x2="82" y2="138" stroke="#1A1A1A" stroke-width="1.4" marker-end="url(#a-l)"/>
+      <rect x="176" y="130" width="72" height="14" rx="2" fill="#fff" stroke="#E2DDD8"/>
+      <text x="212" y="140" font-family="'SF Mono',monospace" font-size="7.5" fill="#111" text-anchor="middle">room_state</text>
+
+      <!-- report_faces -->
+      <line x1="75" y1="156" x2="378" y2="156" stroke="#1A1A1A" stroke-width="1.4" marker-end="url(#a-r)"/>
+      <rect x="160" y="148" width="104" height="14" rx="2" fill="#fff" stroke="#E2DDD8"/>
+      <text x="212" y="158" font-family="'SF Mono',monospace" font-size="7.5" fill="#111" text-anchor="middle">report_faces { faces }</text>
+
+      <!-- Group: Turno -->
+      <rect x="14" y="174" width="432" height="64" rx="3" fill="#F8F7F5" stroke="#E2DDD8" stroke-width="1"/>
+      <text x="22" y="185" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#646464" letter-spacing="0.08em">TURNO</text>
+
+      <!-- stand / continue_turn -->
+      <line x1="75" y1="192" x2="378" y2="192" stroke="#1A1A1A" stroke-width="1.4" marker-end="url(#a-r)"/>
+      <rect x="160" y="184" width="104" height="14" rx="2" fill="#fff" stroke="#E2DDD8"/>
+      <text x="212" y="194" font-family="'SF Mono',monospace" font-size="7.5" fill="#111" text-anchor="middle">stand / continue_turn</text>
+
+      <!-- room_state -->
+      <line x1="378" y1="210" x2="82" y2="210" stroke="#1A1A1A" stroke-width="1.4" marker-end="url(#a-l)"/>
+      <rect x="176" y="202" width="72" height="14" rx="2" fill="#fff" stroke="#E2DDD8"/>
+      <text x="212" y="212" font-family="'SF Mono',monospace" font-size="7.5" fill="#111" text-anchor="middle">room_state</text>
+
+      <!-- Group: Bot -->
+      <rect x="14" y="242" width="432" height="48" rx="3" fill="#FEF0E4" stroke="#F4B06B" stroke-width="1"/>
+      <text x="22" y="253" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#B54B0E" letter-spacing="0.08em">BOT</text>
+
+      <!-- bot_ready -->
+      <line x1="75" y1="260" x2="378" y2="260" stroke="#E87028" stroke-width="1.4" marker-end="url(#a-r)"/>
+      <rect x="176" y="252" width="72" height="14" rx="2" fill="#FEF0E4"/>
+      <text x="212" y="262" font-family="'SF Mono',monospace" font-size="7.5" fill="#B54B0E" text-anchor="middle">bot_ready</text>
+
+      <!-- room_state -->
+      <line x1="378" y1="278" x2="82" y2="278" stroke="#E87028" stroke-width="1.4" marker-end="url(#a-l)"/>
+      <rect x="176" y="270" width="72" height="14" rx="2" fill="#FEF0E4"/>
+      <text x="212" y="280" font-family="'SF Mono',monospace" font-size="7.5" fill="#B54B0E" text-anchor="middle">room_state</text>
+    </svg>
+    <p class="diagram-label">Protocolo WebSocket cliente ↔ servidor</p>
+  </div>
+
+  <h3>Estructura de directorios</h3>
+  <pre>bule-bule/
+├── backend/
+│   ├── server.js          # Lógica de servidor (659 líneas)
+│   ├── gameLogic.js       # Evaluación y comparación de manos (51 líneas)
+│   ├── Dockerfile
+│   └── railway.json
+└── frontend/
+    ├── public/
+    │   └── assets/        # Imágenes, audios (.mp3)
+    └── src/
+        ├── App.jsx            # Routing, música, auth (controlador raíz)
+        ├── socket.js          # Singleton Socket.io
+        ├── index.css          # Todos los estilos (1.544 líneas)
+        └── components/
+            ├── GameBoard.jsx          # Pantalla de juego principal
+            ├── DiceRollerScene.jsx    # Escena 3D Three.js + Rapier
+            ├── AnimacionNextPlayer.jsx
+            ├── AnimacionPalilloRoto.jsx
+            ├── WaitingRoom.jsx
+            ├── RoomList.jsx / CreateRoom.jsx
+            ├── UserSettings.jsx
+            └── Die.jsx / AlaCaidaToast.jsx</pre>
+</div>
+
+<!-- ════════════════ 3. HISTÓRICO ════════════════ -->
+<div class="section section-break">
+  <h2>3. Histórico de commits — línea de vida</h2>
+
+  <div class="timeline">
+
+    <div class="tl-group">
+      <div class="tl-date">5 junio 2026 — Día 1: Fundamentos y primer deploy</div>
+      <div class="tl-item"><span class="tl-hash">ecf1070</span><span class="tl-cat cat-feat">feat</span><strong>Initial commit</strong> — estructura base, lógica de juego (manos, comparación), servidor Socket.io, cliente React con dados 2D.</div>
+      <div class="tl-item"><span class="tl-hash">6e95c0f–1145085</span><span class="tl-cat cat-infra">infra</span><strong>Deploy Railway</strong> — PORT env var, CORS producción, health check, URL frontend apuntando al backend.</div>
+      <div class="tl-item"><span class="tl-hash">d30910a</span><span class="tl-cat cat-feat">feat</span><strong>Navbar persistente</strong>, scoreboard con 5 dados, preservación de posiciones al re-tirar.</div>
+      <div class="tl-item"><span class="tl-hash">8e46001–3c8b832</span><span class="tl-cat cat-feat">feat</span><strong>Sonido sintético</strong> en tirada + <strong>shake-to-roll</strong> en móvil. Primer prototipo jugable end-to-end.</div>
+    </div>
+
+    <div class="tl-group">
+      <div class="tl-date">8 junio 2026 — Día 2: Multiplayer completo + rama 3D mergeada</div>
+      <div class="tl-item"><span class="tl-hash">046d7d8</span><span class="tl-cat cat-feat">feat</span><strong>Google OAuth</strong> — login con Google, perfil con avatar.</div>
+      <div class="tl-item"><span class="tl-hash">d4cf675</span><span class="tl-cat cat-feat">feat</span><strong>Sistema de salas</strong> — lobby, listado de partidas públicas, creación con nombre y código.</div>
+      <div class="tl-item"><span class="tl-hash">2c53366</span><span class="tl-cat cat-feat">feat</span><strong>Ajustes de usuario</strong> — pantalla de perfil, edición de nombre, gestión de notificaciones.</div>
+      <div class="tl-item"><span class="tl-hash">a08e34b</span><span class="tl-cat cat-feat">feat</span><strong>Bot IA</strong> — modo 1 vs Bot con lógica de decisión serverside (keeps, stand-off).</div>
+      <div class="tl-item"><span class="tl-hash">086052f–ea601d7</span><span class="tl-cat cat-feat">feat</span><strong>Gestos táctiles</strong> — swipe y tap para descartar dados. Mínimo 1 descarte para re-tirar.</div>
+      <div class="tl-item"><span class="tl-hash">5f4d086–46bd548</span><span class="tl-cat cat-feat">feat</span><strong>Web Push + invitaciones</strong> — VAPID auto-generado, búsqueda de amigos, invitación en tiempo real y por push offline.</div>
+      <div class="tl-item"><span class="tl-hash">60fba58</span><span class="tl-cat cat-feat">feat</span><strong>Merge rama 3D</strong> — primera versión con Three.js + Rapier física en el dice-box.</div>
+    </div>
+
+    <div class="tl-group">
+      <div class="tl-date">9 junio 2026 — Día 3: Física 3D completa + polish visual</div>
+      <div class="tl-item"><span class="tl-hash">f196beb–440cb77</span><span class="tl-cat cat-feat">feat</span><strong>Dados 3D con Rapier</strong> — física real, gravedad, rebotes, detección de asentamiento. Caras generadas por canvas procedural. Layout 2+3.</div>
+      <div class="tl-item"><span class="tl-hash">143ecbb</span><span class="tl-cat cat-feat">feat</span><strong>Orientación física</strong> — los dados se alinean al slot con la cara correcta arriba (calculada por cuaternión).</div>
+      <div class="tl-item"><span class="tl-hash">5ee7db7</span><span class="tl-cat cat-feat">feat</span><strong>Caras físicas</strong> — <code>report_faces</code> sincroniza la cara visible con el servidor.</div>
+      <div class="tl-item"><span class="tl-hash">92660ee</span><span class="tl-cat cat-feat">feat</span><strong>Imagen de fondo A Coruña</strong>, fade-in inicial, corrección caras K/Q.</div>
+      <div class="tl-item"><span class="tl-hash">e44a65b–912a111</span><span class="tl-cat cat-feat">feat</span><strong>Música de lobby</strong> en bucle con pausa al entrar en partida y fade controlado.</div>
+      <div class="tl-item"><span class="tl-hash">e7f193b</span><span class="tl-cat cat-feat">feat</span><strong>Zona de descarte 3D</strong> — dados descartados al fondo con borde rojo y opacidad 50%.</div>
+      <div class="tl-item"><span class="tl-hash">f71a87c</span><span class="tl-cat cat-fix">fix</span><strong>Double-fire touchend+click</strong> — <code>preventDefault</code> en touchend para móvil.</div>
+    </div>
+
+    <div class="tl-group">
+      <div class="tl-date">10 junio 2026 — Día 4: Vidas + sonido completo + sombras</div>
+      <div class="tl-item"><span class="tl-hash">1a9c09e</span><span class="tl-cat cat-feat">feat</span><strong>Sistema de palillos</strong> — 3 vidas por jugador, capilla, liberación por quintilla. Lógica backend + UI visual.</div>
+      <div class="tl-item"><span class="tl-hash">8712917</span><span class="tl-cat cat-feat">feat</span><strong>Pausa entre turnos</strong> — overlay "jugada a superar", <code>awaitContinue</code> serverside, contador 30s.</div>
+      <div class="tl-item"><span class="tl-hash">1ae8507</span><span class="tl-cat cat-feat">feat</span><strong>Animación palillo roto</strong> — overlay al final de cada ronda con efecto visual.</div>
+      <div class="tl-item"><span class="tl-hash">9a687cc–c61273c</span><span class="tl-cat cat-feat">feat</span><strong>Animación cambio de jugador</strong> — dos imágenes ("ÉS TU TURNO" / "ÉS EL TURNO DE"), nombre + palillos. Botón solo al activo.</div>
+      <div class="tl-item"><span class="tl-hash">79c2081</span><span class="tl-cat cat-feat">feat</span><strong>Bot auto-continúa en 3s</strong> — <code>BOT_CONTINUE_TIMEOUT</code> separado del humano (30s).</div>
+      <div class="tl-item"><span class="tl-hash">c589639</span><span class="tl-cat cat-feat">feat</span><strong>Sonido cubilete</strong> — la física espera al evento <code>ended</code> del mp3.</div>
+      <div class="tl-item"><span class="tl-hash">de29e9c</span><span class="tl-cat cat-feat">feat</span><strong>Sincronización eliminar_dados</strong> — fade α→0 de la duración exacta del mp3. Luego cubilete → física.</div>
+      <div class="tl-item"><span class="tl-hash">82e55c4</span><span class="tl-cat cat-feat">feat</span><strong>Sonido de botones</strong> — listener global, excluye "Tirar dados".</div>
+      <div class="tl-item"><span class="tl-hash">774e8b7</span><span class="tl-cat cat-feat">feat</span><strong>Música de partida</strong> (Dice Lemonlight) — volumen 0.2, en bucle.</div>
+      <div class="tl-item"><span class="tl-hash">21832b2</span><span class="tl-cat cat-feat">feat</span><strong>Sombras 3D</strong> — PCFSoftShadowMap, directional light con frustum ajustado, ShadowMaterial en suelo.</div>
+      <div class="tl-item"><span class="tl-hash">740eaff</span><span class="tl-cat cat-perf">perf</span><strong>Física +15%</strong> — <code>world.timestep × 1.15</code>. Ghost colliders fijos para dados quietos durante nueva tirada.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════ 4.1 BACKEND ════════════════ -->
+<div class="section section-break">
+  <h2>4.1 Backend — server.js · gameLogic.js</h2>
+
+  <div class="card no-break">
+    <h4>Estado global</h4>
+    <p><code>rooms{}</code> — diccionario en memoria indexado por código de sala. Cada sala es un objeto mutable con jugadores, fase de juego, índice del jugador activo, timers y metadatos de ronda.</p>
+    <p style="margin-bottom:0"><code>registeredUsers{}</code> — usuarios OAuth en sesión. Mapea <code>userId → { name, email, picture, socketId, pushSubscription }</code>.</p>
+    <div class="alert alert-red"><strong>Error potencial:</strong> Todo el estado vive en memoria. Un reinicio de Railway (deploy, crash, sleep) destruye todas las salas activas y las suscripciones push.</div>
+  </div>
+
+  <div class="card no-break">
+    <h4>gameLogic.js — Evaluación de manos</h4>
+    <p>Módulo puro sin efectos secundarios. Exporta <code>rollDie()</code>, <code>evaluateHand(dice[])</code> y <code>compareHands(h1, h2)</code>.</p>
+    <div class="alert alert-amber"><strong>Atención:</strong> <code>rollDie()</code> usa <code>Math.random()</code> serverside. La semilla (<code>rollSeed</code>) es solo para animación visual. Si <code>report_faces</code> diverge, la mano mostrada puede no coincidir con la evaluada.</div>
+  </div>
+
+  <!-- DIAGRAM 3: Room lifecycle -->
+  <div class="diagram-wrap" style="flex-direction: column; align-items: center;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 80" width="450" height="75">
+      <defs>
+        <marker id="b-r" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#E87028"/>
+        </marker>
+      </defs>
+
+      <!-- States -->
+      <rect x="8" y="24" width="66" height="28" rx="4" fill="#FEF0E4" stroke="#E87028" stroke-width="1.4"/>
+      <text x="41" y="40" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#E87028" text-anchor="middle">lobby</text>
+
+      <line x1="78" y1="38" x2="104" y2="38" stroke="#E87028" stroke-width="1.4" marker-end="url(#b-r)"/>
+      <text x="91" y="32" font-family="system-ui,sans-serif" font-size="6.5" fill="#B54B0E" text-anchor="middle">start_game</text>
+
+      <rect x="107" y="24" width="72" height="28" rx="4" fill="#1A1A1A" stroke="#1A1A1A" stroke-width="1.4"/>
+      <text x="143" y="40" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle">playing</text>
+
+      <line x1="183" y1="38" x2="209" y2="38" stroke="#E87028" stroke-width="1.4" marker-end="url(#b-r)"/>
+      <text x="196" y="32" font-family="system-ui,sans-serif" font-size="6.5" fill="#B54B0E" text-anchor="middle">ronda fin</text>
+
+      <rect x="212" y="24" width="72" height="28" rx="4" fill="#F8F7F5" stroke="#E2DDD8" stroke-width="1.4"/>
+      <text x="248" y="40" font-family="system-ui,sans-serif" font-size="8.5" font-weight="600" fill="#646464" text-anchor="middle">results</text>
+
+      <line x1="284" y1="38" x2="310" y2="38" stroke="#E87028" stroke-width="1.4" marker-end="url(#b-r)"/>
+      <text x="297" y="32" font-family="system-ui,sans-serif" font-size="6.5" fill="#B54B0E" text-anchor="middle">next_round</text>
+
+      <rect x="313" y="24" width="72" height="28" rx="4" fill="#1A1A1A" stroke="#1A1A1A" stroke-width="1.4"/>
+      <text x="349" y="40" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle">playing</text>
+
+      <!-- Loop arrow -->
+      <path d="M 349 24 Q 349 6 308 6 Q 248 6 248 24" stroke="#E87028" stroke-width="1.2" fill="none" stroke-dasharray="3,2" marker-end="url(#b-r)"/>
+
+      <line x1="389" y1="38" x2="412" y2="38" stroke="#E87028" stroke-width="1.4" marker-end="url(#b-r)"/>
+      <text x="400" y="32" font-family="system-ui,sans-serif" font-size="6.5" fill="#B54B0E" text-anchor="middle">alguien pierde</text>
+
+      <rect x="415" y="24" width="60" height="28" rx="4" fill="#FEF0E4" stroke="#E87028" stroke-width="1.4"/>
+      <text x="445" y="40" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#B54B0E" text-anchor="middle">finished</text>
+    </svg>
+    <p class="diagram-label">Ciclo de vida de una sala</p>
+  </div>
+
+  <div class="card no-break">
+    <h4>Gestión de turnos — timers</h4>
+    <table style="margin-bottom:8pt">
+      <tr><th>Timer</th><th>Duración</th><th>Acción al expirar</th></tr>
+      <tr><td><code>turnTimerId</code></td><td>30s</td><td>Si no ha tirado: tira automático. Si ya tiró: planta.</td></tr>
+      <tr><td><code>continueTimerId</code></td><td>30s (human) / 3s (bot)</td><td>Llama a <code>proceedTurn</code>, arrancando el turno.</td></tr>
+    </table>
+    <div class="alert alert-red" style="margin-bottom:0"><strong>Error potencial:</strong> Los timers usan <code>setTimeout</code> único por sala. Una reconexión con ID diferente durante el turno puede ejecutar <code>finishTurn</code> sobre el jugador equivocado si el índice se modificó mientras tanto.</div>
+  </div>
+
+  <div class="card no-break">
+    <h4>Desconexión de jugadores</h4>
+    <p>El jugador desconectado permanece en sala <strong>20 segundos</strong> para permitir reconexiones. Si era el host, el siguiente jugador hereda el rol.</p>
+    <div class="alert alert-red" style="margin-bottom:0"><strong>Error potencial:</strong> Durante esos 20s puede ser el <code>currentPlayer</code>. Si le toca tirar, el turno queda bloqueado hasta que expire el <code>turnTimer</code> (hasta 30s adicionales). Total: hasta 50s de partida congelada sin notificación.</div>
+  </div>
+
+  <!-- DIAGRAM 4: Bot protocol -->
+  <h3>Bot IA — protocolo de sincronización</h3>
+  <div class="diagram-wrap" style="flex-direction: column; align-items: center;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" width="460" height="92">
+      <defs>
+        <marker id="c-r" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#E87028"/>
+        </marker>
+      </defs>
+
+      <!-- Phase boxes -->
+      <rect x="10" y="30" width="76" height="32" rx="4" fill="#FEF0E4" stroke="#E87028" stroke-width="1.4"/>
+      <text x="48" y="48" font-family="system-ui,sans-serif" font-size="8" font-weight="700" fill="#E87028" text-anchor="middle">botPhase</text>
+      <text x="48" y="58" font-family="'SF Mono',monospace" font-size="7" fill="#B54B0E" text-anchor="middle">'rolled'</text>
+
+      <rect x="136" y="14" width="88" height="22" rx="3" fill="#F2F0ED" stroke="#E2DDD8" stroke-width="1"/>
+      <text x="180" y="28" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">cliente anima 3D</text>
+      <line x1="137" y1="46" x2="88" y2="46" stroke="#1A1A1A" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#c-r)"/>
+      <line x1="224" y1="46" x2="248" y2="46" stroke="#E87028" stroke-width="1.4" marker-end="url(#c-r)"/>
+      <text x="236" y="40" font-family="'SF Mono',monospace" font-size="6.5" fill="#B54B0E" text-anchor="middle">bot_ready</text>
+
+      <rect x="252" y="30" width="76" height="32" rx="4" fill="#FEF0E4" stroke="#E87028" stroke-width="1.4"/>
+      <text x="290" y="48" font-family="system-ui,sans-serif" font-size="8" font-weight="700" fill="#E87028" text-anchor="middle">botPhase</text>
+      <text x="290" y="58" font-family="'SF Mono',monospace" font-size="7" fill="#B54B0E" text-anchor="middle">'picking'</text>
+
+      <rect x="136" y="66" width="88" height="22" rx="3" fill="#F2F0ED" stroke="#E2DDD8" stroke-width="1"/>
+      <text x="180" y="80" font-family="system-ui,sans-serif" font-size="7.5" fill="#646464" text-anchor="middle">cliente muestra descartes</text>
+      <line x1="252" y1="60" x2="224" y2="60" stroke="#1A1A1A" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#c-r)"/>
+      <line x1="136" y1="60" x2="112" y2="60" stroke="#1A1A1A" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#c-r)"/>
+      <line x1="380" y1="46" x2="412" y2="46" stroke="#E87028" stroke-width="1.4" marker-end="url(#c-r)"/>
+      <text x="396" y="40" font-family="'SF Mono',monospace" font-size="6.5" fill="#B54B0E" text-anchor="middle">bot_ready</text>
+
+      <rect x="416" y="30" width="72" height="32" rx="4" fill="#F8F7F5" stroke="#E2DDD8" stroke-width="1.4"/>
+      <text x="452" y="44" font-family="system-ui,sans-serif" font-size="8" font-weight="600" fill="#646464" text-anchor="middle">botPhase</text>
+      <text x="452" y="56" font-family="'SF Mono',monospace" font-size="7" fill="#646464" text-anchor="middle">null</text>
+    </svg>
+    <p class="diagram-label">Fases del bot — sincronización servidor ↔ cliente</p>
+  </div>
+
+  <div class="alert alert-amber"><strong>Atención:</strong> Si el cliente nunca emite <code>bot_ready</code> (fallo de render, tab en segundo plano), el bot queda bloqueado indefinidamente. Hay un fallback de 8s en el cliente, pero no existe timeout serverside para <code>botPhase</code>.</div>
+
+  <div class="card no-break">
+    <h4>report_faces — superficie de ataque</h4>
+    <p>Tras cada tirada, el cliente reporta las caras físicas visibles al servidor. El servidor valida que sean 5 valores del conjunto válido.</p>
+    <div class="alert alert-red" style="margin-bottom:0"><strong>Error potencial:</strong> Un cliente modificado podría enviar la mano que quisiera (p.ej. siempre Quintilla). No existe verificación de coherencia con la semilla ni con los dados generados serverside para esa tirada.</div>
+  </div>
+
+  <div class="card no-break">
+    <h4>Push Notifications — VAPID</h4>
+    <p>Si no se configuran <code>VAPID_PUBLIC_KEY</code> / <code>VAPID_PRIVATE_KEY</code>, el servidor genera nuevas claves en cada inicio.</p>
+    <div class="alert alert-red" style="margin-bottom:0"><strong>Error potencial:</strong> Cada reinicio/redeploy de Railway invalida todas las suscripciones push existentes (fallarán silenciosamente con error 410). Es crítico persistir estas claves como env vars fijas en Railway.</div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card no-break">
+      <h4>CORS</h4>
+      <p>Configurado con <code>origin: '*'</code> tanto en Express como en Socket.io.</p>
+      <div class="alert alert-red" style="margin-bottom:0"><strong>Error potencial:</strong> CORS completamente abierto. Debería restringirse al dominio de Firebase Hosting.</div>
+    </div>
+    <div class="card no-break">
+      <h4>Recursos no acotados</h4>
+      <div class="alert alert-red" style="margin-bottom:0"><strong>Error potencial:</strong> No hay límite de salas simultáneas ni de <code>registeredUsers{}</code>. Sin rate limiting en ningún evento Socket.io. Un uso abusivo puede agotar la memoria del proceso.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ 4.2 FRONTEND ════════════════ -->
+<div class="section section-break">
+  <h2>4.2 Frontend — Componentes y casos de uso</h2>
+
+  <div class="card no-break">
+    <h4>App.jsx — Controlador raíz</h4>
+    <p>Gestiona la pantalla activa (<code>'list' | 'create' | 'settings'</code>), estado de usuario, música, service worker y reconexión por URL (<code>?join=CODE</code>). Singleton de socket importado de <code>socket.js</code> — una sola conexión por sesión.</p>
+    <ul>
+      <li>Si llega <code>room_state</code>, muestra <code>WaitingRoom</code> o <code>GameBoard</code> según <code>room.phase</code>.</li>
+      <li>Dos instancias de <code>Audio</code> precargadas: <code>musicRef</code> (lobby) y <code>gameMusicRef</code> (partida).</li>
+    </ul>
+    <div class="alert alert-amber" style="margin-bottom:0"><strong>Atención:</strong> La música solo arranca tras el primer gesto del usuario (política de autoplay). Al entrar directamente vía URL sin interacción previa, la música de partida puede no reproducirse.</div>
+  </div>
+
+  <div class="card no-break">
+    <h4>GameBoard.jsx — Pantalla de juego</h4>
+    <p>Componente principal. Gestiona <code>pendingDiscards[]</code>, <code>sceneValues / rollingIndices / rollSeed</code>, <code>botDiscards[]</code>, detección de nueva tirada, animaciones de cambio de jugador y palillo roto, shake-to-roll e intercepción de pull-to-refresh.</p>
+    <div class="alert alert-amber"><strong>Atención:</strong> <code>toggleDiscard</code> actualiza estado local sin confirmación del servidor. Si la conexión cae justo antes de emitir <code>roll</code>, los descartes marcados localmente persisten hasta la reconexión.</div>
+    <div class="alert alert-red" style="margin-bottom:0"><strong>Error potencial:</strong> El timer (<code>turnDeadline</code>) se calcula como diferencia entre <code>Date.now()</code> cliente y timestamp de servidor. Una desincronización de reloj puede mostrar 0s aunque el turno no haya expirado.</div>
+  </div>
+
+  <div class="card no-break">
+    <h4>DiceRollerScene.jsx — Escena 3D (componente más complejo)</h4>
+    <p>Gestiona el ciclo completo: sonidos → física → animación → callback.</p>
+    <ul>
+      <li><strong>Init (useEffect [])</strong> — renderer, cámara, luces, 5 meshes de dados. Rapier se carga de forma asíncrona (WASM).</li>
+      <li><strong>rollWithSounds()</strong> — orquesta: exit fade + eliminar_dados.mp3 → cubilete.mp3 → física.</li>
+      <li><strong>step()</strong> — loop de render: física, settle detection, placing tween, move tween, exit tween.</li>
+      <li><strong>Ghost colliders</strong> — dados en fase <code>idle</code> reciben un cuerpo fijo temporal durante <code>doRoll</code> para que los dados nuevos reboten contra ellos.</li>
+    </ul>
+    <div class="alert alert-red"><strong>Error potencial:</strong> Si el servidor emite la primera tirada antes de que Rapier termine de inicializar (WASM), se almacena en <code>ctx.pendingRoll</code>. Si el componente se desmontó mientras cargaba, la tirada se pierde silenciosamente.</div>
+    <div class="alert alert-amber" style="margin-bottom:0"><strong>Atención:</strong> La duración del fade se lee de <code>_eliminarAudio.duration</code>. Si el audio no ha cargado (primera tirada muy rápida), <code>duration</code> es <code>NaN</code> y se usa el fallback de 800ms, que puede no coincidir con el mp3 real.</div>
+  </div>
+
+  <h3>Sistema de audio</h3>
+  <table>
+    <tr><th>Archivo</th><th>Trigger</th><th>Implementación</th></tr>
+    <tr><td><code>dado1/2/3.mp3</code></td><td>Rebote físico dado</td><td>Rotación cíclica, volumen proporcional al impacto</td></tr>
+    <tr><td><code>cubilete.mp3</code></td><td>Antes de lanzar dados</td><td>La física espera al evento <code>ended</code></td></tr>
+    <tr><td><code>eliminar_dados.mp3</code></td><td>Fade-out de dados</td><td>Duración del mp3 = duración del tween α→0</td></tr>
+    <tr><td><code>cogerdado.mp3</code></td><td>Marcar dado para descartar</td><td>Click táctil/ratón + bot picking</td></tr>
+    <tr><td><code>romper_palillo.mp3</code></td><td>Fin de ronda con perdedor</td><td>Simultáneo con AnimacionPalilloRoto</td></tr>
+    <tr><td><code>button_press.mp3</code></td><td>Cualquier botón</td><td>Listener global en document, excluye "Tirar dados"</td></tr>
+    <tr><td><code>bule-escaleira.mp3</code></td><td>Pantalla de inicio</td><td>Loop, pausa al entrar en partida</td></tr>
+    <tr><td><code>dice-lemonlight.mp3</code></td><td>Durante la partida</td><td>Loop vol 0.2, para al volver al lobby</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════ 5. ROADMAP ════════════════ -->
+<div class="section section-break">
+  <h2>5. Roadmap y mejoras futuras</h2>
+
+  <div class="alert alert-amber"><strong>Estado actual:</strong> MVP funcional y jugable. Las áreas en rojo de las secciones anteriores son las prioridades inmediatas antes de cualquier crecimiento de usuarios.</div>
+
+  <h3>Deuda técnica prioritaria</h3>
+  <div class="card no-break">
+    <ol>
+      <li style="margin-bottom:5pt"><strong>Persistencia de estado</strong> — Migrar <code>rooms{}</code> y <code>registeredUsers{}</code> a Redis. Permite reiniciar el servidor sin perder partidas y escalar con Socket.io adapter.</li>
+      <li style="margin-bottom:5pt"><strong>Validación serverside de caras</strong> — Verificar que las caras reportadas son consistentes con la semilla, o ignorar <code>report_faces</code> y calcular la orientación en servidor.</li>
+      <li style="margin-bottom:5pt"><strong>CORS restringido</strong> — <code>origin: 'https://bulebule.web.app'</code> en Express y Socket.io.</li>
+      <li style="margin-bottom:5pt"><strong>VAPID keys persistidas</strong> — Configurar como env vars fijas en Railway para no invalidar suscripciones en cada deploy.</li>
+      <li style="margin-bottom:5pt"><strong>Rate limiting</strong> — Limitar eventos Socket.io por socket/IP (p.ej. máx. 10 <code>roll</code>/s).</li>
+      <li><strong>Notificación de desconexión</strong> — Informar a la sala cuando un jugador se desconecta.</li>
+    </ol>
+  </div>
+
+  <h3>Features pendientes</h3>
+  <div class="roadmap-grid">
+    <div class="roadmap-col card-sm">
+      <h4>Juego</h4>
+      <ul>
+        <li>Chat en sala</li>
+        <li>Espectadores (solo lectura)</li>
+        <li>Revancha con todos los jugadores</li>
+        <li>Variantes de reglas configurables</li>
+        <li>Historial de manos de la partida</li>
+        <li>Estadísticas de jugador (W/L, manos)</li>
+      </ul>
+    </div>
+    <div class="roadmap-col card-sm">
+      <h4>Social</h4>
+      <ul>
+        <li>Lista de amigos persistente</li>
+        <li>Ranking global / tabla de líderes</li>
+        <li>Torneos bracket</li>
+        <li>Compartir resultado de partida</li>
+        <li>Avatares personalizados</li>
+      </ul>
+    </div>
+    <div class="roadmap-col card-sm">
+      <h4>Infraestructura</h4>
+      <ul>
+        <li>Base de datos (PostgreSQL)</li>
+        <li>Redis para estado + Socket.io adapter</li>
+        <li>CI/CD automático (GitHub Actions)</li>
+        <li>Monitoring y alertas (Sentry)</li>
+        <li>Tests unitarios (gameLogic) e integración</li>
+        <li>Logs estructurados (pino / winston)</li>
+      </ul>
+    </div>
+    <div class="roadmap-col card-sm">
+      <h4>Cliente</h4>
+      <ul>
+        <li>Modo offline (PWA completa)</li>
+        <li>App nativa iOS/Android (Capacitor)</li>
+        <li>Haptic feedback en móvil</li>
+        <li>Accesibilidad (ARIA, alto contraste)</li>
+        <li>i18n (castellano / galego / inglés)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Arquitectura escalable propuesta</h3>
+
+  <!-- DIAGRAM 5: Scalable architecture -->
+  <div class="diagram-wrap" style="flex-direction: column; align-items: center;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 230" width="370" height="213">
+      <defs>
+        <marker id="d-d" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#E87028"/>
+        </marker>
+        <marker id="d-u" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#646464"/>
+        </marker>
+      </defs>
+
+      <!-- Firebase Hosting -->
+      <rect x="120" y="8" width="160" height="28" rx="4" fill="#FEF0E4" stroke="#E87028" stroke-width="1.4"/>
+      <text x="200" y="26" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#E87028" text-anchor="middle">Firebase Hosting</text>
+
+      <!-- Arrow down -->
+      <line x1="200" y1="38" x2="200" y2="56" stroke="#E87028" stroke-width="1.4" marker-end="url(#d-d)"/>
+      <text x="214" y="50" font-family="system-ui,sans-serif" font-size="6.5" fill="#B54B0E">HTTPS / WSS</text>
+
+      <!-- Load Balancer -->
+      <rect x="100" y="58" width="200" height="28" rx="4" fill="#1A1A1A"/>
+      <text x="200" y="76" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle">Load Balancer</text>
+
+      <!-- Arrows to nodes -->
+      <line x1="150" y1="88" x2="100" y2="112" stroke="#E2DDD8" stroke-width="1.2" marker-end="url(#d-d)"/>
+      <line x1="250" y1="88" x2="300" y2="112" stroke="#E2DDD8" stroke-width="1.2" marker-end="url(#d-d)"/>
+
+      <!-- Node 1 -->
+      <rect x="32" y="114" width="120" height="28" rx="4" fill="#F8F7F5" stroke="#E2DDD8" stroke-width="1.2"/>
+      <text x="92" y="132" font-family="system-ui,sans-serif" font-size="8" fill="#646464" text-anchor="middle">Node.js instancia 1</text>
+
+      <!-- Node 2 -->
+      <rect x="248" y="114" width="120" height="28" rx="4" fill="#F8F7F5" stroke="#E2DDD8" stroke-width="1.2"/>
+      <text x="308" y="132" font-family="system-ui,sans-serif" font-size="8" fill="#646464" text-anchor="middle">Node.js instancia 2</text>
+
+      <!-- Arrows to Redis -->
+      <line x1="92" y1="144" x2="170" y2="164" stroke="#E2DDD8" stroke-width="1.2" marker-end="url(#d-d)"/>
+      <line x1="308" y1="144" x2="230" y2="164" stroke="#E2DDD8" stroke-width="1.2" marker-end="url(#d-d)"/>
+
+      <!-- Redis -->
+      <rect x="110" y="166" width="180" height="28" rx="4" fill="#FEF0E4" stroke="#E87028" stroke-width="1.4"/>
+      <text x="200" y="178" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#E87028" text-anchor="middle">Redis</text>
+      <text x="200" y="189" font-family="system-ui,sans-serif" font-size="7" fill="#B54B0E" text-anchor="middle">rooms{} + Socket.io adapter</text>
+
+      <!-- Arrow to PostgreSQL -->
+      <line x1="200" y1="196" x2="200" y2="212" stroke="#E2DDD8" stroke-width="1.2" marker-end="url(#d-d)"/>
+
+      <!-- PostgreSQL -->
+      <rect x="110" y="214" width="180" height="14" rx="4" fill="#F8F7F5" stroke="#E2DDD8" stroke-width="1.2"/>
+      <text x="200" y="224" font-family="system-ui,sans-serif" font-size="8" fill="#646464" text-anchor="middle">PostgreSQL — users, stats, historial</text>
+    </svg>
+    <p class="diagram-label">Arquitectura propuesta para escalar a múltiples instancias</p>
+  </div>
+
+  <h3>Tecnologías a evaluar</h3>
+  <table>
+    <tr><th>Área</th><th>Opción actual</th><th>Alternativa</th><th>Motivo</th></tr>
+    <tr><td>Estado servidor</td><td>In-memory</td><td>Redis</td><td>Persistencia, multi-instancia</td></tr>
+    <tr><td>Base de datos</td><td>—</td><td>PostgreSQL + Prisma</td><td>Historial, stats, usuarios</td></tr>
+    <tr><td>Deploy backend</td><td>Railway</td><td>Fly.io / Render</td><td>Mejor pricing a escala, regiones</td></tr>
+    <tr><td>Auth</td><td>OAuth manual</td><td>Clerk / Auth.js</td><td>Sesiones, múltiples proveedores</td></tr>
+    <tr><td>Tests</td><td>—</td><td>Vitest + Playwright</td><td>Unit + E2E multijugador</td></tr>
+    <tr><td>Monitoring</td><td>—</td><td>Sentry + Uptime Robot</td><td>Errores + disponibilidad</td></tr>
+    <tr><td>Physics</td><td>Rapier WASM</td><td>—</td><td>Rapier es ya la mejor opción en JS</td></tr>
+  </table>
+</div>
+
+</div><!-- /page -->
+</body>
+</html>

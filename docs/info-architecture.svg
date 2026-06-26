@@ -1,0 +1,386 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1300" font-family="'Segoe UI', system-ui, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#64748b"/>
+    </marker>
+    <marker id="arr-r" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-p" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#7c3aed"/>
+    </marker>
+    <filter id="sh">
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1800" height="1300" fill="#f1f5f9"/>
+
+  <!-- ══════════════════════ TITLE ══════════════════════ -->
+  <text x="900" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">BuleBule — Arquitectura de Información</text>
+  <text x="900" y="57" text-anchor="middle" font-size="11" fill="#64748b">Juego de dados multijugador en tiempo real · React + Socket.IO + Three.js + Rapier3D</text>
+
+  <!-- ══════════════════════ SECTION 1: SCREENS ══════════════════════ -->
+  <rect x="20" y="70" width="1760" height="340" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <rect x="20" y="70" width="1760" height="32" rx="10" fill="#1d4ed8"/>
+  <rect x="20" y="90" width="1760" height="12" fill="#1d4ed8"/>
+  <text x="40" y="92" font-size="12" font-weight="700" fill="white">① FLUJO DE PANTALLAS</text>
+
+  <!-- RoomList -->
+  <rect x="50" y="140" width="200" height="75" rx="8" fill="#2563eb" filter="url(#sh)"/>
+  <text x="150" y="164" text-anchor="middle" font-size="12" font-weight="700" fill="white">RoomList</text>
+  <text x="150" y="179" text-anchor="middle" font-size="9" fill="#bfdbfe">Pantalla de inicio</text>
+  <text x="150" y="192" text-anchor="middle" font-size="9" fill="#93c5fd">Salas públicas · Login Google</text>
+  <text x="150" y="205" text-anchor="middle" font-size="9" fill="#93c5fd">Unirse con código · Invitaciones</text>
+
+  <!-- CreateRoom -->
+  <rect x="360" y="110" width="190" height="70" rx="8" fill="#1e40af" filter="url(#sh)"/>
+  <text x="455" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="white">CreateRoom</text>
+  <text x="455" y="151" text-anchor="middle" font-size="9" fill="#bfdbfe">Crear partida</text>
+  <text x="455" y="165" text-anchor="middle" font-size="9" fill="#93c5fd">Nombre · Jugadores · Rondas</text>
+  <text x="455" y="178" text-anchor="middle" font-size="9" fill="#93c5fd">Privacidad · Bot · Amigos</text>
+
+  <!-- UserSettings -->
+  <rect x="360" y="230" width="190" height="65" rx="8" fill="#4f46e5" filter="url(#sh)"/>
+  <text x="455" y="255" text-anchor="middle" font-size="12" font-weight="700" fill="white">UserSettings</text>
+  <text x="455" y="271" text-anchor="middle" font-size="9" fill="#c7d2fe">Perfil · Nombre · Avatar</text>
+  <text x="455" y="284" text-anchor="middle" font-size="9" fill="#a5b4fc">Notificaciones push · Logout</text>
+
+  <!-- WaitingRoom -->
+  <rect x="680" y="140" width="210" height="75" rx="8" fill="#0369a1" filter="url(#sh)"/>
+  <text x="785" y="164" text-anchor="middle" font-size="12" font-weight="700" fill="white">WaitingRoom</text>
+  <text x="785" y="179" text-anchor="middle" font-size="9" fill="#bae6fd">Lobby de espera</text>
+  <text x="785" y="192" text-anchor="middle" font-size="9" fill="#7dd3fc">Lista jugadores · Código sala</text>
+  <text x="785" y="205" text-anchor="middle" font-size="9" fill="#7dd3fc">Compartir por WhatsApp</text>
+
+  <!-- GameBoard: playing -->
+  <rect x="1020" y="110" width="215" height="65" rx="8" fill="#0e7490" filter="url(#sh)"/>
+  <text x="1128" y="131" text-anchor="middle" font-size="11" font-weight="700" fill="white">GameBoard</text>
+  <text x="1128" y="146" text-anchor="middle" font-size="10" font-weight="600" fill="#a5f3fc">phase: playing</text>
+  <text x="1128" y="161" text-anchor="middle" font-size="9" fill="#cffafe">Dados 3D · Turno activo · Timer</text>
+  <text x="1128" y="174" text-anchor="middle" font-size="9" fill="#cffafe">Scoreboard · Roll/Stand</text>
+
+  <!-- GameBoard: results -->
+  <rect x="1020" y="200" width="215" height="60" rx="8" fill="#0f766e" filter="url(#sh)"/>
+  <text x="1128" y="221" text-anchor="middle" font-size="11" font-weight="700" fill="white">GameBoard</text>
+  <text x="1128" y="236" text-anchor="middle" font-size="10" font-weight="600" fill="#99f6e4">phase: results</text>
+  <text x="1128" y="251" text-anchor="middle" font-size="9" fill="#ccfbf1">Palillo roto · Manos · Next round</text>
+
+  <!-- GameBoard: finished -->
+  <rect x="1020" y="285" width="215" height="60" rx="8" fill="#115e59" filter="url(#sh)"/>
+  <text x="1128" y="306" text-anchor="middle" font-size="11" font-weight="700" fill="white">GameBoard</text>
+  <text x="1128" y="321" text-anchor="middle" font-size="10" font-weight="600" fill="#5eead4">phase: finished</text>
+  <text x="1128" y="336" text-anchor="middle" font-size="9" fill="#99f6e4">Ganador final · Revanche · Salir</text>
+
+  <!-- Bot indicator -->
+  <rect x="1340" y="155" width="180" height="60" rx="8" fill="#374151" stroke="#6b7280" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="1430" y="178" text-anchor="middle" font-size="11" font-weight="600" fill="#e5e7eb">Bot IA</text>
+  <text x="1430" y="193" text-anchor="middle" font-size="9" fill="#9ca3af">Jugador automático</text>
+  <text x="1430" y="207" text-anchor="middle" font-size="9" fill="#6b7280">bot_ready · botPhase</text>
+
+  <!-- Modals -->
+  <rect x="1340" y="240" width="180" height="50" rx="8" fill="#422006" stroke="#a16207" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="1430" y="260" text-anchor="middle" font-size="10" font-weight="600" fill="#fde68a">Modales</text>
+  <text x="1430" y="275" text-anchor="middle" font-size="9" fill="#fbbf24">room_invite · leaveIntent</text>
+  <text x="1430" y="288" text-anchor="middle" font-size="9" fill="#fbbf24">abandonedBy</text>
+
+  <!-- ── Arrows: navigation ── -->
+  <!-- RoomList → CreateRoom -->
+  <path d="M250,168 C300,168 310,145 360,145" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text x="298" y="158" text-anchor="middle" font-size="9" fill="#475569">crear sala</text>
+
+  <!-- RoomList → UserSettings -->
+  <path d="M250,202 C305,202 315,263 360,263" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text x="298" y="248" text-anchor="middle" font-size="9" fill="#475569">perfil</text>
+
+  <!-- RoomList → WaitingRoom (direct join) -->
+  <path d="M250,178 L680,178" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text x="465" y="171" text-anchor="middle" font-size="9" fill="#475569">unirse con código / invitación push</text>
+
+  <!-- CreateRoom → WaitingRoom -->
+  <path d="M550,145 C610,145 625,170 680,170" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text x="617" y="155" text-anchor="middle" font-size="9" fill="#475569">sala creada</text>
+
+  <!-- WaitingRoom → GameBoard:playing -->
+  <path d="M890,170 C945,170 965,148 1020,148" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text x="957" y="160" text-anchor="middle" font-size="9" fill="#475569">start_game</text>
+
+  <!-- GameBoard:playing → GameBoard:results -->
+  <line x1="1128" y1="175" x2="1128" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="1150" y="192" font-size="9" fill="#475569">fin ronda</text>
+
+  <!-- GameBoard:results ↔ playing (next_round) -->
+  <path d="M1020,230 C998,230 994,155 1020,150" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="4,2" fill="none" marker-end="url(#arr)"/>
+  <text x="980" y="195" text-anchor="middle" font-size="9" fill="#94a3b8">next_round</text>
+
+  <!-- GameBoard:results → finished -->
+  <line x1="1128" y1="260" x2="1128" y2="285" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="1150" y="277" font-size="9" fill="#475569">fin juego</text>
+
+  <!-- GameBoard:finished → WaitingRoom (rematch) -->
+  <path d="M1020,318 C960,360 860,370 785,370 L785,215" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="4,2" fill="none" marker-end="url(#arr)"/>
+  <text x="905" y="380" text-anchor="middle" font-size="9" fill="#94a3b8">rematch</text>
+
+  <!-- Any → RoomList (leave) -->
+  <path d="M1020,345 C940,395 220,398 150,390 L150,215" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="5,3" fill="none" marker-end="url(#arr-r)"/>
+  <text x="588" y="408" text-anchor="middle" font-size="9" fill="#ef4444">salir / room_destroyed / reconexión</text>
+
+  <!-- Bot → GameBoard -->
+  <path d="M1340,185 L1235,168" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arr)"/>
+
+
+  <!-- ══════════════════════ SECTION 2: SOCKET ══════════════════════ -->
+  <rect x="20" y="425" width="1760" height="330" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
+  <rect x="20" y="425" width="1760" height="32" rx="10" fill="#15803d"/>
+  <rect x="20" y="445" width="1760" height="12" fill="#15803d"/>
+  <text x="40" y="447" font-size="12" font-weight="700" fill="white">② PROTOCOLO SOCKET.IO  ·  transporte: long-polling  ·  url: VITE_BACKEND_URL</text>
+
+  <!-- Client → Server panel -->
+  <rect x="35" y="462" width="850" height="278" rx="8" fill="#fff1f2" stroke="#fecaca" stroke-width="1"/>
+  <text x="460" y="482" text-anchor="middle" font-size="11" font-weight="700" fill="#b91c1c">► CLIENT → SERVER  (socket.emit)</text>
+
+  <!-- Group: Identity -->
+  <text x="55" y="501" font-size="10" font-weight="700" fill="#991b1b">IDENTIDAD</text>
+  <text x="55" y="516" font-size="9.5" fill="#374151">register_user   { userId, name, email, picture }</text>
+  <text x="55" y="530" font-size="9.5" fill="#374151">subscribe_push   { userId, subscription }</text>
+  <text x="55" y="544" font-size="9.5" fill="#374151">search_users   { query }   → resultados de amigos</text>
+
+  <!-- Group: Sala -->
+  <text x="55" y="562" font-size="10" font-weight="700" fill="#991b1b">SALA</text>
+  <text x="55" y="577" font-size="9.5" fill="#374151">list_rooms   →  ack: { rooms[] }</text>
+  <text x="55" y="591" font-size="9.5" fill="#374151">create_room   { name, playerName, maxPlayers, vsBot, maxRounds, isPrivate }</text>
+  <text x="55" y="605" font-size="9.5" fill="#374151">join_room   { code, playerName }   →  ack: { ok, error }</text>
+  <text x="55" y="619" font-size="9.5" fill="#374151">invite_to_room   { toUserId, roomCode, roomName }</text>
+  <text x="55" y="633" font-size="9.5" fill="#374151">start_game   →  ack: { ok, error }   (solo host)</text>
+  <text x="55" y="647" font-size="9.5" fill="#374151">leave_room  ·  destroy_room   (host elimina)</text>
+
+  <!-- Group: Turno -->
+  <text x="55" y="665" font-size="10" font-weight="700" fill="#991b1b">TURNO</text>
+  <text x="55" y="680" font-size="9.5" fill="#374151">roll   { keptIndices: number[] }   — tirar dados</text>
+  <text x="55" y="694" font-size="9.5" fill="#374151">discard   { indices: number[] }   — marcar descarte</text>
+  <text x="55" y="708" font-size="9.5" fill="#374151">stand   { faces: string[] }   — plantarse</text>
+  <text x="55" y="722" font-size="9.5" fill="#374151">report_faces   { faces: string[] }   — confirmar caras tras animación 3D</text>
+  <text x="55" y="736" font-size="9.5" fill="#374151">continue_turn  ·  next_round  ·  rematch  ·  bot_ready</text>
+
+  <!-- Server → Client panel -->
+  <rect x="915" y="462" width="850" height="278" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="1340" y="482" text-anchor="middle" font-size="11" font-weight="700" fill="#15803d">◄ SERVER → CLIENT  (broadcast)</text>
+
+  <!-- room_state highlighted -->
+  <rect x="930" y="488" width="820" height="80" rx="6" fill="#dcfce7" stroke="#4ade80" stroke-width="1.5"/>
+  <text x="940" y="506" font-size="10" font-weight="700" fill="#14532d">room_state (room)  — evento principal, recibido por todos los jugadores de la sala</text>
+  <text x="940" y="520" font-size="9" fill="#374151">Actualiza: phase · players[] · currentPlayerIndex · roundNumber · turnDeadline</text>
+  <text x="940" y="533" font-size="9" fill="#374151">roundWinnerId · gameLoserId · endReason · botPhase · rollSeed · awaitingContinue</text>
+  <text x="940" y="546" font-size="9" fill="#374151">→  App.jsx recibe y actualiza todo el estado de juego en un único evento</text>
+  <text x="940" y="560" font-size="9" fill="#374151">→  rollSeed determina la animación de dados (mismo resultado en todos los clientes)</text>
+
+  <text x="930" y="584" font-size="10" font-weight="700" fill="#15803d">OTROS</text>
+  <text x="930" y="598" font-size="9.5" fill="#374151">room_destroyed   { byPlayer?: string }   — sala eliminada, volver a RoomList</text>
+  <text x="930" y="613" font-size="9.5" fill="#374151">room_invite   { roomCode, roomName, inviterName }   — muestra diálogo de aceptar/rechazar</text>
+  <text x="930" y="628" font-size="9.5" fill="#374151">rooms_list   room[]   — lista de salas públicas (para RoomList en tiempo real)</text>
+
+  <text x="930" y="648" font-size="10" font-weight="700" fill="#15803d">FLUJO RECONNECT</text>
+  <text x="930" y="663" font-size="9.5" fill="#374151">socket.on('connect') → si había sala activa: emit join_room(code, name) automáticamente</text>
+  <text x="930" y="678" font-size="9.5" fill="#374151">El servidor rejoin con el mismo nombre y evicta el socket anterior</text>
+  <text x="930" y="693" font-size="9.5" fill="#374151">Esto garantiza que reconexiones móviles recuperan el estado de la partida</text>
+
+  <!-- Arrow between panels -->
+  <line x1="888" y1="600" x2="912" y2="600" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M900,594 L912,600 L900,606 z" fill="#94a3b8"/>
+  <path d="M900,594 L888,600 L900,606 z" fill="#94a3b8"/>
+
+
+  <!-- ══════════════════════ SECTION 3: COMPONENTS ══════════════════════ -->
+  <rect x="20" y="770" width="730" height="505" rx="10" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/>
+  <rect x="20" y="770" width="730" height="32" rx="10" fill="#6d28d9"/>
+  <rect x="20" y="790" width="730" height="12" fill="#6d28d9"/>
+  <text x="40" y="792" font-size="12" font-weight="700" fill="white">③ JERARQUÍA DE COMPONENTES</text>
+
+  <!-- App root -->
+  <rect x="45" y="815" width="140" height="34" rx="6" fill="#7c3aed" filter="url(#sh)"/>
+  <text x="115" y="837" text-anchor="middle" font-size="12" font-weight="700" fill="white">App.jsx</text>
+  <!-- State annotation -->
+  <text x="195" y="826" font-size="8.5" fill="#6d28d9" font-weight="700">Estado global:</text>
+  <text x="195" y="838" font-size="8.5" fill="#374151">screen · room · myId · user · playerName · musicOn</text>
+
+  <!-- Vertical trunk -->
+  <line x1="115" y1="849" x2="115" y2="1238" stroke="#c4b5fd" stroke-width="1.5"/>
+
+  <!-- ─ RoomList ─ -->
+  <line x1="115" y1="875" x2="150" y2="875" stroke="#c4b5fd" stroke-width="1.5"/>
+  <rect x="150" y="861" width="145" height="28" rx="5" fill="#7c3aed" filter="url(#sh)"/>
+  <text x="222" y="879" text-anchor="middle" font-size="10" font-weight="600" fill="white">RoomList</text>
+  <text x="305" y="872" font-size="8.5" fill="#374151">Salas públicas · GoogleLogin</text>
+  <text x="305" y="884" font-size="8.5" fill="#374151">Filtro · Join por código</text>
+
+  <!-- ─ CreateRoom ─ -->
+  <line x1="115" y1="918" x2="150" y2="918" stroke="#c4b5fd" stroke-width="1.5"/>
+  <rect x="150" y="904" width="145" height="28" rx="5" fill="#7c3aed" filter="url(#sh)"/>
+  <text x="222" y="922" text-anchor="middle" font-size="10" font-weight="600" fill="white">CreateRoom</text>
+  <text x="305" y="915" font-size="8.5" fill="#374151">Configuración de sala</text>
+  <text x="305" y="927" font-size="8.5" fill="#374151">Buscador de amigos</text>
+
+  <!-- ─ UserSettings ─ -->
+  <line x1="115" y1="960" x2="150" y2="960" stroke="#c4b5fd" stroke-width="1.5"/>
+  <rect x="150" y="946" width="145" height="28" rx="5" fill="#7c3aed" filter="url(#sh)"/>
+  <text x="222" y="964" text-anchor="middle" font-size="10" font-weight="600" fill="white">UserSettings</text>
+  <text x="305" y="957" font-size="8.5" fill="#374151">Perfil · Nombre · Avatar</text>
+  <text x="305" y="969" font-size="8.5" fill="#374151">Push notifications</text>
+
+  <!-- ─ WaitingRoom ─ -->
+  <line x1="115" y1="1002" x2="150" y2="1002" stroke="#c4b5fd" stroke-width="1.5"/>
+  <rect x="150" y="988" width="145" height="28" rx="5" fill="#7c3aed" filter="url(#sh)"/>
+  <text x="222" y="1006" text-anchor="middle" font-size="10" font-weight="600" fill="white">WaitingRoom</text>
+  <text x="305" y="999" font-size="8.5" fill="#374151">Lista jugadores</text>
+  <text x="305" y="1011" font-size="8.5" fill="#374151">WhatsApp · Código sala</text>
+
+  <!-- ─ GameBoard ─ -->
+  <line x1="115" y1="1048" x2="150" y2="1048" stroke="#c4b5fd" stroke-width="1.5"/>
+  <rect x="150" y="1034" width="145" height="28" rx="5" fill="#7c3aed" filter="url(#sh)"/>
+  <text x="222" y="1052" text-anchor="middle" font-size="10" font-weight="600" fill="white">GameBoard</text>
+  <text x="305" y="1045" font-size="8.5" fill="#374151">playing / results / finished</text>
+
+  <!-- GameBoard subtree -->
+  <line x1="295" y1="1048" x2="315" y2="1048" stroke="#c4b5fd" stroke-width="1.3"/>
+  <line x1="315" y1="1060" x2="315" y2="1238" stroke="#c4b5fd" stroke-width="1.3"/>
+
+  <line x1="315" y1="1075" x2="350" y2="1075" stroke="#c4b5fd" stroke-width="1.3"/>
+  <rect x="350" y="1063" width="130" height="24" rx="4" fill="#5b21b6"/>
+  <text x="415" y="1079" text-anchor="middle" font-size="9" font-weight="600" fill="white">Navbar</text>
+  <text x="490" y="1079" font-size="8" fill="#374151">Salir · Timer · Música</text>
+
+  <line x1="315" y1="1104" x2="350" y2="1104" stroke="#c4b5fd" stroke-width="1.3"/>
+  <rect x="350" y="1092" width="130" height="24" rx="4" fill="#5b21b6"/>
+  <text x="415" y="1108" text-anchor="middle" font-size="9" font-weight="600" fill="white">Scoreboard</text>
+  <text x="490" y="1108" font-size="8" fill="#374151">Palillos · Wins · Liberado</text>
+
+  <line x1="315" y1="1133" x2="350" y2="1133" stroke="#c4b5fd" stroke-width="1.3"/>
+  <rect x="350" y="1121" width="155" height="24" rx="4" fill="#4c1d95"/>
+  <text x="427" y="1137" text-anchor="middle" font-size="9" font-weight="600" fill="white">DiceRollerScene</text>
+  <!-- DiceRollerScene detail -->
+  <line x1="505" y1="1133" x2="530" y2="1133" stroke="#c4b5fd" stroke-width="1.3"/>
+  <rect x="530" y="1115" width="195" height="42" rx="4" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1"/>
+  <text x="627" y="1131" text-anchor="middle" font-size="8.5" font-weight="600" fill="#4c1d95">Three.js · Rapier3D physics</text>
+  <text x="627" y="1143" text-anchor="middle" font-size="8" fill="#374151">5 dados RoundedBox · Toon shading</text>
+  <text x="627" y="1155" text-anchor="middle" font-size="8" fill="#374151">FXAA · Canvas textures · PRNG seed</text>
+
+  <line x1="315" y1="1165" x2="350" y2="1165" stroke="#c4b5fd" stroke-width="1.3"/>
+  <rect x="350" y="1153" width="155" height="24" rx="4" fill="#5b21b6"/>
+  <text x="427" y="1169" text-anchor="middle" font-size="9" font-weight="600" fill="white">Actions / Roll / Stand</text>
+
+  <line x1="315" y1="1197" x2="350" y2="1197" stroke="#c4b5fd" stroke-width="1.3"/>
+  <rect x="350" y="1185" width="165" height="24" rx="4" fill="#5b21b6"/>
+  <text x="432" y="1201" text-anchor="middle" font-size="9" font-weight="600" fill="white">AnimacionNextPlayer</text>
+
+  <line x1="315" y1="1228" x2="350" y2="1228" stroke="#c4b5fd" stroke-width="1.3"/>
+  <rect x="350" y="1216" width="165" height="24" rx="4" fill="#5b21b6"/>
+  <text x="432" y="1232" text-anchor="middle" font-size="9" font-weight="600" fill="white">AnimacionPalilloRoto</text>
+
+
+  <!-- ══════════════════════ SECTION 4: DATA MODEL ══════════════════════ -->
+  <rect x="770" y="770" width="1010" height="505" rx="10" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+  <rect x="770" y="770" width="1010" height="32" rx="10" fill="#c2410c"/>
+  <rect x="770" y="790" width="1010" height="12" fill="#c2410c"/>
+  <text x="790" y="792" font-size="12" font-weight="700" fill="white">④ MODELO DE DATOS</text>
+
+  <!-- Room entity -->
+  <rect x="790" y="815" width="455" height="245" rx="8" fill="white" stroke="#fdba74" stroke-width="1.5" filter="url(#sh)"/>
+  <rect x="790" y="815" width="455" height="28" rx="8" fill="#ea580c"/>
+  <rect x="790" y="833" width="455" height="10" fill="#ea580c"/>
+  <text x="1017" y="833" text-anchor="middle" font-size="11" font-weight="700" fill="white">Room</text>
+
+  <text x="808" y="858" font-size="9" font-weight="700" fill="#92400e">IDENTIDAD</text>
+  <text x="808" y="872" font-size="9" fill="#374151">code: string  (4 chars, ej: "XKCD")   ·   name: string</text>
+  <text x="808" y="886" font-size="9" fill="#374151">hostId: socket.id   ·   isPrivate: boolean   ·   maxPlayers: number</text>
+  <text x="808" y="900" font-size="9" fill="#374151">vsBot: boolean   ·   maxRounds: number  (0 = ∞)</text>
+
+  <line x1="808" y1="907" x2="1230" y2="907" stroke="#fed7aa" stroke-width="1"/>
+
+  <text x="808" y="921" font-size="9" font-weight="700" fill="#92400e">ESTADO EN VIVO</text>
+  <text x="808" y="935" font-size="9" fill="#374151">phase: 'lobby' | 'playing' | 'results' | 'finished'</text>
+  <text x="808" y="949" font-size="9" fill="#374151">players: Player[]   ·   currentPlayerIndex: number</text>
+  <text x="808" y="963" font-size="9" fill="#374151">roundNumber: number   ·   rollSeed: number  (PRNG determinista)</text>
+  <text x="808" y="977" font-size="9" fill="#374151">turnDeadline: timestamp   ·   continueDeadline: timestamp</text>
+  <text x="808" y="991" font-size="9" fill="#374151">awaitingContinue: boolean   ·   botPhase: 'rolled' | 'picking' | null</text>
+
+  <line x1="808" y1="998" x2="1230" y2="998" stroke="#fed7aa" stroke-width="1"/>
+
+  <text x="808" y="1012" font-size="9" font-weight="700" fill="#92400e">RESULTADOS</text>
+  <text x="808" y="1026" font-size="9" fill="#374151">roundWinnerId   ·   roundLoserId   ·   gameLoserId</text>
+  <text x="808" y="1040" font-size="9" fill="#374151">endReason: 'rounds' | 'liberado' | 'capilla'</text>
+
+  <!-- Player entity -->
+  <rect x="790" y="1072" width="455" height="185" rx="8" fill="white" stroke="#fdba74" stroke-width="1.5" filter="url(#sh)"/>
+  <rect x="790" y="1072" width="455" height="28" rx="8" fill="#b45309"/>
+  <rect x="790" y="1090" width="455" height="10" fill="#b45309"/>
+  <text x="1017" y="1090" text-anchor="middle" font-size="11" font-weight="700" fill="white">Player</text>
+
+  <text x="808" y="1114" font-size="9" fill="#374151">id: string (socket.id  ó  "bot_N")   ·   name: string   ·   isBot: boolean</text>
+  <text x="808" y="1128" font-size="9" fill="#374151">currentDice: string[5]   (AS | K | Q | J | 8 | 7)</text>
+  <text x="808" y="1142" font-size="9" fill="#374151">pendingDiscards: number[]   ·   rollCount: number   ·   done: boolean</text>
+
+  <line x1="808" y1="1149" x2="1230" y2="1149" stroke="#fed7aa" stroke-width="1"/>
+
+  <text x="808" y="1163" font-size="9" font-weight="700" fill="#92400e">PALILLOS</text>
+  <text x="808" y="1177" font-size="9" fill="#374151">breaks: 0–3   (3 = en capilla → siguiente derrota elimina)</text>
+  <text x="808" y="1191" font-size="9" fill="#374151">liberado: boolean   (Repóker → inmune, breaks congelados)</text>
+  <text x="808" y="1205" font-size="9" fill="#374151">wins: number   ·   hand: { rank, desc, topKey?, pairs? }</text>
+
+  <!-- Hand rankings & dice faces -->
+  <rect x="1265" y="815" width="495" height="440" rx="8" fill="white" stroke="#fdba74" stroke-width="1.5" filter="url(#sh)"/>
+  <rect x="1265" y="815" width="495" height="28" rx="8" fill="#d97706"/>
+  <rect x="1265" y="833" width="495" height="10" fill="#d97706"/>
+  <text x="1512" y="833" text-anchor="middle" font-size="11" font-weight="700" fill="white">Manos (rank) · Caras · Palillos</text>
+
+  <!-- Rankings table -->
+  <text x="1283" y="858" font-size="9" font-weight="700" fill="#92400e">RANKING DE MANOS  (rank 7 = mayor)</text>
+
+  <rect x="1283" y="864" width="460" height="20" rx="3" fill="#fef9c3"/>
+  <text x="1296" y="878" font-size="9" font-weight="700" fill="#a16207">7</text>
+  <rect x="1315" y="866" width="72" height="16" rx="3" fill="#fef08a"/>
+  <text x="1351" y="878" text-anchor="middle" font-size="9" font-weight="700" fill="#854d0e">Repóker</text>
+  <text x="1395" y="878" font-size="9" fill="#374151">5 iguales  →  jugador queda LIBERADO (inmune)</text>
+
+  <text x="1296" y="897" font-size="9" fill="#374151"><tspan font-weight="700">6</tspan>  Póker          4 iguales</text>
+  <text x="1296" y="911" font-size="9" fill="#374151"><tspan font-weight="700">5</tspan>  Full           3 iguales + 2 iguales</text>
+  <text x="1296" y="925" font-size="9" fill="#374151"><tspan font-weight="700">4</tspan>  Escalera       A-K-Q-J-8  ó  A-K-Q-J-7</text>
+  <text x="1296" y="939" font-size="9" fill="#374151"><tspan font-weight="700">3</tspan>  Trío           3 iguales</text>
+  <text x="1296" y="953" font-size="9" fill="#374151"><tspan font-weight="700">2</tspan>  Doble pareja   2 pares distintos</text>
+  <text x="1296" y="967" font-size="9" fill="#374151"><tspan font-weight="700">1</tspan>  Pareja         1 par</text>
+  <text x="1296" y="981" font-size="9" fill="#374151"><tspan font-weight="700">0</tspan>  Alta           sin combinación</text>
+
+  <line x1="1283" y1="988" x2="1737" y2="988" stroke="#fde68a" stroke-width="1"/>
+
+  <!-- Dice faces -->
+  <text x="1283" y="1005" font-size="9" font-weight="700" fill="#92400e">CARAS DEL DADO</text>
+  <text x="1283" y="1019" font-size="9" fill="#374151">AS (Ace)  ·  K (Rey)  ·  Q (Reina)  ·  J (Jota)  ·  8  ·  7</text>
+  <rect x="1283" y="1026" width="10" height="10" rx="2" fill="#dc2626"/>
+  <text x="1298" y="1036" font-size="8.5" fill="#374151">Rojas:   AS, K, 8</text>
+  <rect x="1420" y="1026" width="10" height="10" rx="2" fill="#1c1917"/>
+  <text x="1435" y="1036" font-size="8.5" fill="#374151">Negras:  Q, J, 7</text>
+
+  <line x1="1283" y1="1044" x2="1737" y2="1044" stroke="#fde68a" stroke-width="1"/>
+
+  <!-- Palillo system visual -->
+  <text x="1283" y="1061" font-size="9" font-weight="700" fill="#92400e">SISTEMA DE PALILLOS</text>
+  <rect x="1283" y="1067" width="460" height="90" rx="6" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>
+  <text x="1297" y="1083" font-size="8.5" fill="#374151">Cada jugador comienza con 3 palillos intactos</text>
+  <text x="1297" y="1097" font-size="8.5" fill="#374151">Perder ronda  →  breaks + 1  (se rompe un palillo)</text>
+  <text x="1297" y="1111" font-size="8.5" fill="#374151">breaks = 3  →  en capilla  →  próxima derrota: eliminado</text>
+  <text x="1297" y="1125" font-size="8.5" fill="#374151">Repóker  →  liberado = true  →  palillos inmunes</text>
+  <text x="1297" y="1139" font-size="8.5" fill="#374151">Último jugador en pie = ganador final</text>
+  <text x="1297" y="1153" font-size="8.5" fill="#374151">endReason:  'capilla' | 'liberado' | 'rounds' (max rondas)</text>
+
+  <line x1="1283" y1="1166" x2="1737" y2="1166" stroke="#fde68a" stroke-width="1"/>
+
+  <!-- Audio assets -->
+  <text x="1283" y="1183" font-size="9" font-weight="700" fill="#92400e">AUDIO</text>
+  <text x="1283" y="1197" font-size="8.5" fill="#374151">cubilete.mp3  ·  dado1-3.mp3  ·  romper_palillo.mp3</text>
+  <text x="1283" y="1210" font-size="8.5" fill="#374151">eliminar_dados.mp3  ·  button_press.mp3</text>
+  <text x="1283" y="1224" font-size="8.5" fill="#374151">BGM lobby: bule-escaleira.mp3  ·  BGM game: dice-lemonlight.mp3</text>
+
+</svg>
