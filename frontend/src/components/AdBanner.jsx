@@ -29,11 +29,11 @@ export default function AdBanner({ slot = '3181703270' }) {
     <div className="ad-banner" ref={ref}>
       <ins
         className="adsbygoogle"
-        style={{ display: 'block' }}
+        style={{ display: 'block', height: '50px' }}
         data-ad-client="ca-pub-4894674675461010"
         data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
+        data-ad-format="horizontal"
+        data-full-width-responsive="false"
       />
     </div>
   )

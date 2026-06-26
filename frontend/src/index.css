@@ -1302,7 +1302,7 @@ body {
 
 /* ── Actions ─────────────────────────────────────────────── */
 .actions {
-  padding: 16px 20px 50px;
+  padding: 16px 20px 74px;
   display: flex;
   flex-direction: column;
   gap: 10px;
