@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - 'firebase.json'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   deploy:
@@ -25,10 +29,9 @@ jobs:
         run: npm run build
         working-directory: frontend
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - uses: google-github-actions/auth@v2
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: dados-1c0fd
-          channelId: live
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Firebase Hosting
+        run: npx firebase-tools@latest deploy --only hosting --project dados-1c0fd
