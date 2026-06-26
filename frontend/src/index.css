@@ -310,6 +310,7 @@ body {
   font-size: 15px;
   font-weight: 600;
   color: #c0392b;
+  margin: 16px 0;
 }
 
 .results__liberado {
@@ -444,7 +445,26 @@ body {
   left: 0;
   right: 0;
   bottom: calc(16px + env(safe-area-inset-bottom));
+  max-height: 100px;
+  overflow: hidden;
   animation: next-player-btn-in 0.25s ease-out 0.45s both;
+}
+
+.next-player-ad--top {
+  top: 0;
+  bottom: unset;
+  animation: none;
+}
+
+.game-ad-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  max-height: 50px;
+  overflow: hidden;
+  z-index: 5;
+  background: var(--bg);
 }
 
 .ad-banner {
@@ -452,6 +472,19 @@ body {
   max-width: 480px;
   margin: 0 auto;
   padding: 0 16px;
+  background: var(--bg);
+}
+.ad-banner--dev {
+  border: 2px dashed red;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ad-banner--dev__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: red;
+  opacity: 0.7;
 }
 
 /* ── Modal de confirmación ───────────────────────────────── */
@@ -1093,9 +1126,9 @@ body {
 .scoreboard__row--active { background: var(--active-row); padding-left: 6px; padding-right: 6px; margin: 0 -6px; }
 .scoreboard__row--done { opacity: 0.75; }
 
-.scoreboard__player-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.scoreboard__name { font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scoreboard__hand-label { font-size: 10px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scoreboard__player-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.scoreboard__name { font-size: 15px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scoreboard__hand-label { font-size: 12px; color: var(--text-subtle); display: flex; align-items: baseline; gap: 5px; overflow: hidden; text-overflow: ellipsis; }
 .scoreboard__dice { display: flex; gap: 3px; }
 .scoreboard__pts-num { font-size: 13px; font-weight: 700; flex-shrink: 0; white-space: nowrap; min-width: 42px; text-align: right; }
 .scoreboard__wins-num { font-size: 13px; font-weight: 700; flex-shrink: 0; width: 20px; text-align: center; }
@@ -1281,7 +1314,7 @@ body {
 
 /* ── Actions ─────────────────────────────────────────────── */
 .actions {
-  padding: 16px 20px 64px;
+  padding: 16px 20px 50px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1356,9 +1389,11 @@ body {
 
 .results__row--winner { background: var(--winner-bg); font-weight: 700; }
 
-.results__player { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results__dice { display: flex; gap: 3px; flex-shrink: 0; width: 152px; justify-content: flex-end; }
-.results__desc { font-size: 12px; color: var(--text-subtle); white-space: nowrap; flex-shrink: 0; width: 90px; display: flex; align-items: baseline; gap: 5px; }
+.results__player-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.results__player { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results__dice { display: flex; gap: 3px; flex-shrink: 0; justify-content: flex-end; }
+.results__desc { font-size: 12px; color: var(--text-subtle); display: flex; align-items: baseline; gap: 5px; }
+.results__wins { font-size: 13px; font-weight: 700; color: #22c55e; flex-shrink: 0; min-width: 16px; text-align: right; }
 
 .results__scores {
   padding: 16px 20px;
@@ -1881,6 +1916,7 @@ body {
 }
 .rl__icon-btn:active { transform: scale(0.9); }
 .rl__icon-btn:disabled { opacity: 0.35; cursor: default; }
+.rl__icon-btn--active { background: var(--accent, #111); color: #fff; }
 
 .rl__rank-row {
   display: flex;
@@ -1920,6 +1956,16 @@ body {
   font-weight: 600;
   color: var(--text);
   flex-shrink: 0;
+}
+.rl__playing-pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: #22c55e;
+  border-radius: 20px;
+  padding: 2px 7px;
 }
 
 /* Empty state */
@@ -2204,8 +2250,9 @@ body {
 }
 
 .bs__pill {
-  width: 50px;
+  min-width: 50px;
   height: 50px;
+  padding: 0 14px;
   border-radius: 14px;
   border: 1.5px solid var(--border);
   background: var(--bg);
@@ -2218,6 +2265,7 @@ body {
   justify-content: center;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 .bs__pill--active {
   background: var(--primary);
@@ -2286,6 +2334,20 @@ body {
 .bs__submit:active:not(:disabled) { opacity: 0.78; }
 .bs__submit--secondary { background: var(--surface); color: var(--text); }
 .bs__submit--danger    { background: #fef2f2; color: #ef4444; }
+.bs__reset {
+  width: 100%;
+  margin-top: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.bs__reset:active { opacity: 0.6; }
 
 /* ── UserSettings (inside .bs sheet) ───────────────────────────────────────── */
 .us__avatar-row {
@@ -3281,6 +3343,11 @@ body {
   gap: 6px;
   min-width: 0;
 }
+.uds__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .uds__name {
   font-size: 18px;
   font-weight: 700;
@@ -3290,6 +3357,19 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.uds__fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--text-subtle);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color 0.15s, transform 0.1s;
+}
+.uds__fav-btn--active { color: #ffd700; }
+.uds__fav-btn:active { transform: scale(1.25); }
 .uds__tier-badge {
   display: inline-block;
   font-size: 11px;

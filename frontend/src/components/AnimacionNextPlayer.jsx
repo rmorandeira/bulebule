@@ -116,11 +116,16 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
           </>
         )}
         {!exitPhase && isMyTurn && (
-          <div className="next-player-footer">
-            <button className="btn btn--primary next-player-continue" onClick={onContinue}>
-              {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
-            </button>
-          </div>
+          <>
+            <div className="next-player-ad next-player-ad--top">
+              <AdBanner />
+            </div>
+            <div className="next-player-footer">
+              <button className="btn btn--primary next-player-continue" onClick={onContinue}>
+                {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import { track } from '../analytics'
 import Die from './Die'
+import AdBanner from './AdBanner'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 
@@ -465,16 +466,21 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             <div className="results__hands">
               {room.players.map(p => (
                 <div key={p.id} className={`results__row ${p.id === room.roundWinnerId ? 'results__row--winner' : ''} ${p.id === room.roundLoserId ? 'results__row--loser' : ''}`}>
-                  <span className="results__player">{p.name}</span>
+                  <div className="results__player-info">
+                    <span className="results__player">{p.name}</span>
+                    {p.hand && (
+                      <span className="results__desc">
+                        {p.hand.desc}
+                        {p.id === room.roundWinnerId && p.hand?.rank != null && (
+                          <span className="results__hand-pts">+{handPts(p.hand.rank)} pts</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
                   <div className="results__dice">
                     {sortDice(p.currentDice ?? []).map((v, i) => <Die key={i} value={v} small />)}
                   </div>
-                  <span className="results__desc">
-                    {p.hand?.desc}
-                    {p.id === room.roundWinnerId && p.hand?.rank != null && (
-                      <span className="results__hand-pts">+{handPts(p.hand.rank)} pts</span>
-                    )}
-                  </span>
+                  <span className="results__wins">{p.wins}</span>
                 </div>
               ))}
             </div>
@@ -522,6 +528,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
               </p>
           )}
+          <div className="game-ad-bottom">
+            <AdBanner />
+          </div>
           </>
         )
       })() : room.phase === 'tiebreak' ? (() => {
@@ -614,7 +623,10 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   <div className="scoreboard__player-info">
                     <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
                     {p.done && p.hand && (
-                      <span className="scoreboard__hand-label">{p.hand.desc}</span>
+                      <span className="scoreboard__hand-label">
+                        {p.hand.desc}
+                        {p.hand.rank != null && <span className="results__hand-pts">+{handPts(p.hand.rank)} pts</span>}
+                      </span>
                     )}
                   </div>
                   {p.inDesempate && <span className="tag tag--desempate">DESEMPATE</span>}
@@ -769,8 +781,11 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               </p>
             )}
           </div>
+          <div className="game-ad-bottom">
+            <AdBanner />
+          </div>
         </>
-      )})}
+      )}
 
       {nextPlayerVisible && (
         <AnimacionNextPlayer

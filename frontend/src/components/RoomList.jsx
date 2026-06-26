@@ -10,6 +10,10 @@ import UserDetailSheet from './UserDetailSheet'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem('bule_favorites') ?? '{}') } catch { return {} }
+}
+
 function TierDot({ tier }) {
   return <span className="tier-dot" style={{ background: TIER_COLOR[tier] ?? TIER_COLOR.Bronce }} />
 }
@@ -31,6 +35,123 @@ const PAGES = [
   { id: 'tienda',        emoji: '🎁', label: 'Tienda online',  desc: 'Utiliza tus puntos para comprar objetos y regalos' },
 ]
 const DEFAULT_PAGE = 'online'
+
+const ROOM_STATUS_OPTIONS = [
+  { id: 'all',     label: 'Todas' },
+  { id: 'lobby',   label: 'Por empezar' },
+  { id: 'playing', label: 'En curso' },
+]
+const ROOM_SORT_OPTIONS = [
+  { id: 'default', label: 'Por defecto' },
+  { id: 'name',    label: 'Nombre' },
+  { id: 'players', label: 'Jugadores' },
+]
+const DEFAULT_ROOM_FILTER = { sort: 'default', status: 'all', favoritesOnly: false }
+
+function RoomFilterSheet({ filter, onApply, closing, onClose }) {
+  const [local, setLocal] = useState(filter)
+
+  return (
+    <>
+      <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
+      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
+        <div className="bs__handle" />
+
+        <p className="bs__label">ESTADO</p>
+        <div className="bs__pills">
+          {ROOM_STATUS_OPTIONS.map(opt => (
+            <button key={opt.id}
+              className={`bs__pill${local.status === opt.id ? ' bs__pill--active' : ''}`}
+              onClick={() => setLocal(v => ({ ...v, status: opt.id }))}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="bs__label">ORDENAR POR</p>
+        <div className="bs__pills">
+          {ROOM_SORT_OPTIONS.map(opt => (
+            <button key={opt.id}
+              className={`bs__pill${local.sort === opt.id ? ' bs__pill--active' : ''}`}
+              onClick={() => setLocal(v => ({ ...v, sort: opt.id }))}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="bs__private-row">
+          <span className="bs__label" style={{ margin: 0 }}>CON FAVORITOS</span>
+          <button type="button" role="switch" aria-checked={local.favoritesOnly}
+            className={`bs__toggle${local.favoritesOnly ? ' bs__toggle--on' : ''}`}
+            onClick={() => setLocal(v => ({ ...v, favoritesOnly: !v.favoritesOnly }))} />
+        </div>
+
+        <button className="bs__submit" onClick={() => { onApply(local); onClose() }}>
+          Aplicar filtros
+        </button>
+        <button className="bs__reset" onClick={() => setLocal(DEFAULT_ROOM_FILTER)}>
+          Resetear filtros
+        </button>
+      </div>
+    </>
+  )
+}
+
+const RANK_SORT_OPTIONS = [
+  { id: 'score', label: 'Puntuación' },
+  { id: 'name',  label: 'Nombre' },
+]
+const TIER_OPTIONS = ['Todos', 'Diamante', 'Oro', 'Plata', 'Bronce']
+const DEFAULT_RANK_FILTER = { sort: 'score', favoritesOnly: false, tier: 'Todos' }
+
+function FilterSheet({ filter, onApply, closing, onClose }) {
+  const [local, setLocal] = useState(filter)
+
+  return (
+    <>
+      <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
+      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
+        <div className="bs__handle" />
+
+        <p className="bs__label">ORDENAR POR</p>
+        <div className="bs__pills">
+          {RANK_SORT_OPTIONS.map(opt => (
+            <button key={opt.id}
+              className={`bs__pill${local.sort === opt.id ? ' bs__pill--active' : ''}`}
+              onClick={() => setLocal(v => ({ ...v, sort: opt.id }))}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="bs__label">CATEGORÍA</p>
+        <div className="bs__pills">
+          {TIER_OPTIONS.map(t => (
+            <button key={t}
+              className={`bs__pill${local.tier === t ? ' bs__pill--active' : ''}`}
+              onClick={() => setLocal(v => ({ ...v, tier: t }))}>
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <div className="bs__private-row">
+          <span className="bs__label" style={{ margin: 0 }}>SOLO FAVORITOS</span>
+          <button type="button" role="switch" aria-checked={local.favoritesOnly}
+            className={`bs__toggle${local.favoritesOnly ? ' bs__toggle--on' : ''}`}
+            onClick={() => setLocal(v => ({ ...v, favoritesOnly: !v.favoritesOnly }))} />
+        </div>
+
+        <button className="bs__submit" onClick={() => { onApply(local); onClose() }}>
+          Aplicar filtros
+        </button>
+        <button className="bs__reset" onClick={() => setLocal(DEFAULT_RANK_FILTER)}>
+          Resetear filtros
+        </button>
+      </div>
+    </>
+  )
+}
 
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
@@ -190,6 +311,12 @@ export default function RoomList({
   const [myRank, setMyRank]     = useState(null)
   const [rankings, setRankings] = useState([])
   const [rankTotal, setRankTotal] = useState(0)
+  const [rankFilter, setRankFilter] = useState(DEFAULT_RANK_FILTER)
+  const [filterSheet, setFilterSheet]     = useState(false)
+  const [filterClosing, setFilterClosing] = useState(false)
+  const [roomFilter, setRoomFilter]         = useState(DEFAULT_ROOM_FILTER)
+  const [roomFilterSheet, setRoomFilterSheet]     = useState(false)
+  const [roomFilterClosing, setRoomFilterClosing] = useState(false)
   const [activeTournament, setActiveTournament] = useState(null)
   const [viewingUser, setViewingUser]           = useState(null) // { userId, name, picture }
 
@@ -197,6 +324,8 @@ export default function RoomList({
   const scrollTimerRef   = useRef(null)
   const progScrollRef    = useRef(false)
   const closeCreateRef   = useRef(null)
+  const closeFilterRef     = useRef(null)
+  const closeRoomFilterRef = useRef(null)
   const didInitRef       = useRef(false)
   const swipeTouchRef    = useRef(null) // {x, y, scrollY} at touchstart
   const prevTabRef       = useRef(activeTab)
@@ -248,6 +377,8 @@ export default function RoomList({
       socket.off('disconnect', onDisconnect)
       socket.off('rooms_list', onRoomsList)
       clearTimeout(closeCreateRef.current)
+      clearTimeout(closeFilterRef.current)
+      clearTimeout(closeRoomFilterRef.current)
       clearTimeout(scrollTimerRef.current)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -311,6 +442,26 @@ export default function RoomList({
     closeCreateRef.current = setTimeout(() => { setCreateSheet(false); setCreateClosing(false) }, CLOSE_DURATION)
   }
 
+  function openFilter() {
+    clearTimeout(closeFilterRef.current)
+    setFilterClosing(false)
+    setFilterSheet(true)
+  }
+  function closeFilter() {
+    setFilterClosing(true)
+    closeFilterRef.current = setTimeout(() => { setFilterSheet(false); setFilterClosing(false) }, CLOSE_DURATION)
+  }
+
+  function openRoomFilter() {
+    clearTimeout(closeRoomFilterRef.current)
+    setRoomFilterClosing(false)
+    setRoomFilterSheet(true)
+  }
+  function closeRoomFilter() {
+    setRoomFilterClosing(true)
+    closeRoomFilterRef.current = setTimeout(() => { setRoomFilterSheet(false); setRoomFilterClosing(false) }, CLOSE_DURATION)
+  }
+
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   function handleGoogleSuccess(credentialResponse) {
@@ -347,13 +498,27 @@ export default function RoomList({
 
   const isFull = r => r.playerCount >= r.maxPlayers
 
-  const filteredRankings = rankSearch.trim()
-    ? rankings.filter(r => r.name.toLowerCase().includes(rankSearch.trim().toLowerCase()))
-    : rankings
+  const favs = rankFilter.favoritesOnly ? getFavorites() : null
+  let filteredRankings = rankings
+    .filter(r => !rankSearch.trim() || r.name.toLowerCase().includes(rankSearch.trim().toLowerCase()))
+    .filter(r => !favs || !!favs[r.userId])
+    .filter(r => rankFilter.tier === 'Todos' || r.tier === rankFilter.tier)
+  if (rankFilter.sort === 'name') {
+    filteredRankings = [...filteredRankings].sort((a, b) => a.name.localeCompare(b.name))
+  }
+  const isFilterActive = rankFilter.sort !== 'score' || rankFilter.favoritesOnly || rankFilter.tier !== 'Todos'
 
-  const filteredRooms = roomSearch.trim()
-    ? rooms.filter(r => r.name.toLowerCase().includes(roomSearch.trim().toLowerCase()))
-    : rooms
+  const roomFavs = roomFilter.favoritesOnly ? getFavorites() : null
+  let filteredRooms = rooms
+    .filter(r => !roomSearch.trim() || r.name.toLowerCase().includes(roomSearch.trim().toLowerCase()))
+    .filter(r => roomFilter.status === 'all' || (roomFilter.status === 'lobby' ? r.phase === 'lobby' : r.phase !== 'lobby'))
+    .filter(r => !roomFavs || (r.playerIds ?? []).some(id => !!roomFavs[id]))
+  if (roomFilter.sort === 'name') {
+    filteredRooms = [...filteredRooms].sort((a, b) => a.name.localeCompare(b.name))
+  } else if (roomFilter.sort === 'players') {
+    filteredRooms = [...filteredRooms].sort((a, b) => b.playerCount - a.playerCount)
+  }
+  const isRoomFilterActive = roomFilter.sort !== 'default' || roomFilter.status !== 'all' || roomFilter.favoritesOnly
 
   // ── Swipe on content area → navigate tabs ─────────────────────────────────
 
@@ -439,10 +604,9 @@ export default function RoomList({
                   </button>
                 )}
               </div>
-              <button className="rl__icon-btn" aria-label="Actualizar" onClick={fetchStats}>
+              <button className={`rl__icon-btn${isFilterActive ? ' rl__icon-btn--active' : ''}`} aria-label="Filtrar" onClick={openFilter}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                 </svg>
               </button>
             </div>
@@ -457,7 +621,10 @@ export default function RoomList({
                 onClick={() => setViewingUser({ userId: r.userId, name: r.name, picture: r.picture })}
               >
                 <span className="rl__rank-pos">{r.rank}</span>
-                <span className="rl__rank-name">{r.name}<TierDot tier={r.tier} /></span>
+                <span className="rl__rank-name">
+                  {r.name}<TierDot tier={r.tier} />
+                  {r.isPlaying && <span className="rl__playing-pill">jugando</span>}
+                </span>
                 <span className="rl__rank-score">{r.score.toLocaleString()}</span>
               </div>
             ))}
@@ -493,6 +660,11 @@ export default function RoomList({
                   </button>
                 )}
               </div>
+              <button className={`rl__icon-btn${isRoomFilterActive ? ' rl__icon-btn--active' : ''}`} aria-label="Filtrar" onClick={openRoomFilter}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+              </button>
               <button className="rl__icon-btn" onClick={openCreate} disabled={!connected} aria-label="Crear sala">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="4"  y1="6"  x2="20" y2="6"/>
@@ -648,6 +820,26 @@ export default function RoomList({
           )}
         </button>
       </nav>
+
+      {/* Room filter sheet */}
+      {roomFilterSheet && (
+        <RoomFilterSheet
+          filter={roomFilter}
+          onApply={setRoomFilter}
+          closing={roomFilterClosing}
+          onClose={closeRoomFilter}
+        />
+      )}
+
+      {/* Rank filter sheet */}
+      {filterSheet && (
+        <FilterSheet
+          filter={rankFilter}
+          onApply={setRankFilter}
+          closing={filterClosing}
+          onClose={closeFilter}
+        />
+      )}
 
       {/* Create / Solo play sheet */}
       {createSheet && (

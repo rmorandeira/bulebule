@@ -332,6 +332,9 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
 function buildRankings() {
   return stmts.rankings.all().map((row, i) => {
     const online = registeredUsers[row.user_id];
+    const isPlaying = Object.values(rooms).some(r =>
+      !r.vsBot && r.phase !== 'lobby' && r.players.some(p => p.id === row.user_id)
+    );
     return {
       userId:      row.user_id,
       name:        online?.name    ?? row.name,
@@ -341,6 +344,7 @@ function buildRankings() {
       gamesWon:    row.games_won,
       tier:        getTier(row.score).name,
       rank:        i + 1,
+      isPlaying,
     };
   });
 }
@@ -644,6 +648,7 @@ function sanitizeForList(room) {
     phase: room.phase,
     isPrivate: !!room.isPrivate,
     tournamentId: room.tournamentId ?? null,
+    playerIds: room.players.map(p => p.id),
   };
 }
 
@@ -653,7 +658,7 @@ function broadcast(code) {
 }
 
 function broadcastRoomList() {
-  const list = Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId && r.phase === 'lobby').map(sanitizeForList);
+  const list = Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId).map(sanitizeForList);
   io.emit('rooms_list', list);
 }
 
