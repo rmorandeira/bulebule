@@ -250,7 +250,7 @@ const stmts = {
                                ON CONFLICT(user_id, rolls) DO UPDATE SET count = count + 1`),
   getHandStats:   db.prepare(`SELECT hand_desc, hand_rank, count FROM hand_stats WHERE user_id = ? ORDER BY count DESC`),
   getRollStats:   db.prepare(`SELECT rolls, count FROM roll_stats WHERE user_id = ? ORDER BY rolls`),
-  getItems:       db.prepare(`SELECT * FROM items WHERE available = 1 ORDER BY price ASC`),
+  getItems:       db.prepare(`SELECT * FROM items ORDER BY price ASC`),
   getItemById:    db.prepare(`SELECT * FROM items WHERE id = ?`),
   getUserItems:   db.prepare(`SELECT item_id FROM user_items WHERE user_id = ?`),
   insertUserItem: db.prepare(`INSERT OR IGNORE INTO user_items (user_id, item_id) VALUES (?, ?)`),
@@ -271,7 +271,7 @@ const stmts = {
     { id: 'dice-marble-black', name: 'Mármol Negro',          description: 'Dados con textura de mármol negro. Elegancia oscura para los mejores jugadores.', price: 3000, image_url: '/assets/dice/marble-black.png', category: 'dice' },
     { id: 'dice-marble-red',   name: 'Mármol Rojo',           description: 'Dados con textura de mármol rojo. Para los jugadores más apasionados.',           price: 3000, image_url: '/assets/dice/marble-red.png',   category: 'dice' },
     { id: 'dice-marble-green', name: 'Mármol Verde',          description: 'Dados con textura de mármol verde. La suerte del tablero está de tu lado.',        price: 3000, image_url: '/assets/dice/marble-green.png', category: 'dice' },
-    { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack' },
+    { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack', available: 0 },
   ];
   const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
   const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));

@@ -12,8 +12,6 @@ const CATEGORIES = [
   { id: 'figure',      label: 'Personajes',      emoji: '🧑‍🎨' },
 ]
 
-const BIZUM_NUMBER = '696242948'
-const BIZUM_DISPLAY = '696 242 948'
 
 export default function Marketplace({ user }) {
   const [items, setItems]         = useState([])
@@ -22,7 +20,6 @@ export default function Marketplace({ user }) {
   const [selected, setSelected]   = useState(null)
   const [closing, setClosing]     = useState(false)
   const [buying, setBuying]       = useState(false)
-  const [copied, setCopied]       = useState(false)
   const [error, setError]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeSkin, setActiveSkin] = useState(() => localStorage.getItem('bule_dice_skin') ?? null)
@@ -41,7 +38,6 @@ export default function Marketplace({ user }) {
     clearTimeout(closeRef.current)
     setClosing(false)
     setError('')
-    setCopied(false)
     setSelected(item)
   }
 
@@ -75,13 +71,6 @@ export default function Marketplace({ user }) {
       if (!res?.ok) { setError(res?.error ?? 'Error al procesar'); return }
       setCredits(res.score)
       closeItem()
-    })
-  }
-
-  function handleCopyBizum() {
-    navigator.clipboard?.writeText(BIZUM_NUMBER).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     })
   }
 
@@ -126,8 +115,8 @@ export default function Marketplace({ user }) {
         {visibleItems.map(item => (
           <div
             key={item.id}
-            className={`mkt__card${owned(item.id) ? ' mkt__card--owned' : ''}`}
-            onClick={() => openItem(item)}
+            className={`mkt__card${owned(item.id) ? ' mkt__card--owned' : ''}${!item.available ? ' mkt__card--disabled' : ''}`}
+            onClick={() => item.available ? openItem(item) : undefined}
           >
             <div className="mkt__card-img-wrap">
               <img
@@ -136,8 +125,9 @@ export default function Marketplace({ user }) {
                 alt={item.name}
                 onError={e => { e.currentTarget.style.display = 'none' }}
               />
-              {activeSkin === item.id && <span className="mkt__active-badge">Activo</span>}
-              {owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
+              {!item.available && <span className="mkt__disabled-badge">Disabled</span>}
+              {item.available && activeSkin === item.id && <span className="mkt__active-badge">Activo</span>}
+              {item.available && owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
             </div>
             <p className="mkt__card-name">{item.name}</p>
             <p className="mkt__card-price">
@@ -174,11 +164,7 @@ export default function Marketplace({ user }) {
               {selected.category === 'pack' ? (
                 <>
                   <div className="mkt__bizum">
-                    <p className="mkt__bizum-label">Envía <strong>1 €</strong> por Bizum al:</p>
-                    <p className="mkt__bizum-num">{BIZUM_DISPLAY}</p>
-                    <button className="mkt__bizum-copy" onClick={handleCopyBizum}>
-                      {copied ? '✓ Copiado' : 'Copiar número'}
-                    </button>
+                    <p className="mkt__bizum-label">Envía <strong>1 €</strong> por Bizum y confirma el pago.</p>
                   </div>
                   {!user ? (
                     <p className="mkt__sheet-hint">Inicia sesión para confirmar el pago</p>

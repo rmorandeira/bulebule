@@ -3389,6 +3389,25 @@ body {
   border-radius: 20px;
 }
 
+.mkt__card--disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+.mkt__disabled-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #6b7280;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
 .mkt__card-name {
   font-size: 15px;
   font-weight: 700;
