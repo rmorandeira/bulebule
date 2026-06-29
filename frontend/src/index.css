@@ -2187,6 +2187,26 @@ body {
   animation: bs-slide-down 0.26s cubic-bezier(0.55, 0, 1, 0.45) forwards;
 }
 
+.bs.uds {
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.uds__handle-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  margin: -14px -20px 0;
+  padding: 14px 20px 8px;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+}
+.uds__handle-sticky .bs__handle {
+  margin-bottom: 0;
+}
+
 /* Collapsible section — animated with grid-template-rows trick */
 .bs__collapse {
   display: grid;

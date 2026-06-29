@@ -215,24 +215,7 @@ export default function DiceRollerScene({
   const mountRef = useRef(null)
   const ctxRef   = useRef(null)
   const propsRef = useRef({})
-  propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled }
-
-  // ── Rebuild dice materials when active player skin changes ──────────────────
-  useEffect(() => {
-    const ctx = ctxRef.current
-    if (!ctx) return
-    const resolvedSkin = skin !== undefined ? skin : localStorage.getItem('bule_dice_skin')
-    const applyMats = () => {
-      const mats = buildMats(resolvedSkin)
-      ctx.dice.forEach(d => { d.mesh.material = mats })
-    }
-    const img = resolvedSkin ? _skinImgs[resolvedSkin] : null
-    if (img && !img.complete) {
-      img.onload = applyMats
-    } else {
-      applyMats()
-    }
-  }, [skin])
+  propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled, skin }
 
   // ── Init Three.js scene (once) ──────────────────────────────────────────────
   useEffect(() => {
@@ -359,6 +342,7 @@ export default function DiceRollerScene({
       camCurPos:  new THREE.Vector3(0, 7.5, 11.5),
       camCurLook: new THREE.Vector3(0, FY + 1.5, 0),
       camTween: null,
+      lastSkin: activeSkin,
     }
     ctxRef.current = ctx
 
@@ -606,6 +590,23 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
 function step(ctx, now, propsRef) {
   const { world, dice } = ctx
   if (!world) return
+
+  // Detect skin changes every frame (handles both prop changes and localStorage updates)
+  const propSkin = propsRef.current.skin
+  const resolvedSkin = propSkin !== undefined ? propSkin : localStorage.getItem('bule_dice_skin')
+  if (resolvedSkin !== ctx.lastSkin) {
+    ctx.lastSkin = resolvedSkin
+    const img = resolvedSkin ? _skinImgs[resolvedSkin] : null
+    if (img && !img.complete) {
+      img.onload = () => {
+        const mats = buildMats(resolvedSkin)
+        ctx.dice.forEach(d => { d.mesh.material = mats })
+      }
+    } else {
+      const mats = buildMats(resolvedSkin)
+      ctx.dice.forEach(d => { d.mesh.material = mats })
+    }
+  }
 
   const rolling = dice.filter(d => d.phase === 'rolling')
 

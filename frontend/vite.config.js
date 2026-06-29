@@ -1,7 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { readFileSync } from 'fs'
-const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'))
+import { execSync } from 'child_process'
+
+function getVersion() {
+  try {
+    return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
+  } catch {
+    return 'dev'
+  }
+}
+const version = getVersion()
 
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(version) },

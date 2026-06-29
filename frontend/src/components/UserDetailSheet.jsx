@@ -46,8 +46,12 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
 
   useEffect(() => {
     if (!userId) return
+    setProfile(null)
     setLoading(true)
     setError('')
+    setClosing(false)
+    setSelectedItem(null)
+    setItemClosing(false)
     socket.emit('get_user_profile', { userId }, (res) => {
       setLoading(false)
       if (res?.ok) setProfile(res)
@@ -131,7 +135,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
     <>
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={close} />
       <div className={`bs uds${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-        <div className="bs__handle" />
+        <div className="uds__handle-sticky"><div className="bs__handle" /></div>
 
         {/* Header */}
         <div className="uds__header">
