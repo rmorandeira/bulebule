@@ -193,10 +193,11 @@ function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.
 
 // ── Tournaments ───────────────────────────────────────────────────────────────
 const TOURNAMENT_DEFS = [
-  { id: 'bronce',   name: 'Torneo Bronce',   tier: 'Bronce',   minScore: 0,   maxScore: 99   },
-  { id: 'plata',    name: 'Torneo Plata',     tier: 'Plata',    minScore: 100, maxScore: 299  },
-  { id: 'oro',      name: 'Torneo Oro',       tier: 'Oro',      minScore: 300, maxScore: 699  },
-  { id: 'diamante', name: 'Torneo Diamante',  tier: 'Diamante', minScore: 700, maxScore: Infinity },
+  { id: 'bronce',     name: 'Torneo Bronce',   tier: 'Bronce',   minScore: 0,   maxScore: 99   },
+  { id: 'plata',      name: 'Torneo Plata',     tier: 'Plata',    minScore: 100, maxScore: 299  },
+  { id: 'oro',        name: 'Torneo Oro',       tier: 'Oro',      minScore: 300, maxScore: 699  },
+  { id: 'diamante',   name: 'Torneo Diamante',  tier: 'Diamante', minScore: 700, maxScore: Infinity },
+  { id: 'bar-o-doce', name: 'Bar O Doce',       tier: 'Especial', minScore: 0,   maxScore: Infinity, requiredItem: 'bar-doce' },
 ];
 
 const tournamentPlayers = {};
@@ -274,14 +275,17 @@ const stmts = {
     { id: 'dice-transp-red',   name: 'Dados Rojos Transparentes', description: 'Dados con acabado traslúcido en rojo. Minimalismo con estilo.', price: 3000, image_url: '/assets/dice/transparent-red.png', category: 'dice' },
     { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack', available: 0 },
     { id: 'bar-el-polvorin',   name: 'Bar El Polvorín',       description: 'El bar más icónico del barrio. Un clásico para los jugadores de Bule Bule.',         price: 45000, image_url: '/assets/items/bar-el-polvorin.png', category: 'landmark' },
-    { id: 'bar-el-olimpico',   name: 'Bar El Olímpico',       description: 'Un referente del barrio donde el tiempo se detiene entre partida y partida. <em>Especialidad en café, no café de especialidad.</em>', price: 45000, image_url: '/assets/items/bar-el-olimpico.png', category: 'landmark' },
+    { id: 'bar-el-olimpico',   name: 'Bar El Olímpico',       description: 'Un referente del barrio donde el tiempo se detiene entre partida y partida.<br><em>Especialidad en café, no café de especialidad.</em>', price: 45000, image_url: '/assets/items/bar-el-olimpico.png', category: 'landmark' },
     { id: 'bar-doce',          name: 'Bar Doce',              description: 'El número doce de la calle y el primero en tu corazón. Pintxos, conversación y alguna que otra mano ganada en la barra.', price: 45000, image_url: '/assets/items/bar-doce.png', category: 'landmark' },
+    { id: 'bar-el-ocho',       name: 'Bar El Ocho',           description: 'Café-bar de Monte Alto con solera. Donde el barrio se sienta, se sirve el mejor café y las partidas duran lo que tienen que durar.', price: 45000, image_url: '/assets/items/bar-el-ocho.png', category: 'landmark' },
   ];
   const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
   const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));
   tx();
   // Fix image_url for items that existed before the path was updated
   db.prepare(`UPDATE items SET image_url = '/assets/dice/transparent-red.png' WHERE id = 'dice-transp-red' AND image_url = '/assets/dice/transparent-red.svg'`).run();
+  // Update Bar El Olímpico description to use <br> before italic line
+  db.prepare(`UPDATE items SET description = 'Un referente del barrio donde el tiempo se detiene entre partida y partida.<br><em>Especialidad en café, no café de especialidad.</em>' WHERE id = 'bar-el-olimpico'`).run();
 })();
 
 // ── Superuser bootstrap ────────────────────────────────────────────────────────
@@ -1024,7 +1028,12 @@ io.on('connection', (socket) => {
       if (row) {
         score = row.score;
         tier = getTier(score).name;
-        canPlay = score >= def.minScore;
+        if (def.requiredItem) {
+          const owned = db.prepare(`SELECT 1 FROM user_items WHERE user_id = ? AND item_id = ?`).get(userId, def.requiredItem);
+          canPlay = !!owned;
+        } else {
+          canPlay = score >= def.minScore;
+        }
       }
     }
 
@@ -1062,10 +1071,15 @@ io.on('connection', (socket) => {
       const def = getTournamentDef(tournamentId);
       if (!def) return cb?.({ ok: false, error: 'Torneo no encontrado' });
       if (!userId) return cb?.({ ok: false, error: 'Debes iniciar sesión para jugar en torneos' });
-      const row = stmts.getStats.get(userId);
-      const score = row?.score ?? 0;
-      if (score < def.minScore) {
-        return cb?.({ ok: false, error: `Necesitas nivel ${def.tier} para crear salas en este torneo` });
+      if (def.requiredItem) {
+        const owned = db.prepare(`SELECT 1 FROM user_items WHERE user_id = ? AND item_id = ?`).get(userId, def.requiredItem);
+        if (!owned) return cb?.({ ok: false, error: `Necesitas el item "${def.name}" para jugar en este torneo` });
+      } else {
+        const row = stmts.getStats.get(userId);
+        const score = row?.score ?? 0;
+        if (score < def.minScore) {
+          return cb?.({ ok: false, error: `Necesitas nivel ${def.tier} para crear salas en este torneo` });
+        }
       }
     }
 

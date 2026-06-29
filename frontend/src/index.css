@@ -2671,8 +2671,11 @@ body {
   font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
   background: var(--text); color: var(--bg); padding: 3px 8px; border-radius: 20px; flex-shrink: 0;
 }
-.tl__badge--lower { background: #4caf50; color: #fff; }
+.tl__badge--lower  { background: #4caf50; color: #fff; }
 .tl__badge--locked { background: transparent; color: var(--text-subtle); padding: 0; }
+.tl__badge--key    { background: #b8860b; color: #fff; }
+.tl__card--exclusive { border: 1px solid rgba(184,134,11,0.35); }
+.tl__hint--section { margin-top: 12px; }
 .tl__login-hint { font-size: 12px; color: var(--text-subtle); text-align: center; padding: 8px 0 4px; }
 
 /* ── Tournament Lobby (tlob) ──────────────────────────────────────────────── */
