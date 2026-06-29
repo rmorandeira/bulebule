@@ -700,6 +700,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     onDieClick={toggleDiscard}
                     seed={rollSeed}
                     sorted={!!displayPlayer?.done}
+                    skin={isMyTurn ? undefined : (currentPlayer?.diceSkin ?? null)}
                     onSettled={(faces) => {
                       setRollingIndices([])
                       if (faces?.length === 5) {

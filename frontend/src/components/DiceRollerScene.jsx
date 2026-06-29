@@ -210,11 +210,29 @@ function getTopFace(mesh) {
 export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
   interactive, onDieClick, onSettled, seed, sorted = false,
+  skin = undefined,
 }) {
   const mountRef = useRef(null)
   const ctxRef   = useRef(null)
   const propsRef = useRef({})
   propsRef.current = { values, rollingIndices, pendingDiscards, interactive, onDieClick, onSettled }
+
+  // ── Rebuild dice materials when active player skin changes ──────────────────
+  useEffect(() => {
+    const ctx = ctxRef.current
+    if (!ctx) return
+    const resolvedSkin = skin !== undefined ? skin : localStorage.getItem('bule_dice_skin')
+    const applyMats = () => {
+      const mats = buildMats(resolvedSkin)
+      ctx.dice.forEach(d => { d.mesh.material = mats })
+    }
+    const img = resolvedSkin ? _skinImgs[resolvedSkin] : null
+    if (img && !img.complete) {
+      img.onload = applyMats
+    } else {
+      applyMats()
+    }
+  }, [skin])
 
   // ── Init Three.js scene (once) ──────────────────────────────────────────────
   useEffect(() => {
@@ -290,7 +308,7 @@ export default function DiceRollerScene({
     floor.receiveShadow = true
     scene.add(floor)
 
-    const activeSkin = localStorage.getItem('bule_dice_skin')
+    const activeSkin = skin !== undefined ? skin : localStorage.getItem('bule_dice_skin')
 
     // 5 persistent die meshes
     const dice = Array.from({ length: 5 }, (_, i) => {
