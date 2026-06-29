@@ -72,11 +72,17 @@ export default function TournamentList({ user, myStats, onEnter }) {
             if (isLocked) cardClass += ' tl__card--locked'
             return (
               <div key={t.id} className={cardClass} onClick={() => !isLocked && onEnter(t)}>
-                <span className="tl__card-emoji">🔑</span>
+                {t.requiredItemImageUrl
+                  ? <img className="tl__card-item-img" src={t.requiredItemImageUrl} alt={t.requiredItemName ?? ''} />
+                  : <span className="tl__card-emoji">🔑</span>
+                }
                 <div className="tl__card-body">
                   <p className="tl__card-name">{t.name}</p>
+                  <p className="tl__card-req">
+                    Requiere: <strong>{t.requiredItemName ?? t.requiredItem}</strong>
+                  </p>
                   <p className="tl__card-meta">
-                    {t.playerCount} en sala. {t.openRooms} {t.openRooms === 1 ? 'Partida abierta' : 'Partidas abiertas'}
+                    {t.playerCount} en sala · {t.openRooms} {t.openRooms === 1 ? 'partida abierta' : 'partidas abiertas'}
                     {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
                   </p>
                 </div>

@@ -1002,12 +1002,19 @@ io.on('connection', (socket) => {
 
   socket.on('get_tournaments', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
-    const result = TOURNAMENT_DEFS.map(t => ({
-      ...t,
-      playerCount: Object.keys(tournamentPlayers[t.id]).length,
-      openRooms: Object.values(rooms).filter(r => r.tournamentId === t.id && r.phase === 'lobby').length,
-      activeGames: Object.values(rooms).filter(r => r.tournamentId === t.id && r.phase !== 'lobby').length,
-    }));
+    const result = TOURNAMENT_DEFS.map(t => {
+      const requiredItemData = t.requiredItem
+        ? db.prepare(`SELECT id, name, image_url FROM items WHERE id = ?`).get(t.requiredItem)
+        : null;
+      return {
+        ...t,
+        requiredItemName:     requiredItemData?.name ?? null,
+        requiredItemImageUrl: requiredItemData?.image_url ?? null,
+        playerCount:  Object.keys(tournamentPlayers[t.id]).length,
+        openRooms:    Object.values(rooms).filter(r => r.tournamentId === t.id && r.phase === 'lobby').length,
+        activeGames:  Object.values(rooms).filter(r => r.tournamentId === t.id && r.phase !== 'lobby').length,
+      };
+    });
     cb?.({ ok: true, tournaments: result });
   });
 
