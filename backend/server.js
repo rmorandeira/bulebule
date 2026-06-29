@@ -46,6 +46,7 @@ async function trackEvent(name, data = {}) {
 }
 
 const registeredUsers = {};
+const socketToUser = {}; // socketId → userId, O(1) lookup
 
 // ── SQLite persistence ────────────────────────────────────────────────────────
 const Database = require('better-sqlite3');
@@ -290,8 +291,7 @@ const commitGamePoints = db.transaction((uid, roundDelta, result) => {
 
 function getUserIdForPlayer(player) {
   if (player.isBot) return null;
-  // Only returns an id for registered (logged-in) players
-  return Object.values(registeredUsers).find(u => u.socketId === player.id)?.userId ?? null;
+  return socketToUser[player.id] ?? null;
 }
 
 function awardRoundPoints(room) {
@@ -1195,7 +1195,10 @@ io.on('connection', (socket) => {
 
   socket.on('register_user', ({ userId, name, email, picture }) => {
     if (!userId || !name) return;
-    registeredUsers[userId] = { ...(registeredUsers[userId] || {}), userId, name, email: email ?? null, picture: picture ?? null, socketId: socket.id };
+    const prev = registeredUsers[userId];
+    if (prev?.socketId) delete socketToUser[prev.socketId];
+    registeredUsers[userId] = { ...(prev || {}), userId, name, email: email ?? null, picture: picture ?? null, socketId: socket.id };
+    socketToUser[socket.id] = userId;
     socket.data.userId = userId;
     stmts.upsertUser.run(userId, name, email ?? null, picture ?? null);
     stmts.ensureStats.run(userId);
@@ -1315,6 +1318,7 @@ io.on('connection', (socket) => {
     if (socket.data.userId && registeredUsers[socket.data.userId]) {
       registeredUsers[socket.data.userId].socketId = null;
     }
+    delete socketToUser[socket.id];
     const tid = socket.data.tournamentId;
     if (tid && tournamentPlayers[tid]) {
       delete tournamentPlayers[tid][socket.id];
