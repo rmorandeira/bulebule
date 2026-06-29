@@ -1081,6 +1081,28 @@ body {
   overflow: hidden;
 }
 
+/* Wrappers para el layout responsivo del tablero */
+.game-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.game-body--full {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.game-sidebar {
+  display: contents; /* en mobile es transparente; en tablet se convierte en columna */
+}
+.game-main {
+  display: contents; /* en mobile es transparente; en tablet toma la columna derecha */
+}
+
 /* ── Navbar ──────────────────────────────────────────────── */
 .navbar {
   display: grid;
@@ -3839,4 +3861,71 @@ body {
 .chi__btn--accept {
   background: var(--primary);
   color: var(--primary-text);
+}
+
+/* ── Responsive: tablet portrait (600px+) ───────────────────────────────── */
+@media (min-width: 600px) {
+  #root {
+    max-width: 720px;
+  }
+
+  /* Sheets y overlays fijos */
+  .bs,
+  .rl__settings-sheet {
+    max-width: 720px;
+  }
+
+  /* Marketplace: 3 columnas en lugar de 2 */
+  .mkt__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Items de usuario: 4 columnas */
+  .uds__items {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* Tablero de juego: scoreboard lateral + área principal */
+  .game-body {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+  }
+  .game-sidebar {
+    display: block;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .game-sidebar .scoreboard {
+    border-bottom: none;
+  }
+  .game-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+/* ── Responsive: tablet grande (960px+) ─────────────────────────────────── */
+@media (min-width: 960px) {
+  #root {
+    max-width: 900px;
+  }
+
+  .bs,
+  .rl__settings-sheet {
+    max-width: 900px;
+  }
+
+  .mkt__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .uds__items {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .game-body {
+    grid-template-columns: 260px 1fr;
+  }
 }

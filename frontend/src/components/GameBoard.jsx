@@ -378,7 +378,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
         const gameLoser = room.players.find(p => p.id === room.gameLoserId)
         return (
-          <>
+          <div className="game-body game-body--full">
           <div className="results">
             {gameLoser ? (
               <div className="results__winner">
@@ -530,7 +530,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           <div className="game-ad-bottom">
             <AdBanner />
           </div>
-          </>
+          </div>
         )
       })() : room.phase === 'tiebreak' ? (() => {
         const tb = room.tiebreaker
@@ -545,6 +545,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
         }
 
         return (
+          <div className="game-body game-body--full">
           <div className="results">
             <div className="results__winner">
               <p className="results__winner-label">
@@ -596,9 +597,11 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               )}
             </div>
           </div>
+          </div>
         )
       })() : (
-        <>
+        <div className="game-body">
+          <div className="game-sidebar">
           <div className="scoreboard">
             <div className="scoreboard__header">
               <p className="scoreboard__title">
@@ -647,6 +650,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               )
             })}
           </div>
+          </div>{/* /game-sidebar */}
+          <div className="game-main">
 
           {room.desempate && !me?.inDesempate ? (
             <div className="dice-box dice-box--waiting">
@@ -784,7 +789,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           <div className="game-ad-bottom">
             <AdBanner />
           </div>
-        </>
+          </div>{/* /game-main */}
+        </div>{/* /game-body */}
       )}
 
       {nextPlayerVisible && (
