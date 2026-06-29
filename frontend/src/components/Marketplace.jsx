@@ -5,7 +5,8 @@ const CLOSE_DURATION = 260
 
 const CATEGORIES = [
   { id: 'all',         label: 'Todo',           emoji: '🛍️' },
-  { id: 'collectible', label: 'Coleccionables',  emoji: '🎲' },
+  { id: 'dice',        label: 'Dados',          emoji: '🎲' },
+  { id: 'collectible', label: 'Coleccionables',  emoji: '🎰' },
   { id: 'landmark',    label: 'Monumentos',      emoji: '🏛️' },
   { id: 'figure',      label: 'Personajes',      emoji: '🧑‍🎨' },
 ]
@@ -19,6 +20,7 @@ export default function Marketplace({ user }) {
   const [buying, setBuying]       = useState(false)
   const [error, setError]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
+  const [activeSkin, setActiveSkin] = useState(() => localStorage.getItem('bule_dice_skin') ?? null)
   const closeRef = useRef(null)
 
   useEffect(() => {
@@ -56,6 +58,16 @@ export default function Marketplace({ user }) {
       setCredits(res.credits)
       closeItem()
     })
+  }
+
+  function handleEquip(itemId) {
+    localStorage.setItem('bule_dice_skin', itemId)
+    setActiveSkin(itemId)
+  }
+
+  function handleUnequip() {
+    localStorage.removeItem('bule_dice_skin')
+    setActiveSkin(null)
   }
 
   const owned = (id) => userItems.includes(id)
@@ -100,10 +112,11 @@ export default function Marketplace({ user }) {
                 alt={item.name}
                 onError={e => { e.currentTarget.style.display = 'none' }}
               />
+              {activeSkin === item.id && <span className="mkt__active-badge">Activo</span>}
               {owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
             </div>
             <p className="mkt__card-name">{item.name}</p>
-            <p className="mkt__card-price">{item.price.toLocaleString()} puntos</p>
+            <p className="mkt__card-price">{item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} puntos`}</p>
           </div>
         ))}
       </div>
@@ -129,11 +142,21 @@ export default function Marketplace({ user }) {
               {selected.description && (
                 <p className="mkt__sheet-desc">{selected.description}</p>
               )}
-              <p className="mkt__sheet-price">{selected.price.toLocaleString()} puntos</p>
+              <p className="mkt__sheet-price">{selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} puntos`}</p>
 
               {error && <p className="bs__error">{error}</p>}
 
-              {owned(selected.id) ? (
+              {selected.category === 'dice' && (selected.price === 0 || owned(selected.id)) ? (
+                activeSkin === selected.id ? (
+                  <button className="bs__submit bs__submit--secondary" onClick={handleUnequip}>
+                    Desactivar skin
+                  </button>
+                ) : (
+                  <button className="bs__submit" onClick={() => handleEquip(selected.id)}>
+                    Activar skin
+                  </button>
+                )
+              ) : owned(selected.id) ? (
                 <button className="bs__submit" disabled>Ya lo tienes ✓</button>
               ) : !user ? (
                 <p className="mkt__sheet-hint">Inicia sesión para comprar</p>

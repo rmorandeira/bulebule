@@ -157,6 +157,46 @@ body {
   transform: translateX(-73.7%);
 }
 
+/* ── Marble skin ─────────────────────────────────────────── */
+.die--marble {
+  background-image: url('/assets/dice/marble.png');
+  background-size: cover;
+  background-position: center;
+  background-color: #3a6080;
+  border-color: rgba(255,255,255,0.25);
+}
+.die--marble .die-letter,
+.die--marble-black .die-letter      { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+.die--marble .die-letter--red,
+.die--marble-black .die-letter--red { color: #ffaaaa; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+.die--marble .pip,
+.die--marble-black .pip             { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.die--marble .pip--red,
+.die--marble-black .pip--red        { background: #ff9999; }
+
+.die--marble-black {
+  background-image: url('/assets/dice/marble-black.png');
+  background-size: cover;
+  background-position: center;
+  background-color: #1a1a2e;
+  border-color: rgba(255,255,255,0.15);
+}
+
+.die--marble-red {
+  background-image: url('/assets/dice/marble-red.png');
+  background-size: cover;
+  background-position: center;
+  background-color: #4a1010;
+  border-color: rgba(255,255,255,0.2);
+}
+
+.die--marble-green {
+  background-image: url('/assets/dice/marble-green.png');
+  background-size: cover;
+  background-position: center;
+  background-color: #0e3320;
+  border-color: rgba(255,255,255,0.2);
+}
 
 /* ── Buttons ─────────────────────────────────────────────── */
 .btn {
@@ -3271,6 +3311,18 @@ body {
   font-size: 10px;
   font-weight: 700;
   background: var(--accent);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.mkt__active-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #22c55e;
   color: #fff;
   padding: 2px 8px;
   border-radius: 20px;

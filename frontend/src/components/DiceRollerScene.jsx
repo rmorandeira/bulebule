@@ -6,6 +6,18 @@ import { RenderPass }     from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass }     from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { FXAAShader }     from 'three/examples/jsm/shaders/FXAAShader.js'
 
+// Preload all dice skin textures so they're ready when scene mounts
+const _skinImgs = {
+  'dice-marble':       new window.Image(),
+  'dice-marble-black': new window.Image(),
+  'dice-marble-red':   new window.Image(),
+  'dice-marble-green': new window.Image(),
+}
+_skinImgs['dice-marble'].src       = '/assets/dice/marble.png'
+_skinImgs['dice-marble-black'].src = '/assets/dice/marble-black.png'
+_skinImgs['dice-marble-red'].src   = '/assets/dice/marble-red.png'
+_skinImgs['dice-marble-green'].src = '/assets/dice/marble-green.png'
+
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
 const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
 const VALUE_TO_FACE = Object.fromEntries(FACE_VALUES.map((v, i) => [v, i]))
@@ -62,7 +74,14 @@ function makeToonGradient() {
 // AS, K, 8 → rojo   |   Q, J, 7 → negro
 const RED_FACES = new Set(['AS', 'K', '8'])
 
-function drawPip(ctx, cx, cy, r, isRed) {
+function drawPip(ctx, cx, cy, r, isRed, textured = false) {
+  if (textured) {
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'
+    ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = isRed ? '#ff9999' : '#ffffff'
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill()
+    return
+  }
   ctx.fillStyle = isRed ? '#6A0000' : '#0A0500'
   ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2); ctx.fill()
   ctx.fillStyle = isRed ? '#C02010' : '#1E0F00'
@@ -71,15 +90,22 @@ function drawPip(ctx, cx, cy, r, isRed) {
   ctx.beginPath(); ctx.arc(cx - r * 0.28, cy - r * 0.32, r * 0.48, 0, Math.PI * 2); ctx.fill()
 }
 
-function makeTex(value) {
+function makeTex(value, bgImg = null) {
   const S = 256
   const cv = document.createElement('canvas')
   cv.width = cv.height = S
   const ctx = cv.getContext('2d')
 
-  // Amber base — fills full canvas so rounded-box corners blend
-  ctx.fillStyle = '#EDE5D2'
-  ctx.fillRect(0, 0, S, S)
+  const textured = bgImg !== null
+  if (textured) {
+    ctx.drawImage(bgImg, 0, 0, S, S)
+    ctx.fillStyle = 'rgba(10,20,40,0.12)'
+    ctx.fillRect(0, 0, S, S)
+  } else {
+    // Amber base — fills full canvas so rounded-box corners blend
+    ctx.fillStyle = '#EDE5D2'
+    ctx.fillRect(0, 0, S, S)
+  }
 
   const isRed = RED_FACES.has(value)
 
@@ -89,24 +115,34 @@ function makeTex(value) {
       if (!on) return
       let cx = m + (i % 3) * st
       if (value === '8' && Math.floor(i / 3) === 1) cx -= st / 2
-      drawPip(ctx, cx, m + Math.floor(i / 3) * st, pr, isRed)
+      drawPip(ctx, cx, m + Math.floor(i / 3) * st, pr, isRed, textured)
     })
   } else {
     const label = value === 'AS' ? 'A' : value
     ctx.font = `900 ${S * 0.56}px Georgia,serif`
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.fillStyle = isRed ? '#6A0000' : '#0A0500'
-    ctx.fillText(label, S / 2 + 2, S / 2 + 3)
-    ctx.fillStyle = isRed ? '#C02010' : '#1E0F00'
-    ctx.fillText(label, S / 2, S / 2)
+    if (textured) {
+      ctx.shadowColor = 'rgba(0,0,0,0.55)'
+      ctx.shadowBlur = 10
+      ctx.fillStyle = isRed ? '#ffaaaa' : '#ffffff'
+      ctx.fillText(label, S / 2, S / 2)
+      ctx.shadowBlur = 0
+    } else {
+      ctx.fillStyle = isRed ? '#6A0000' : '#0A0500'
+      ctx.fillText(label, S / 2 + 2, S / 2 + 3)
+      ctx.fillStyle = isRed ? '#C02010' : '#1E0F00'
+      ctx.fillText(label, S / 2, S / 2)
+    }
   }
   return new THREE.CanvasTexture(cv)
 }
 
 const _toonGrad = makeToonGradient()
 
-function buildMats() {
-  return FACE_VALUES.map(v => new THREE.MeshToonMaterial({ map: makeTex(v), gradientMap: _toonGrad }))
+function buildMats(skinId = null) {
+  const img = skinId ? _skinImgs[skinId] : null
+  const bgImg = img?.complete && img.naturalWidth > 0 ? img : null
+  return FACE_VALUES.map(v => new THREE.MeshToonMaterial({ map: makeTex(v, bgImg), gradientMap: _toonGrad }))
 }
 
 const eio = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
@@ -238,11 +274,13 @@ export default function DiceRollerScene({
     floor.receiveShadow = true
     scene.add(floor)
 
+    const activeSkin = localStorage.getItem('bule_dice_skin')
+
     // 5 persistent die meshes
     const dice = Array.from({ length: 5 }, (_, i) => {
       const mesh = new THREE.Mesh(
         new RoundedBoxGeometry(DIE, DIE, DIE, 4, DIE * 0.12),
-        buildMats()
+        buildMats(activeSkin)
       )
       mesh.userData.idx = i
       mesh.visible = false

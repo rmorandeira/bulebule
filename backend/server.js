@@ -266,6 +266,11 @@ const stmts = {
     { id: 'cubata',          name: 'Cubata',              description: 'El clásico del verano gallego.', price: 5000,   image_url: '/assets/items/cubata.png',          category: 'collectible' },
     { id: 'churros',         name: 'Churros',             description: 'Para los jugadores más dulces.', price: 3000,   image_url: '/assets/items/churros.png',         category: 'collectible' },
     { id: 'balon',           name: 'Balón',               description: 'Para los campeones del tablero.', price: 10000, image_url: '/assets/items/balon.png',           category: 'collectible' },
+    { id: 'dice-standard',   name: 'Dados Estándar',      description: 'El conjunto de dados clásico. Gratuito para todos los jugadores.', price: 0, image_url: '/assets/dice/standard.png', category: 'dice' },
+    { id: 'dice-marble',       name: 'Dados de Mármol',       description: 'Conjunto de dados con textura de mármol azul. Actívalos desde tu colección.',   price: 3000, image_url: '/assets/dice/marble.png',       category: 'dice' },
+    { id: 'dice-marble-black', name: 'Mármol Negro',          description: 'Dados con textura de mármol negro. Elegancia oscura para los mejores jugadores.', price: 3000, image_url: '/assets/dice/marble-black.png', category: 'dice' },
+    { id: 'dice-marble-red',   name: 'Mármol Rojo',           description: 'Dados con textura de mármol rojo. Para los jugadores más apasionados.',           price: 3000, image_url: '/assets/dice/marble-red.png',   category: 'dice' },
+    { id: 'dice-marble-green', name: 'Mármol Verde',          description: 'Dados con textura de mármol verde. La suerte del tablero está de tu lado.',        price: 3000, image_url: '/assets/dice/marble-green.png', category: 'dice' },
   ];
   const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
   const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));
