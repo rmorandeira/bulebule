@@ -2,18 +2,20 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 function getVersion() {
   try {
     return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
-  } catch {
-    // Vercel does shallow clones without tags — fall back to package.json
-    try {
-      return 'v' + JSON.parse(readFileSync('./package.json', 'utf-8')).version
-    } catch {
-      return 'dev'
-    }
-  }
+  } catch {}
+  try {
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))
+    return `v${pkg.version}`
+  } catch {}
+  return 'dev'
 }
 const version = getVersion()
 
