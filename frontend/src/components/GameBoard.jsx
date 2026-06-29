@@ -405,7 +405,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               <div className="results__scores-header">
                 <p className="results__scores-title">Clasificación</p>
                 <div className="scoreboard__col-headers">
-                  <span className="scoreboard__col-pts">Puntos</span>
+                  <span className="scoreboard__col-pts">Bules</span>
                   <span className="scoreboard__trophy">🏆</span>
                 </div>
               </div>
@@ -493,7 +493,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     <div className="results__scores-header">
                       <p className="results__scores-title">Clasificación</p>
                       <div className="scoreboard__col-headers">
-                        <span className="scoreboard__col-pts">Puntos</span>
+                        <span className="scoreboard__col-pts">Bules</span>
                         <span className="scoreboard__trophy">🏆</span>
                       </div>
                     </div>
@@ -605,7 +605,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 {room.desempate ? 'Desempate' : 'Clasificación'}
               </p>
               <div className="scoreboard__col-headers">
-                <span className="scoreboard__col-pts">Puntos</span>
+                <span className="scoreboard__col-pts">Bules</span>
                 <span className="scoreboard__trophy">🏆</span>
               </div>
             </div>

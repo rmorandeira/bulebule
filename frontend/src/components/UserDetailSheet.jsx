@@ -183,7 +183,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
           <div className="uds__stats">
             <div className="uds__stat">
               <span className="uds__stat-val">{stats.score.toLocaleString()}</span>
-              <span className="uds__stat-lbl">Puntos</span>
+              <span className="uds__stat-lbl">Bules</span>
             </div>
             <div className="uds__stat">
               <span className="uds__stat-val">{stats.gamesPlayed}</span>
@@ -271,7 +271,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
                 <p className="mkt__sheet-desc">{selectedItem.description}</p>
               )}
               <p className="mkt__sheet-price">
-                {selectedItem.price === 0 ? 'Gratis' : `${selectedItem.price.toLocaleString()} puntos`}
+                {selectedItem.price === 0 ? 'Gratis' : `${selectedItem.price.toLocaleString()} Bules`}
               </p>
               {isSelf && selectedItem.category === 'dice' && (
                 activeSkin === selectedItem.id ? (

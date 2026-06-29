@@ -141,7 +141,7 @@ function StatsTab({ stats, myRank, rankTotal, handStats, rollStats }) {
       {/* Score hero */}
       <div className="usec__stat-hero">
         <span className="usec__stat-hero-value">{stats.score.toLocaleString()}</span>
-        <span className="usec__stat-hero-label">puntos</span>
+        <span className="usec__stat-hero-label">Bules</span>
       </div>
 
       {/* Summary grid */}
@@ -257,7 +257,7 @@ function ItemsTab({ user }) {
       <div className="usec__coming-soon">
         <span className="usec__coming-icon">🎁</span>
         <p className="usec__coming-title">Sin items todavía</p>
-        <p className="usec__coming-sub">Compra items en la tienda con tus puntos</p>
+        <p className="usec__coming-sub">Compra items en la tienda con tus Bules</p>
       </div>
     )
   }
@@ -276,7 +276,7 @@ function ItemsTab({ user }) {
             <span className="mkt__owned-badge">Tuyo</span>
           </div>
           <p className="mkt__card-name">{item.name}</p>
-          <p className="mkt__card-price">{item.price.toLocaleString()} puntos</p>
+          <p className="mkt__card-price">{item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} Bules`}</p>
         </div>
       ))}
     </div>

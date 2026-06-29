@@ -116,7 +116,7 @@ export default function Marketplace({ user }) {
               {owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
             </div>
             <p className="mkt__card-name">{item.name}</p>
-            <p className="mkt__card-price">{item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} puntos`}</p>
+            <p className="mkt__card-price">{item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} Bules`}</p>
           </div>
         ))}
       </div>
@@ -142,7 +142,7 @@ export default function Marketplace({ user }) {
               {selected.description && (
                 <p className="mkt__sheet-desc">{selected.description}</p>
               )}
-              <p className="mkt__sheet-price">{selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} puntos`}</p>
+              <p className="mkt__sheet-price">{selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} Bules`}</p>
 
               {error && <p className="bs__error">{error}</p>}
 

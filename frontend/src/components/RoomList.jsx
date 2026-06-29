@@ -32,7 +32,7 @@ const PAGES = [
   { id: 'clasificacion', emoji: '📊', label: 'Clasificación',  desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
   { id: 'challenge',     emoji: '🏆', label: 'Challengue',     desc: 'Reta a otros jugadores en duelos 1vs1 y demuestra quién es el mejor' },
   { id: 'online',        emoji: '🎲', label: 'Juego online',   desc: 'Juega una partida tú sólo o contra la máquina' },
-  { id: 'tienda',        emoji: '🎁', label: 'Tienda online',  desc: 'Utiliza tus puntos para comprar objetos y regalos' },
+  { id: 'tienda',        emoji: '🎁', label: 'Tienda online',  desc: 'Utiliza tus Bules para comprar objetos y regalos' },
 ]
 const DEFAULT_PAGE = 'online'
 
