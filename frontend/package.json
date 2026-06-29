@@ -1,6 +1,6 @@
 {
   "name": "bule-bule-client",
-  "version": "0.3.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
