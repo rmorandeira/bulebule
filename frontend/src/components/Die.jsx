@@ -24,10 +24,21 @@ function DieFace({ value }) {
   )
 }
 
+const SKIN_CLASS = {
+  'dice-marble':       'die--marble',
+  'dice-marble-black': 'die--marble-black',
+  'dice-marble-red':   'die--marble-red',
+  'dice-marble-green': 'die--marble-green',
+}
+
 export default function Die({ value, small = false }) {
+  const skinClass = SKIN_CLASS[localStorage.getItem('bule_dice_skin')] ?? ''
   return (
     <div className="die-wrapper">
-      <div className={small ? 'die die--small' : 'die'} aria-label={`Dado ${value}`}>
+      <div
+        className={`die${small ? ' die--small' : ''}${skinClass ? ` ${skinClass}` : ''}`}
+        aria-label={`Dado ${value}`}
+      >
         <DieFace value={value} />
       </div>
     </div>
