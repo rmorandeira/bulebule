@@ -158,7 +158,7 @@ export default function Marketplace({ user }) {
               </div>
               <p className="mkt__sheet-name">{selected.name}</p>
               {selected.description && (
-                <p className="mkt__sheet-desc">{selected.description}</p>
+                <p className="mkt__sheet-desc" dangerouslySetInnerHTML={{ __html: selected.description }} />
               )}
 
               {error && <p className="bs__error">{error}</p>}

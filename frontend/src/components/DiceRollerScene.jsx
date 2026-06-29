@@ -19,7 +19,7 @@ _skinImgs['dice-marble-red'].src   = '/assets/dice/marble-red-texture.png'
 _skinImgs['dice-marble-green'].src = '/assets/dice/marble-green-texture.png'
 
 const _skinColors = {
-  'dice-transp-red': { bg: '#dc2626', opacity: 0.15 },
+  'dice-transp-red': { bg: '#dc2626', opacity: 0.5 },
 }
 
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
@@ -324,6 +324,15 @@ export default function DiceRollerScene({
         prevVelY: 0, hitCooldown: 0, inCorner: false,
       }
     })
+
+    // If texture image not yet loaded when scene init runs, rebuild all dice materials once it loads
+    const skinImg = activeSkin ? _skinImgs[activeSkin] : null
+    if (skinImg && !skinImg.complete) {
+      skinImg.onload = () => {
+        const mats = buildMats(activeSkin)
+        dice.forEach(d => { d.mesh.material = mats })
+      }
+    }
 
     const ctx = {
       renderer, scene, camera, dice,

@@ -274,10 +274,14 @@ const stmts = {
     { id: 'dice-transp-red',   name: 'Dados Rojos Transparentes', description: 'Dados con acabado traslúcido en rojo. Minimalismo con estilo.', price: 3000, image_url: '/assets/dice/transparent-red.png', category: 'dice' },
     { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack', available: 0 },
     { id: 'bar-el-polvorin',   name: 'Bar El Polvorín',       description: 'El bar más icónico del barrio. Un clásico para los jugadores de Bule Bule.',         price: 45000, image_url: '/assets/items/bar-el-polvorin.png', category: 'landmark' },
+    { id: 'bar-el-olimpico',   name: 'Bar El Olímpico',       description: 'Un referente del barrio donde el tiempo se detiene entre partida y partida. <em>Especialidad en café, no café de especialidad.</em>', price: 45000, image_url: '/assets/items/bar-el-olimpico.png', category: 'landmark' },
+    { id: 'bar-doce',          name: 'Bar Doce',              description: 'El número doce de la calle y el primero en tu corazón. Pintxos, conversación y alguna que otra mano ganada en la barra.', price: 45000, image_url: '/assets/items/bar-doce.png', category: 'landmark' },
   ];
   const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
   const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));
   tx();
+  // Fix image_url for items that existed before the path was updated
+  db.prepare(`UPDATE items SET image_url = '/assets/dice/transparent-red.png' WHERE id = 'dice-transp-red' AND image_url = '/assets/dice/transparent-red.svg'`).run();
 })();
 
 // ── Superuser bootstrap ────────────────────────────────────────────────────────
