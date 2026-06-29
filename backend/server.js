@@ -1334,9 +1334,11 @@ io.on('connection', (socket) => {
     const stats = row
       ? { score: row.score, gamesPlayed: row.games_played, gamesWon: row.games_won, tier: getTier(row.score).name }
       : null;
-    const itemIds = stmts.getUserItems.all(userId).map(r => r.item_id);
-    const items   = itemIds.map(id => stmts.getItemById.get(id)).filter(Boolean);
-    cb?.({ ok: true, name: user?.name ?? userId, picture: user?.picture ?? null, stats, items });
+    const itemIds   = stmts.getUserItems.all(userId).map(r => r.item_id);
+    const items     = itemIds.map(id => stmts.getItemById.get(id)).filter(Boolean);
+    const handStats = stmts.getHandStats.all(userId);
+    const rollStats = stmts.getRollStats.all(userId);
+    cb?.({ ok: true, name: user?.name ?? userId, picture: user?.picture ?? null, stats, items, handStats, rollStats });
   });
 
   socket.on('challenge_user', ({ toUserId, playerName } = {}, cb) => {

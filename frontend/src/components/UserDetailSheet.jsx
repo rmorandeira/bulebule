@@ -11,6 +11,26 @@ function saveFavorites(favs) {
 }
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
+const HAND_RANK_LABEL = ['Carta alta', 'Pareja', 'Dobles parejas', 'Trío', 'Escalera', 'Full', 'Póker', 'Repóker']
+
+function getPlayerType(handStats, rollStats) {
+  if (!handStats?.length) return null
+  const totalRounds = rollStats?.reduce((s, r) => s + r.count, 0) ?? 0
+  if (totalRounds < 3) return null
+  const totalRolls  = rollStats?.reduce((s, r) => s + r.rolls * r.count, 0) ?? 0
+  const avgRolls    = totalRolls / totalRounds
+  const totalHands  = handStats.reduce((s, h) => s + h.count, 0)
+  const repókerCount = handStats.find(h => h.hand_rank === 7)?.count ?? 0
+  const highCount   = handStats.filter(h => h.hand_rank >= 5).reduce((s, h) => s + h.count, 0)
+  const highPct     = totalHands > 0 ? highCount / totalHands : 0
+
+  if (repókerCount >= 2)  return 'Repoquero'
+  if (highPct > 0.25)     return 'Jugador técnico'
+  if (avgRolls >= 2.6)    return 'Jugador arriesgado'
+  if (avgRolls <= 1.4)    return 'Jugador cauteloso'
+  return 'Jugador equilibrado'
+}
+
 export default function UserDetailSheet({ userId, initialName, initialPicture, onClose, user, playerName }) {
   const [profile, setProfile]   = useState(null)
   const [loading, setLoading]   = useState(true)
@@ -64,12 +84,21 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
     })
   }
 
-  const name    = profile?.name    ?? initialName    ?? '...'
-  const picture = profile?.picture ?? initialPicture ?? null
-  const stats   = profile?.stats
-  const items   = profile?.items ?? []
-  const isSelf  = user?.email === userId
+  const name      = profile?.name      ?? initialName    ?? '...'
+  const picture   = profile?.picture   ?? initialPicture ?? null
+  const stats     = profile?.stats
+  const items     = profile?.items     ?? []
+  const handStats = profile?.handStats ?? []
+  const rollStats = profile?.rollStats ?? []
+  const isSelf    = user?.email === userId
   const canChallenge = !!user && !isSelf
+
+  const playerType  = getPlayerType(handStats, rollStats)
+  const topHands    = [...handStats].sort((a, b) => b.count - a.count).slice(0, 5)
+  const totalRounds = rollStats.reduce((s, r) => s + r.count, 0)
+  const avgRolls    = totalRounds > 0
+    ? (rollStats.reduce((s, r) => s + r.rolls * r.count, 0) / totalRounds).toFixed(1)
+    : null
 
   return (
     <>
@@ -110,11 +139,16 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
                 </button>
               )}
             </div>
-            {stats && (
-              <span className="uds__tier-badge" style={{ background: TIER_COLOR[stats.tier] ?? TIER_COLOR.Bronce }}>
-                {stats.tier}
-              </span>
-            )}
+            <div className="uds__header-badges">
+              {stats && (
+                <span className="uds__tier-badge" style={{ background: TIER_COLOR[stats.tier] ?? TIER_COLOR.Bronce }}>
+                  {stats.tier}
+                </span>
+              )}
+              {playerType && (
+                <span className="uds__type-badge">{playerType}</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -136,7 +170,30 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
               </span>
               <span className="uds__stat-lbl">Victorias</span>
             </div>
+            {avgRolls && (
+              <div className="uds__stat">
+                <span className="uds__stat-val">{avgRolls}</span>
+                <span className="uds__stat-lbl">Tiradas/ronda</span>
+              </div>
+            )}
           </div>
+        )}
+
+        {!loading && topHands.length > 0 && (
+          <>
+            <p className="uds__section-title">JUGADAS</p>
+            <div className="uds__hands">
+              {topHands.map(h => (
+                <div key={h.hand_desc} className="uds__hand-row">
+                  <span className="uds__hand-rank" style={{ opacity: 0.4 + (h.hand_rank / 7) * 0.6 }}>
+                    {HAND_RANK_LABEL[h.hand_rank] ?? h.hand_rank}
+                  </span>
+                  <span className="uds__hand-desc">{h.hand_desc}</span>
+                  <span className="uds__hand-count">×{h.count}</span>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {!loading && items.length > 0 && (

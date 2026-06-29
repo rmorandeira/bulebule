@@ -3368,6 +3368,12 @@ body {
 }
 .uds__fav-btn--active { color: #ffd700; }
 .uds__fav-btn:active { transform: scale(1.25); }
+.uds__header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
 .uds__tier-badge {
   display: inline-block;
   font-size: 11px;
@@ -3376,6 +3382,49 @@ body {
   padding: 2px 10px;
   border-radius: 20px;
   width: fit-content;
+}
+.uds__type-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 10px;
+  border-radius: 20px;
+  width: fit-content;
+}
+.uds__hands {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.uds__hand-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.uds__hand-rank {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--accent);
+  min-width: 72px;
+}
+.uds__hand-desc {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+}
+.uds__hand-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-subtle);
 }
 .uds__stats {
   display: flex;
