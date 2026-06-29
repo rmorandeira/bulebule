@@ -3863,8 +3863,8 @@ body {
   color: var(--primary-text);
 }
 
-/* ── Responsive: tablet portrait (600px+) ───────────────────────────────── */
-@media (min-width: 600px) {
+/* ── Responsive: tablet portrait (520px+) ───────────────────────────────── */
+@media (min-width: 520px) {
   #root {
     max-width: 720px;
   }
@@ -3906,8 +3906,8 @@ body {
   }
 }
 
-/* ── Responsive: tablet grande (960px+) ─────────────────────────────────── */
-@media (min-width: 960px) {
+/* ── Responsive: tablet grande (800px+) ─────────────────────────────────── */
+@media (min-width: 800px) {
   #root {
     max-width: 900px;
   }
