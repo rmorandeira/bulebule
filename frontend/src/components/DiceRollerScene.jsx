@@ -13,10 +13,10 @@ const _skinImgs = {
   'dice-marble-red':   new window.Image(),
   'dice-marble-green': new window.Image(),
 }
-_skinImgs['dice-marble'].src       = '/assets/dice/marble.png'
-_skinImgs['dice-marble-black'].src = '/assets/dice/marble-black.png'
-_skinImgs['dice-marble-red'].src   = '/assets/dice/marble-red.png'
-_skinImgs['dice-marble-green'].src = '/assets/dice/marble-green.png'
+_skinImgs['dice-marble'].src       = '/assets/dice/marble-texture.png'
+_skinImgs['dice-marble-black'].src = '/assets/dice/marble-black-texture.png'
+_skinImgs['dice-marble-red'].src   = '/assets/dice/marble-red-texture.png'
+_skinImgs['dice-marble-green'].src = '/assets/dice/marble-green-texture.png'
 
 const _skinColors = {
   'dice-transp-red': { bg: '#dc2626', opacity: 0.15 },

@@ -159,7 +159,7 @@ body {
 
 /* ── Marble skin ─────────────────────────────────────────── */
 .die--marble {
-  background-image: url('/assets/dice/marble.png');
+  background-image: url('/assets/dice/marble-texture.png');
   background-size: cover;
   background-position: center;
   background-color: #3a6080;
@@ -175,7 +175,7 @@ body {
 .die--marble-black .pip--red        { background: #ff9999; }
 
 .die--marble-black {
-  background-image: url('/assets/dice/marble-black.png');
+  background-image: url('/assets/dice/marble-black-texture.png');
   background-size: cover;
   background-position: center;
   background-color: #1a1a2e;
@@ -183,7 +183,7 @@ body {
 }
 
 .die--marble-red {
-  background-image: url('/assets/dice/marble-red.png');
+  background-image: url('/assets/dice/marble-red-texture.png');
   background-size: cover;
   background-position: center;
   background-color: #4a1010;
@@ -191,7 +191,7 @@ body {
 }
 
 .die--marble-green {
-  background-image: url('/assets/dice/marble-green.png');
+  background-image: url('/assets/dice/marble-green-texture.png');
   background-size: cover;
   background-position: center;
   background-color: #0e3320;

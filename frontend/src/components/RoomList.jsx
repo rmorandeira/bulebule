@@ -329,7 +329,6 @@ export default function RoomList({
   const closeFilterRef     = useRef(null)
   const closeRoomFilterRef = useRef(null)
   const didInitRef       = useRef(false)
-  const swipeTouchRef    = useRef(null) // {x, y, scrollY} at touchstart
   const prevTabRef       = useRef(activeTab)
 
   useEffect(() => {
@@ -522,27 +521,6 @@ export default function RoomList({
   }
   const isRoomFilterActive = roomFilter.sort !== 'default' || roomFilter.status !== 'all' || roomFilter.favoritesOnly
 
-  // ── Swipe on content area → navigate tabs ─────────────────────────────────
-
-  function handleContentTouchStart(e) {
-    const t = e.touches[0]
-    swipeTouchRef.current = { x: t.clientX, y: t.clientY, scrollTop: e.currentTarget.scrollTop }
-  }
-
-  function handleContentTouchEnd(e) {
-    const start = swipeTouchRef.current
-    if (!start) return
-    swipeTouchRef.current = null
-    const t = e.changedTouches[0]
-    const dx = t.clientX - start.x
-    const dy = t.clientY - start.y
-    // Only act on clearly horizontal swipes; ignore vertical scrolling
-    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return
-    const idx = PAGES.findIndex(p => p.id === activeTab)
-    if (dx < 0 && idx < PAGES.length - 1) goToPage(PAGES[idx + 1].id)
-    if (dx > 0 && idx > 0)               goToPage(PAGES[idx - 1].id)
-  }
-
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -582,10 +560,8 @@ export default function RoomList({
         </>
       )}
 
-      {/* Content area — only active tab is shown; swipe to navigate */}
-      <div className="rl__content"
-        onTouchStart={handleContentTouchStart}
-        onTouchEnd={handleContentTouchEnd}>
+      {/* Content area */}
+      <div className="rl__content">
 
         {/* ── Clasificación ── */}
         {activeTab === 'clasificacion' && (
