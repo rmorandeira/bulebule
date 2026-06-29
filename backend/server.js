@@ -999,6 +999,12 @@ io.on('connection', (socket) => {
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     if (!vsBot && !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
 
+    const MAX_ROOMS_PER_USER = 2;
+    const activeRooms = Object.values(rooms).filter(r => r.hostId === socket.id).length;
+    if (activeRooms >= MAX_ROOMS_PER_USER) {
+      return cb?.({ ok: false, error: 'Ya tienes demasiadas salas abiertas' });
+    }
+
     if (tournamentId) {
       const def = getTournamentDef(tournamentId);
       if (!def) return cb?.({ ok: false, error: 'Torneo no encontrado' });
