@@ -277,6 +277,15 @@ const stmts = {
   tx();
 })();
 
+// ── Superuser bootstrap ────────────────────────────────────────────────────────
+;(function seedSuperUser() {
+  const id = 'rmorandeira@gmail.com'
+  const score = 12_000_000
+  db.prepare(`INSERT OR IGNORE INTO users (user_id, name, email, picture, created_at, updated_at) VALUES (?, ?, ?, NULL, strftime('%s','now'), strftime('%s','now'))`).run(id, 'Roi Vázquez', id)
+  db.prepare(`INSERT OR IGNORE INTO player_stats (user_id, name, score, games_played, games_won, created_at, updated_at) VALUES (?, ?, ?, 0, 0, strftime('%s','now'), strftime('%s','now'))`).run(id, 'Roi Vázquez', score)
+  db.prepare(`UPDATE player_stats SET score = ? WHERE user_id = ? AND score < ?`).run(score, id, score)
+})();
+
 function ensureStats(userId) {
   const u = registeredUsers[userId];
   stmts.ensureUser.run(userId, u?.name ?? userId, u?.picture ?? null);
