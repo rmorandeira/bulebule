@@ -349,14 +349,16 @@ function buildRankings() {
   });
 }
 
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*';
+
 const app = express();
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: ALLOWED_ORIGIN }));
 app.get('/', (_, res) => res.send('OK'));
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 app.get('/api/vapid-public-key', (_, res) => res.json({ key: VAPID_PUBLIC }));
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: { origin: ALLOWED_ORIGIN, methods: ['GET', 'POST'] },
   transports: ['polling', 'websocket'],
 });
 
