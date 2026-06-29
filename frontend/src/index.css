@@ -199,8 +199,8 @@ body {
 }
 
 .die--transp-red {
-  background: rgba(220, 38, 38, 0.78);
-  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.15);
   backdrop-filter: blur(4px);
 }
 .die--transp-red .die-letter,

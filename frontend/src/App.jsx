@@ -180,7 +180,7 @@ export default function App() {
       // Rejoin lobby after mobile app-switch reconnect
       const r = roomRef.current
       if (r?.phase === 'lobby') {
-        socket.emit('join_room', { code: r.code, playerName: playerNameRef.current })
+        socket.emit('join_room', { code: r.code, playerName: playerNameRef.current, diceSkin: localStorage.getItem('bule_dice_skin') ?? null })
       }
     })
     socket.on('room_state', setRoom)
@@ -216,7 +216,7 @@ export default function App() {
     if (!pendingJoinCode || !myId) return
     const name = loadUser()?.name || playerName
     if (!name) return
-    socket.emit('join_room', { code: pendingJoinCode, playerName: name }, (res) => {
+    socket.emit('join_room', { code: pendingJoinCode, playerName: name, diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       if (!res?.ok) alert(res?.error || 'No se pudo unir a la sala')
       setPendingJoinCode(null)
     })
@@ -273,7 +273,7 @@ export default function App() {
     const { roomCode, roomName } = pendingInvite
     const name = user?.name || playerName
     setPendingInvite(null)
-    socket.emit('join_room', { code: roomCode, playerName: name }, (res) => {
+    socket.emit('join_room', { code: roomCode, playerName: name, diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       if (!res?.ok) alert(res?.error || 'No se pudo unir a la sala')
     })
   }

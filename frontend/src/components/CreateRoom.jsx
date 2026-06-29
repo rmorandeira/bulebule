@@ -59,6 +59,7 @@ export default function CreateRoom({ playerName, user, onBack, musicOn, onToggle
       vsBot,
       maxRounds,
       isPrivate: !vsBot && isPrivate,
+      diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
     }, (res) => {
       setLoading(false)
       if (!res?.ok) return setError(res?.error || 'Error al crear la sala')

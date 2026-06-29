@@ -32,8 +32,9 @@ const SKIN_CLASS = {
   'dice-transp-red':   'die--transp-red',
 }
 
-export default function Die({ value, small = false }) {
-  const skinClass = SKIN_CLASS[localStorage.getItem('bule_dice_skin')] ?? ''
+export default function Die({ value, small = false, skin = undefined }) {
+  const resolvedSkin = skin !== undefined ? skin : localStorage.getItem('bule_dice_skin')
+  const skinClass = SKIN_CLASS[resolvedSkin] ?? ''
   return (
     <div className="die-wrapper">
       <div

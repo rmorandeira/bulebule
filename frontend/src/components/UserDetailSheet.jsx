@@ -87,11 +87,13 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
   function handleEquip(itemId) {
     localStorage.setItem('bule_dice_skin', itemId)
     setActiveSkin(itemId)
+    socket.emit('set_dice_skin', { skinId: itemId })
   }
 
   function handleUnequip() {
     localStorage.removeItem('bule_dice_skin')
     setActiveSkin(null)
+    socket.emit('set_dice_skin', { skinId: null })
   }
 
   function handleChallenge() {

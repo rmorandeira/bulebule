@@ -19,7 +19,7 @@ _skinImgs['dice-marble-red'].src   = '/assets/dice/marble-red.png'
 _skinImgs['dice-marble-green'].src = '/assets/dice/marble-green.png'
 
 const _skinColors = {
-  'dice-transp-red': { bg: '#dc2626', opacity: 0.78 },
+  'dice-transp-red': { bg: '#dc2626', opacity: 0.15 },
 }
 
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z

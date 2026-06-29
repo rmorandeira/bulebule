@@ -188,6 +188,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
         vsBot: true,
         maxRounds: 0,
         isPrivate: false,
+        diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
       }, (res) => {
         setLoading(false)
         if (!res?.ok) return setError(res?.error || 'Error al crear la partida')
@@ -202,6 +203,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
         vsBot: false,
         maxRounds: 0,
         isPrivate,
+        diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
       }, (res) => {
         setLoading(false)
         if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
@@ -477,7 +479,7 @@ export default function RoomList({
     if (!connected) return setError('Sin conexión al servidor')
     if (!playerName?.trim()) return setError('Introduce tu nombre primero')
     setJoiningCode(code)
-    socket.emit('join_room', { code, playerName: playerName.trim() }, (res) => {
+    socket.emit('join_room', { code, playerName: playerName.trim(), diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       setJoiningCode(null)
       if (!res?.ok) return setError(res?.error || 'No se pudo unir a la sala')
       track('room_join')

@@ -271,8 +271,9 @@ const stmts = {
     { id: 'dice-marble-black', name: 'Mármol Negro',          description: 'Dados con textura de mármol negro. Elegancia oscura para los mejores jugadores.', price: 3000, image_url: '/assets/dice/marble-black.png', category: 'dice' },
     { id: 'dice-marble-red',   name: 'Mármol Rojo',           description: 'Dados con textura de mármol rojo. Para los jugadores más apasionados.',           price: 3000, image_url: '/assets/dice/marble-red.png',   category: 'dice' },
     { id: 'dice-marble-green', name: 'Mármol Verde',          description: 'Dados con textura de mármol verde. La suerte del tablero está de tu lado.',        price: 3000, image_url: '/assets/dice/marble-green.png', category: 'dice' },
-    { id: 'dice-transp-red',   name: 'Dados Rojos Transparentes', description: 'Dados con acabado traslúcido en rojo. Minimalismo con estilo.', price: 3000, image_url: '/assets/dice/transparent-red.svg', category: 'dice' },
+    { id: 'dice-transp-red',   name: 'Dados Rojos Transparentes', description: 'Dados con acabado traslúcido en rojo. Minimalismo con estilo.', price: 3000, image_url: '/assets/dice/transparent-red.png', category: 'dice' },
     { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack', available: 0 },
+    { id: 'bar-el-polvorin',   name: 'Bar El Polvorín',       description: 'El bar más icónico del barrio. Un clásico para los jugadores de Bule Bule.',         price: 45000, image_url: '/assets/items/bar-el-polvorin.png', category: 'landmark' },
   ];
   const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
   const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));
@@ -408,7 +409,7 @@ function makeRateLimiter(maxCalls, windowMs) {
 }
 
 function makePlayer(id, name) {
-  return { id, name, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false };
+  return { id, name, diceSkin: null, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false };
 }
 
 function makeBotPlayer(n = 0) {
@@ -652,6 +653,7 @@ function sanitize(room) {
         userId: uid ?? null,
         name: p.name,
         isBot: p.isBot ?? false,
+        diceSkin: p.isBot ? null : (p.diceSkin ?? null),
         currentDice: p.currentDice,
         rollHistory: p.rollHistory,
         rollDiscardHistory: p.rollDiscardHistory ?? [],
@@ -1041,7 +1043,7 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null }, cb) => {
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null, diceSkin = null }, cb) => {
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     if (!vsBot && !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
@@ -1082,7 +1084,7 @@ io.on('connection', (socket) => {
       roundWinnerId: null,
       turnDeadline: null,
       tournamentId: tournamentId ?? null,
-      players: [makePlayer(socket.id, playerName.trim())],
+      players: [{ ...makePlayer(socket.id, playerName.trim()), diceSkin: diceSkin ?? null }],
     };
 
     if (vsBot) {
@@ -1102,7 +1104,7 @@ io.on('connection', (socket) => {
     else if (!vsBot) broadcastRoomList();
   });
 
-  socket.on('join_room', ({ code, playerName }, cb) => {
+  socket.on('join_room', ({ code, playerName, diceSkin = null }, cb) => {
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Introduce tu nombre' });
     const normalCode = code?.toUpperCase();
@@ -1129,13 +1131,23 @@ io.on('connection', (socket) => {
     }
 
     if (room.players.length >= room.maxPlayers) return cb?.({ ok: false, error: 'Sala llena' });
-    room.players.push(makePlayer(socket.id, playerName.trim()));
+    room.players.push({ ...makePlayer(socket.id, playerName.trim()), diceSkin: diceSkin ?? null });
     socket.join(normalCode);
     socket.data.roomCode = normalCode;
     console.log(`join_room: "${room.name}" player="${playerName}"`);
     cb?.({ ok: true, code: normalCode });
     broadcast(normalCode);
     broadcastRoomList();
+  });
+
+  socket.on('set_dice_skin', ({ skinId = null } = {}) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player || player.isBot) return;
+    player.diceSkin = skinId ?? null;
+    broadcast(code);
   });
 
   socket.on('destroy_room', (cb) => {

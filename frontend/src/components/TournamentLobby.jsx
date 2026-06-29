@@ -68,6 +68,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
       isPrivate: false,
       tournamentId: tournament.id,
       userId: user?.email ?? null,
+      diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
     }, (res) => {
       setCreating(false)
       if (!res?.ok) return setCreateError(res?.error ?? 'Error al crear la sala')
@@ -79,7 +80,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
     if (joiningCode) return
     const name = user?.name ?? playerName
     setJoiningCode(room.code)
-    socket.emit('join_room', { code: room.code, playerName: name }, (res) => {
+    socket.emit('join_room', { code: room.code, playerName: name, diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       setJoiningCode(null)
       if (!res?.ok) setError(res?.error ?? 'No se pudo unir a la sala')
     })
