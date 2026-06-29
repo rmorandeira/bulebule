@@ -447,7 +447,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               <h2 className="results__name">{winner?.name}</h2>
               <p className="results__hand">
                 {winner?.hand?.desc}
-                {winner?.hand?.rank != null && <span className="results__hand-pts">+{handPts(winner.hand.rank)} pts</span>}
+                {winner?.hand?.rank != null && <span className="results__hand-pts">+{handPts(winner.hand.rank)} B</span>}
               </p>
             </div>
             {(() => {
@@ -471,7 +471,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       <span className="results__desc">
                         {p.hand.desc}
                         {p.id === room.roundWinnerId && p.hand?.rank != null && (
-                          <span className="results__hand-pts">+{handPts(p.hand.rank)} pts</span>
+                          <span className="results__hand-pts">+{handPts(p.hand.rank)} B</span>
                         )}
                       </span>
                     )}
@@ -624,7 +624,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     {p.done && p.hand && (
                       <span className="scoreboard__hand-label">
                         {p.hand.desc}
-                        {p.hand.rank != null && <span className="results__hand-pts">+{handPts(p.hand.rank)} pts</span>}
+                        {p.hand.rank != null && <span className="results__hand-pts">+{handPts(p.hand.rank)} B</span>}
                       </span>
                     )}
                   </div>
@@ -681,7 +681,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   {displayPlayer?.hand?.rank != null && (
                     <span className="dice-box__hand">
                       {displayPlayer.hand.desc}
-                      <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} pts</span>
+                      <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} B</span>
                     </span>
                   )}
                 </div>
@@ -771,7 +771,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             {me?.done && (
               <p className="waiting-label">
                 {`Tu mano: ${me?.hand?.desc}`}
-                {me?.hand?.rank != null && <span className="dice-box__hand-pts">+{handPts(me.hand.rank)} pts</span>}
+                {me?.hand?.rank != null && <span className="dice-box__hand-pts">+{handPts(me.hand.rank)} B</span>}
               </p>
             )}
             {!isMyTurn && !me?.done && waitTimeLeft !== null && (

@@ -9,13 +9,14 @@ import TournamentLobby from './TournamentLobby'
 import UserDetailSheet from './UserDetailSheet'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
+const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉' }
 
 function getFavorites() {
   try { return JSON.parse(localStorage.getItem('bule_favorites') ?? '{}') } catch { return {} }
 }
 
 function TierDot({ tier }) {
-  return <span className="tier-dot" style={{ background: TIER_COLOR[tier] ?? TIER_COLOR.Bronce }} />
+  return <span className="tier-emoji">{TIER_EMOJI[tier] ?? TIER_EMOJI.Bronce}</span>
 }
 
 function decodeJwt(token) {
@@ -536,7 +537,7 @@ export default function RoomList({
         <img className="rl__logo" src="/assets/logo-bulebule.png" alt="Bule Bule" draggable={false} />
         <div className="rl__hd-score">
           {myStats && <>
-            <span className="rl__hd-pts">{myStats.score.toLocaleString()} pts</span>
+            <span className="rl__hd-pts">{myStats.score.toLocaleString()} B</span>
             {myRank && <span className="rl__hd-rank">Ranking {myRank}/{rankTotal}</span>}
           </>}
         </div>
