@@ -6,7 +6,7 @@ import { RenderPass }     from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass }     from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { FXAAShader }     from 'three/examples/jsm/shaders/FXAAShader.js'
 
-// Preload all dice skin textures so they're ready when scene mounts
+// Skin config: image-based or flat-color
 const _skinImgs = {
   'dice-marble':       new window.Image(),
   'dice-marble-black': new window.Image(),
@@ -17,6 +17,10 @@ _skinImgs['dice-marble'].src       = '/assets/dice/marble.png'
 _skinImgs['dice-marble-black'].src = '/assets/dice/marble-black.png'
 _skinImgs['dice-marble-red'].src   = '/assets/dice/marble-red.png'
 _skinImgs['dice-marble-green'].src = '/assets/dice/marble-green.png'
+
+const _skinColors = {
+  'dice-transp-red': { bg: '#dc2626', opacity: 0.78 },
+}
 
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
 const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
@@ -90,16 +94,19 @@ function drawPip(ctx, cx, cy, r, isRed, textured = false) {
   ctx.beginPath(); ctx.arc(cx - r * 0.28, cy - r * 0.32, r * 0.48, 0, Math.PI * 2); ctx.fill()
 }
 
-function makeTex(value, bgImg = null) {
+function makeTex(value, bgImg = null, bgColor = null) {
   const S = 256
   const cv = document.createElement('canvas')
   cv.width = cv.height = S
   const ctx = cv.getContext('2d')
 
-  const textured = bgImg !== null
-  if (textured) {
+  const textured = bgImg !== null || bgColor !== null
+  if (bgImg) {
     ctx.drawImage(bgImg, 0, 0, S, S)
     ctx.fillStyle = 'rgba(10,20,40,0.12)'
+    ctx.fillRect(0, 0, S, S)
+  } else if (bgColor) {
+    ctx.fillStyle = bgColor
     ctx.fillRect(0, 0, S, S)
   } else {
     // Amber base — fills full canvas so rounded-box corners blend
@@ -140,6 +147,15 @@ function makeTex(value, bgImg = null) {
 const _toonGrad = makeToonGradient()
 
 function buildMats(skinId = null) {
+  const colorCfg = skinId ? _skinColors[skinId] : null
+  if (colorCfg) {
+    return FACE_VALUES.map(v => {
+      const mat = new THREE.MeshToonMaterial({ map: makeTex(v, null, colorCfg.bg), gradientMap: _toonGrad })
+      mat.transparent = true
+      mat.opacity = colorCfg.opacity
+      return mat
+    })
+  }
   const img = skinId ? _skinImgs[skinId] : null
   const bgImg = img?.complete && img.naturalWidth > 0 ? img : null
   return FACE_VALUES.map(v => new THREE.MeshToonMaterial({ map: makeTex(v, bgImg), gradientMap: _toonGrad }))

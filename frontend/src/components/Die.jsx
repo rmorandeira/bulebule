@@ -29,6 +29,7 @@ const SKIN_CLASS = {
   'dice-marble-black': 'die--marble-black',
   'dice-marble-red':   'die--marble-red',
   'dice-marble-green': 'die--marble-green',
+  'dice-transp-red':   'die--transp-red',
 }
 
 export default function Die({ value, small = false }) {

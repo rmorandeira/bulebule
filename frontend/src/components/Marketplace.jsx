@@ -166,13 +166,9 @@ export default function Marketplace({ user }) {
                   <div className="mkt__bizum">
                     <p className="mkt__bizum-label">Envía <strong>1 €</strong> por Bizum y confirma el pago.</p>
                   </div>
-                  {!user ? (
-                    <p className="mkt__sheet-hint">Inicia sesión para confirmar el pago</p>
-                  ) : (
-                    <button className="bs__submit" onClick={handleBuyPack} disabled={buying}>
-                      {buying ? 'Procesando...' : '✓ Confirmar pago'}
-                    </button>
-                  )}
+                  <button className="bs__submit" disabled>
+                    Comprar Bules
+                  </button>
                 </>
               ) : (
                 <>

@@ -198,6 +198,16 @@ body {
   border-color: rgba(255,255,255,0.2);
 }
 
+.die--transp-red {
+  background: rgba(220, 38, 38, 0.78);
+  border-color: rgba(220, 38, 38, 0.35);
+  backdrop-filter: blur(4px);
+}
+.die--transp-red .die-letter,
+.die--transp-red .die-letter--red { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+.die--transp-red .pip,
+.die--transp-red .pip--red        { background: rgba(255,255,255,0.9); }
+
 /* ── Buttons ─────────────────────────────────────────────── */
 .btn {
   padding: 15px 24px;
