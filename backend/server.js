@@ -374,6 +374,18 @@ function genCode() {
   return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+function makeRateLimiter(maxCalls, windowMs) {
+  const timestamps = [];
+  return function() {
+    const now = Date.now();
+    while (timestamps.length && timestamps[0] <= now - windowMs) timestamps.shift();
+    if (timestamps.length >= maxCalls) return false;
+    timestamps.push(now);
+    return true;
+  };
+}
+
 function makePlayer(id, name) {
   return { id, name, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false };
 }
@@ -835,8 +847,16 @@ function endRound(room) {
 app.get('/api/rankings', (_, res) => res.json({ rankings: buildRankings().slice(0, 100) }));
 
 io.on('connection', (socket) => {
+  const rl = {
+    action: makeRateLimiter(15, 5_000),   // roll/stand/discard: 15 per 5s
+    room:   makeRateLimiter(5,  60_000),  // create/join/leave/start: 5 per min
+    social: makeRateLimiter(10, 60_000),  // challenge/invite/search: 10 per min
+    buy:    makeRateLimiter(5,  60_000),  // buy_item: 5 per min
+    read:   makeRateLimiter(30, 10_000),  // stats/list queries: 30 per 10s
+  };
 
   socket.on('get_stats', (cb) => {
+    if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid      = socket.data.userId;
     const rankings = buildRankings();
     const myRank   = uid ? (rankings.findIndex(r => r.userId === uid) + 1) || null : null;
@@ -853,6 +873,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_marketplace', (cb) => {
+    if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid       = socket.data.userId;
     const items     = stmts.getItems.all();
     const userItems = uid ? stmts.getUserItems.all(uid).map(r => r.item_id) : [];
@@ -861,6 +882,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('buy_item', ({ itemId } = {}, cb) => {
+    if (!rl.buy()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid  = socket.data.userId;
     if (!uid)    return cb?.({ ok: false, error: 'Debes iniciar sesión' });
     const item = stmts.getItemById.get(itemId);
@@ -873,6 +895,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_user_items', (cb) => {
+    if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid       = socket.data.userId;
     if (!uid) return cb?.({ ok: true, items: [] });
     const itemIds   = stmts.getUserItems.all(uid).map(r => r.item_id);
@@ -881,10 +904,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('list_rooms', (cb) => {
+    if (!rl.read()) return cb?.({ rooms: [] });
     cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId).map(sanitizeForList) });
   });
 
   socket.on('get_tournaments', (cb) => {
+    if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const result = TOURNAMENT_DEFS.map(t => ({
       ...t,
       playerCount: Object.keys(tournamentPlayers[t.id]).length,
@@ -895,6 +920,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_tournament', ({ tournamentId, userId, name, picture }, cb) => {
+    if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const def = getTournamentDef(tournamentId);
     if (!def) return cb?.({ ok: false, error: 'Torneo no encontrado' });
 
@@ -938,6 +964,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null }, cb) => {
+    if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     if (!vsBot && !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
 
@@ -991,6 +1018,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_room', ({ code, playerName }, cb) => {
+    if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Introduce tu nombre' });
     const normalCode = code?.toUpperCase();
     const room = rooms[normalCode];
@@ -1063,6 +1091,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('start_game', (cb) => {
+    if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.hostId !== socket.id) return cb?.({ ok: false });
     if (room.players.length < 2) return cb?.({ ok: false, error: 'Necesitas al menos 2 jugadores' });
@@ -1074,6 +1103,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('discard', ({ indices }, cb) => {
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
@@ -1085,6 +1115,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('roll', ({ keptIndices = [] }, cb) => {
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
@@ -1113,8 +1144,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('report_faces', (data, rawCb) => {
-    const { faces } = (data && typeof data === 'object') ? data : {};
     const cb = typeof rawCb === 'function' ? rawCb : null;
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const { faces } = (data && typeof data === 'object') ? data : {};
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
@@ -1130,8 +1162,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('stand', (data, rawCb) => {
-    const { faces } = (data && typeof data === 'object') ? data : {};
     const cb = typeof rawCb === 'function' ? rawCb : null;
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const { faces } = (data && typeof data === 'object') ? data : {};
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
@@ -1147,6 +1180,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('continue_turn', (cb) => {
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing' || !room.awaitingContinue) return cb?.({ ok: false });
     proceedTurn(room);
@@ -1165,6 +1199,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('next_round', (cb) => {
+    if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'results') return cb?.({ ok: false });
     const loserIsBot = room.players.find(p => p.id === room.roundLoserId)?.isBot;
@@ -1176,6 +1211,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('rematch', (cb) => {
+    if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.hostId !== socket.id || room.phase !== 'finished') return cb?.({ ok: false });
     // El perdedor de la partida abre la revancha; wins se acumulan entre partidas
@@ -1209,6 +1245,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('search_users', ({ query = '' }, cb) => {
+    if (!rl.social()) return cb?.({ users: [] });
     const q = query.toLowerCase();
     const myUserId = socket.data.userId;
     const results = Object.values(registeredUsers)
@@ -1219,6 +1256,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('invite_to_room', ({ toUserId, roomCode, roomName }, cb) => {
+    if (!rl.social()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const invitee = registeredUsers[toUserId];
     if (!invitee) return cb?.({ ok: false, error: 'Usuario no encontrado' });
     const inviterName = (socket.data.userId && registeredUsers[socket.data.userId]?.name) || 'Alguien';
@@ -1245,6 +1283,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_user_profile', ({ userId } = {}, cb) => {
+    if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     if (!userId) return cb?.({ ok: false, error: 'Falta userId' });
     const user = registeredUsers[userId];
     const row  = stmts.getStats.get(userId);
@@ -1258,6 +1297,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('challenge_user', ({ toUserId, playerName } = {}, cb) => {
+    if (!rl.social()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid = socket.data.userId;
     if (!uid)     return cb?.({ ok: false, error: 'Debes iniciar sesión para retar a otros jugadores' });
     const target = registeredUsers[toUserId];
