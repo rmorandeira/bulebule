@@ -5,11 +5,15 @@ const CLOSE_DURATION = 260
 
 const CATEGORIES = [
   { id: 'all',         label: 'Todo',           emoji: '🛍️' },
+  { id: 'pack',        label: 'Bules',          emoji: '💰' },
   { id: 'dice',        label: 'Dados',          emoji: '🎲' },
   { id: 'collectible', label: 'Coleccionables',  emoji: '🎰' },
   { id: 'landmark',    label: 'Monumentos',      emoji: '🏛️' },
   { id: 'figure',      label: 'Personajes',      emoji: '🧑‍🎨' },
 ]
+
+const BIZUM_NUMBER = '696242948'
+const BIZUM_DISPLAY = '696 242 948'
 
 export default function Marketplace({ user }) {
   const [items, setItems]         = useState([])
@@ -18,6 +22,7 @@ export default function Marketplace({ user }) {
   const [selected, setSelected]   = useState(null)
   const [closing, setClosing]     = useState(false)
   const [buying, setBuying]       = useState(false)
+  const [copied, setCopied]       = useState(false)
   const [error, setError]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeSkin, setActiveSkin] = useState(() => localStorage.getItem('bule_dice_skin') ?? null)
@@ -36,6 +41,7 @@ export default function Marketplace({ user }) {
     clearTimeout(closeRef.current)
     setClosing(false)
     setError('')
+    setCopied(false)
     setSelected(item)
   }
 
@@ -60,6 +66,25 @@ export default function Marketplace({ user }) {
     })
   }
 
+  function handleBuyPack() {
+    if (!selected || buying) return
+    setBuying(true)
+    setError('')
+    socket.emit('buy_bules_pack', { packId: selected.id }, (res) => {
+      setBuying(false)
+      if (!res?.ok) { setError(res?.error ?? 'Error al procesar'); return }
+      setCredits(res.score)
+      closeItem()
+    })
+  }
+
+  function handleCopyBizum() {
+    navigator.clipboard?.writeText(BIZUM_NUMBER).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   function handleEquip(itemId) {
     localStorage.setItem('bule_dice_skin', itemId)
     setActiveSkin(itemId)
@@ -76,7 +101,6 @@ export default function Marketplace({ user }) {
     ? items
     : items.filter(i => i.category === activeCategory)
 
-  // Only show categories that have items
   const availableCategories = CATEGORIES.filter(c =>
     c.id === 'all' || items.some(i => i.category === c.id)
   )
@@ -116,7 +140,9 @@ export default function Marketplace({ user }) {
               {owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
             </div>
             <p className="mkt__card-name">{item.name}</p>
-            <p className="mkt__card-price">{item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} Bules`}</p>
+            <p className="mkt__card-price">
+              {item.category === 'pack' ? '1 €' : item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} Bules`}
+            </p>
           </div>
         ))}
       </div>
@@ -142,30 +168,53 @@ export default function Marketplace({ user }) {
               {selected.description && (
                 <p className="mkt__sheet-desc">{selected.description}</p>
               )}
-              <p className="mkt__sheet-price">{selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} Bules`}</p>
 
               {error && <p className="bs__error">{error}</p>}
 
-              {selected.category === 'dice' && (selected.price === 0 || owned(selected.id)) ? (
-                activeSkin === selected.id ? (
-                  <button className="bs__submit bs__submit--secondary" onClick={handleUnequip}>
-                    Desactivar skin
-                  </button>
-                ) : (
-                  <button className="bs__submit" onClick={() => handleEquip(selected.id)}>
-                    Activar skin
-                  </button>
-                )
-              ) : owned(selected.id) ? (
-                <button className="bs__submit" disabled>Ya lo tienes ✓</button>
-              ) : !user ? (
-                <p className="mkt__sheet-hint">Inicia sesión para comprar</p>
-              ) : credits < selected.price ? (
-                <button className="bs__submit" disabled>Créditos insuficientes</button>
+              {selected.category === 'pack' ? (
+                <>
+                  <div className="mkt__bizum">
+                    <p className="mkt__bizum-label">Envía <strong>1 €</strong> por Bizum al:</p>
+                    <p className="mkt__bizum-num">{BIZUM_DISPLAY}</p>
+                    <button className="mkt__bizum-copy" onClick={handleCopyBizum}>
+                      {copied ? '✓ Copiado' : 'Copiar número'}
+                    </button>
+                  </div>
+                  {!user ? (
+                    <p className="mkt__sheet-hint">Inicia sesión para confirmar el pago</p>
+                  ) : (
+                    <button className="bs__submit" onClick={handleBuyPack} disabled={buying}>
+                      {buying ? 'Procesando...' : '✓ Confirmar pago'}
+                    </button>
+                  )}
+                </>
               ) : (
-                <button className="bs__submit" onClick={handleBuy} disabled={buying}>
-                  {buying ? 'Comprando...' : `Comprar · ${selected.price.toLocaleString()} pts`}
-                </button>
+                <>
+                  <p className="mkt__sheet-price">
+                    {selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} Bules`}
+                  </p>
+                  {selected.category === 'dice' && (selected.price === 0 || owned(selected.id)) ? (
+                    activeSkin === selected.id ? (
+                      <button className="bs__submit bs__submit--secondary" onClick={handleUnequip}>
+                        Desactivar skin
+                      </button>
+                    ) : (
+                      <button className="bs__submit" onClick={() => handleEquip(selected.id)}>
+                        Activar skin
+                      </button>
+                    )
+                  ) : owned(selected.id) ? (
+                    <button className="bs__submit" disabled>Ya lo tienes ✓</button>
+                  ) : !user ? (
+                    <p className="mkt__sheet-hint">Inicia sesión para comprar</p>
+                  ) : credits < selected.price ? (
+                    <button className="bs__submit" disabled>Bules insuficientes</button>
+                  ) : (
+                    <button className="bs__submit" onClick={handleBuy} disabled={buying}>
+                      {buying ? 'Comprando...' : `Comprar · ${selected.price.toLocaleString()} Bules`}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

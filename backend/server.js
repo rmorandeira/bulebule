@@ -271,6 +271,7 @@ const stmts = {
     { id: 'dice-marble-black', name: 'Mármol Negro',          description: 'Dados con textura de mármol negro. Elegancia oscura para los mejores jugadores.', price: 3000, image_url: '/assets/dice/marble-black.png', category: 'dice' },
     { id: 'dice-marble-red',   name: 'Mármol Rojo',           description: 'Dados con textura de mármol rojo. Para los jugadores más apasionados.',           price: 3000, image_url: '/assets/dice/marble-red.png',   category: 'dice' },
     { id: 'dice-marble-green', name: 'Mármol Verde',          description: 'Dados con textura de mármol verde. La suerte del tablero está de tu lado.',        price: 3000, image_url: '/assets/dice/marble-green.png', category: 'dice' },
+    { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack' },
   ];
   const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
   const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));
@@ -942,6 +943,17 @@ io.on('connection', (socket) => {
     stmts.insertUserItem.run(uid, itemId);
     const newCredits = stmts.getStats.get(uid)?.score ?? 0;
     cb?.({ ok: true, credits: newCredits });
+  });
+
+  socket.on('buy_bules_pack', ({ packId } = {}, cb) => {
+    if (!rl.buy()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const uid = socket.data.userId;
+    if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión' });
+    const pack = stmts.getItemById.get(packId);
+    if (!pack || pack.category !== 'pack') return cb?.({ ok: false, error: 'Pack no válido' });
+    db.prepare('UPDATE player_stats SET score = score + 1000 WHERE user_id = ?').run(uid);
+    const newScore = stmts.getStats.get(uid)?.score ?? 0;
+    cb?.({ ok: true, score: newScore });
   });
 
   socket.on('get_user_items', (cb) => {

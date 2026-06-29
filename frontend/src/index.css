@@ -3398,6 +3398,41 @@ body {
   padding: 16px 0 8px;
 }
 
+.mkt__bizum {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 8px 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.mkt__bizum-label {
+  font-size: 14px;
+  color: var(--text-subtle);
+  text-align: center;
+}
+
+.mkt__bizum-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+.mkt__bizum-copy {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 1.5px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 18px;
+  cursor: pointer;
+}
+
 /* ── User Detail Sheet (uds) ──────────────────────────────────────────────── */
 
 .uds__header {
