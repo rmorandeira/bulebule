@@ -107,7 +107,7 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
       {/* Content */}
       <div className="usec__content">
         {activeTab === 'stats'     && <StatsTab stats={stats} myRank={myRank} rankTotal={rankTotal} handStats={handStats} rollStats={rollStats} />}
-        {activeTab === 'historial' && <ComingSoon />}
+        {activeTab === 'historial' && <HistorialTab />}
         {activeTab === 'items'     && <ItemsTab user={user} />}
         {activeTab === 'ajustes'   && (
           <SettingsTab user={user} onUpdate={onUpdate} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
@@ -350,6 +350,82 @@ function ItemsTab({ user }) {
         </>
       )}
     </>
+  )
+}
+
+// ── Historial tab ─────────────────────────────────────────────────────────────
+
+function fmtDate(ts) {
+  const d = new Date(ts * 1000)
+  const now = new Date()
+  const diffDays = Math.floor((now - d) / 86400000)
+  const time = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  if (diffDays === 0) return `Hoy · ${time}`
+  if (diffDays === 1) return `Ayer · ${time}`
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ` · ${time}`
+}
+
+function HistorialTab() {
+  const [sessions, setSessions]   = useState([])
+  const [purchases, setPurchases] = useState([])
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    socket.emit('get_user_history', (res) => {
+      setLoading(false)
+      if (res?.ok) {
+        setSessions(res.sessions ?? [])
+        setPurchases(res.purchases ?? [])
+      }
+    })
+  }, [])
+
+  if (loading) return <p className="usec__empty">Cargando...</p>
+
+  const timeline = [
+    ...sessions.map(s => ({ type: 'game', ts: s.played_at, ...s })),
+    ...purchases.map(p => ({ type: 'purchase', ts: p.bought_at, ...p })),
+  ].sort((a, b) => b.ts - a.ts)
+
+  if (timeline.length === 0) {
+    return (
+      <div className="usec__coming-soon">
+        <span className="usec__coming-icon">📋</span>
+        <p className="usec__coming-title">Sin actividad aún</p>
+        <p className="usec__coming-sub">Aquí verás tus partidas y compras</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="hist__list">
+      {timeline.map((entry, i) => (
+        entry.type === 'game' ? (
+          <div key={`g${i}`} className={`hist__row hist__row--${entry.result}`}>
+            <span className="hist__icon">{entry.result === 'win' ? '🏆' : '💀'}</span>
+            <div className="hist__info">
+              <p className="hist__title">{entry.result === 'win' ? 'Victoria' : 'Derrota'}</p>
+              <p className="hist__date">{fmtDate(entry.ts)}</p>
+            </div>
+            <span className={`hist__delta hist__delta--${entry.result}`}>
+              {entry.result === 'win' ? '+' : ''}{entry.score_delta} B
+            </span>
+          </div>
+        ) : (
+          <div key={`p${i}`} className="hist__row hist__row--purchase">
+            <img src={entry.image_url} alt={entry.name} className="hist__item-img"
+              onError={e => { e.currentTarget.style.display = 'none' }} />
+            <div className="hist__info">
+              <p className="hist__title">{entry.name}</p>
+              <p className="hist__date">{fmtDate(entry.ts)}</p>
+            </div>
+            <span className="hist__delta hist__delta--purchase">
+              {entry.price === 0 ? 'Gratis' : `-${entry.price.toLocaleString()} B`}
+            </span>
+          </div>
+        )
+      ))}
+    </div>
   )
 }
 

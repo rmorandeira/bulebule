@@ -3082,6 +3082,67 @@ body {
   margin: 0;
 }
 
+/* Historial tab */
+
+.hist__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hist__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hist__row:last-child { border-bottom: none; }
+
+.hist__icon {
+  font-size: 22px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.hist__item-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.hist__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.hist__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hist__date {
+  font-size: 11px;
+  color: var(--text-subtle);
+  margin-top: 2px;
+}
+
+.hist__delta {
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.hist__delta--win      { color: #22c55e; }
+.hist__delta--loss     { color: var(--text-subtle); }
+.hist__delta--purchase { color: #ef4444; }
+
 /* Settings tab */
 
 .usec__settings {

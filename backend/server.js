@@ -965,6 +965,21 @@ io.on('connection', (socket) => {
     cb?.({ ok: true, items });
   });
 
+  socket.on('get_user_history', (cb) => {
+    if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const uid = socket.data.userId;
+    if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión' });
+    const sessions = db.prepare(
+      `SELECT result, score_delta, played_at FROM game_sessions WHERE user_id = ? ORDER BY played_at DESC LIMIT 50`
+    ).all(uid);
+    const purchases = db.prepare(
+      `SELECT i.id, i.name, i.image_url, i.price, i.category, ui.bought_at
+       FROM user_items ui JOIN items i ON ui.item_id = i.id
+       WHERE ui.user_id = ? ORDER BY ui.bought_at DESC LIMIT 50`
+    ).all(uid);
+    cb?.({ ok: true, sessions, purchases });
+  });
+
   socket.on('list_rooms', (cb) => {
     if (!rl.read()) return cb?.({ rooms: [] });
     cb?.({ rooms: Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId).map(sanitizeForList) });
