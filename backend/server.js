@@ -526,7 +526,7 @@ function startDesempate(room, playerIds, provisionalWinnerId) {
   const firstIdx = room.players.findIndex(p => p.id === playerIds[0]);
   room.startingPlayerIndex = firstIdx !== -1 ? firstIdx : 0;
   room.currentPlayerIndex  = room.startingPlayerIndex;
-  room.maxRolls    = null;
+  room.maxRolls    = 1;    // desempate a la caída: una sola tirada
   room.turnDeadline = null;
 
   awaitContinue(room);
