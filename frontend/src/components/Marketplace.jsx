@@ -4,10 +4,10 @@ import socket from '../socket'
 const CLOSE_DURATION = 260
 
 const CATEGORIES = [
-  { id: 'all',         label: 'Todo',        emoji: '🛍️' },
-  { id: 'collectible', label: 'Coleccionables', emoji: '🎲' },
-  { id: 'landmark',    label: 'Monumentos',  emoji: '🏛️' },
-  { id: 'figure',      label: 'Personajes',  emoji: '🧑‍🎨' },
+  { id: 'all',         label: 'Todo',           emoji: '🛍️' },
+  { id: 'collectible', label: 'Coleccionables',  emoji: '🎲' },
+  { id: 'landmark',    label: 'Monumentos',      emoji: '🏛️' },
+  { id: 'figure',      label: 'Personajes',      emoji: '🧑‍🎨' },
 ]
 
 export default function Marketplace({ user }) {
@@ -19,11 +19,7 @@ export default function Marketplace({ user }) {
   const [buying, setBuying]       = useState(false)
   const [error, setError]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
-
-  const pagerRef       = useRef(null)
-  const scrollTimerRef = useRef(null)
-  const progScrollRef  = useRef(false)
-  const closeRef       = useRef(null)
+  const closeRef = useRef(null)
 
   useEffect(() => {
     socket.emit('get_marketplace', (res) => {
@@ -33,45 +29,6 @@ export default function Marketplace({ user }) {
       setCredits(res.credits ?? 0)
     })
   }, [])
-
-  // Snap carousel to the active category card
-  function snapToCategory(id) {
-    const pager = pagerRef.current
-    if (!pager) return
-    const idx = CATEGORIES.findIndex(c => c.id === id)
-    const card = pager.children[idx]
-    if (card) {
-      progScrollRef.current = true
-      pager.scrollTo({ left: card.offsetLeft - (pager.offsetWidth - card.offsetWidth) / 2, behavior: 'smooth' })
-      setTimeout(() => { progScrollRef.current = false }, 400)
-    }
-  }
-
-  function handleCategoryClick(id) {
-    setActiveCategory(id)
-    snapToCategory(id)
-  }
-
-  function handleCarouselScroll() {
-    if (progScrollRef.current) return
-    clearTimeout(scrollTimerRef.current)
-    scrollTimerRef.current = setTimeout(() => {
-      const pager = pagerRef.current
-      if (!pager) return
-      const center = pager.scrollLeft + pager.offsetWidth / 2
-      let closest = null
-      let minDist = Infinity
-      Array.from(pager.children).forEach((card, i) => {
-        const cardCenter = card.offsetLeft + card.offsetWidth / 2
-        const dist = Math.abs(center - cardCenter)
-        if (dist < minDist) { minDist = dist; closest = i }
-      })
-      if (closest !== null) {
-        const cat = CATEGORIES[closest]
-        if (cat && cat.id !== activeCategory) setActiveCategory(cat.id)
-      }
-    }, 80)
-  }
 
   function openItem(item) {
     clearTimeout(closeRef.current)
@@ -114,20 +71,17 @@ export default function Marketplace({ user }) {
 
   return (
     <div className="mkt">
-      {/* Category carousel */}
-      <div className="mkt__carousel" ref={pagerRef} onScroll={handleCarouselScroll}>
+      {/* Category tabs */}
+      <div className="mkt__tabs">
         {availableCategories.map(cat => (
-          <div
+          <button
             key={cat.id}
-            className={`mkt__cat-card${activeCategory === cat.id ? ' mkt__cat-card--active' : ''}`}
-            onClick={() => handleCategoryClick(cat.id)}
+            className={`mkt__tab${activeCategory === cat.id ? ' mkt__tab--active' : ''}`}
+            onClick={() => setActiveCategory(cat.id)}
           >
-            <span className="mkt__cat-emoji">{cat.emoji}</span>
-            <span className="mkt__cat-label">{cat.label}</span>
-            <span className="mkt__cat-count">
-              {cat.id === 'all' ? items.length : items.filter(i => i.category === cat.id).length} items
-            </span>
-          </div>
+            <span className="mkt__tab-emoji">{cat.emoji}</span>
+            <span>{cat.label}</span>
+          </button>
         ))}
       </div>
 
