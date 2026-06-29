@@ -64,8 +64,8 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
         {room.players.map(p => (
           <div
             key={p.id}
-            className={`player-list__item${p.userId && p.id !== myId ? ' player-list__item--clickable' : ''}`}
-            onClick={() => p.userId && p.id !== myId && setViewingUser({ userId: p.userId, name: p.name, picture: null })}
+            className={`player-list__item${p.userId ? ' player-list__item--clickable' : ''}`}
+            onClick={() => p.userId && setViewingUser({ userId: p.userId, name: p.name, picture: null })}
           >
             <span className="player-list__name">{p.name}</span>
             {p.id === room.hostId && <span className="badge">Host</span>}
