@@ -239,9 +239,15 @@ function StatsTab({ stats, myRank, rankTotal, handStats, rollStats }) {
 
 // ── Items tab ─────────────────────────────────────────────────────────────────
 
+const CLOSE_DURATION = 260
+
 function ItemsTab({ user }) {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [items, setItems]           = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [selected, setSelected]     = useState(null)
+  const [closing, setClosing]       = useState(false)
+  const [activeSkin, setActiveSkin] = useState(() => localStorage.getItem('bule_dice_skin') ?? null)
+  const closeRef = useRef(null)
 
   useEffect(() => {
     socket.emit('get_user_items', (res) => {
@@ -249,6 +255,27 @@ function ItemsTab({ user }) {
       if (res?.ok) setItems(res.items ?? [])
     })
   }, [])
+
+  function openItem(item) {
+    clearTimeout(closeRef.current)
+    setClosing(false)
+    setSelected(item)
+  }
+
+  function closeItem() {
+    setClosing(true)
+    closeRef.current = setTimeout(() => { setSelected(null); setClosing(false) }, CLOSE_DURATION)
+  }
+
+  function handleEquip(itemId) {
+    localStorage.setItem('bule_dice_skin', itemId)
+    setActiveSkin(itemId)
+  }
+
+  function handleUnequip() {
+    localStorage.removeItem('bule_dice_skin')
+    setActiveSkin(null)
+  }
 
   if (loading) return <p className="usec__empty">Cargando...</p>
 
@@ -263,23 +290,66 @@ function ItemsTab({ user }) {
   }
 
   return (
-    <div className="mkt__grid mkt__grid--usec">
-      {items.map(item => (
-        <div key={item.id} className="mkt__card mkt__card--owned">
-          <div className="mkt__card-img-wrap">
-            <img
-              className="mkt__card-img"
-              src={item.image_url}
-              alt={item.name}
-              onError={e => { e.currentTarget.style.display = 'none' }}
-            />
-            <span className="mkt__owned-badge">Tuyo</span>
+    <>
+      <div className="mkt__grid mkt__grid--usec">
+        {items.map(item => (
+          <div key={item.id} className="mkt__card mkt__card--owned" onClick={() => openItem(item)}>
+            <div className="mkt__card-img-wrap">
+              <img
+                className="mkt__card-img"
+                src={item.image_url}
+                alt={item.name}
+                onError={e => { e.currentTarget.style.display = 'none' }}
+              />
+              {activeSkin === item.id && <span className="mkt__active-badge">Activo</span>}
+              <span className="mkt__owned-badge">Tuyo</span>
+            </div>
+            <p className="mkt__card-name">{item.name}</p>
+            <p className="mkt__card-price">{item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} Bules`}</p>
           </div>
-          <p className="mkt__card-name">{item.name}</p>
-          <p className="mkt__card-price">{item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} Bules`}</p>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {selected && (
+        <>
+          <div
+            className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`}
+            onClick={closeItem}
+          />
+          <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
+            <div className="bs__handle" />
+            <div className="mkt__sheet">
+              <div className="mkt__sheet-img-wrap">
+                <img
+                  className="mkt__sheet-img"
+                  src={selected.image_url}
+                  alt={selected.name}
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                />
+              </div>
+              <p className="mkt__sheet-name">{selected.name}</p>
+              {selected.description && (
+                <p className="mkt__sheet-desc">{selected.description}</p>
+              )}
+              <p className="mkt__sheet-price">
+                {selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} Bules`}
+              </p>
+              {selected.category === 'dice' && (
+                activeSkin === selected.id ? (
+                  <button className="bs__submit bs__submit--secondary" onClick={handleUnequip}>
+                    Desactivar skin
+                  </button>
+                ) : (
+                  <button className="bs__submit" onClick={() => handleEquip(selected.id)}>
+                    Activar skin
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
