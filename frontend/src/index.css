@@ -3176,6 +3176,52 @@ body {
   gap: 16px;
 }
 
+.mkt__carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 4px 20px 12px;
+  flex-shrink: 0;
+}
+.mkt__carousel::-webkit-scrollbar { display: none; }
+
+.mkt__cat-card {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  flex-shrink: 0;
+  width: calc(60% - 20px);
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mkt__cat-card--active { opacity: 1; }
+.mkt__cat-card:active { opacity: 0.7; }
+
+.mkt__cat-emoji {
+  font-size: 24px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.mkt__cat-label {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+.mkt__cat-count {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
 .mkt__credits {
   font-size: 13px;
   color: var(--text-subtle);
