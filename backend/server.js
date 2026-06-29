@@ -197,7 +197,7 @@ const TOURNAMENT_DEFS = [
   { id: 'plata',      name: 'Torneo Plata',     tier: 'Plata',    minScore: 100, maxScore: 299  },
   { id: 'oro',        name: 'Torneo Oro',       tier: 'Oro',      minScore: 300, maxScore: 699  },
   { id: 'diamante',   name: 'Torneo Diamante',  tier: 'Diamante', minScore: 700, maxScore: Infinity },
-  { id: 'bar-o-doce', name: 'Bar O Doce',       tier: 'Especial', minScore: 0,   maxScore: Infinity, requiredItem: 'bar-doce' },
+  { id: 'bar-o-doce', name: 'Bar Doce',          tier: 'Especial', minScore: 0,   maxScore: Infinity, requiredItem: 'bar-doce' },
 ];
 
 const tournamentPlayers = {};
@@ -286,6 +286,10 @@ const stmts = {
   db.prepare(`UPDATE items SET image_url = '/assets/dice/transparent-red.png' WHERE id = 'dice-transp-red' AND image_url = '/assets/dice/transparent-red.svg'`).run();
   // Update Bar El Olímpico description to use <br> before italic line
   db.prepare(`UPDATE items SET description = 'Un referente del barrio donde el tiempo se detiene entre partida y partida.<br><em>Especialidad en café, no café de especialidad.</em>' WHERE id = 'bar-el-olimpico'`).run();
+  // Ensure Bar El Ocho and Bar Doce exist with correct data
+  db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES ('bar-el-ocho', 'Bar El Ocho', 'Café-bar de Monte Alto con solera. Donde el barrio se sienta, se sirve el mejor café y las partidas duran lo que tienen que durar.', 45000, '/assets/items/bar-el-ocho.png', 'landmark')`).run();
+  db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES ('bar-el-olimpico', 'Bar El Olímpico', 'Un referente del barrio donde el tiempo se detiene entre partida y partida.<br><em>Especialidad en café, no café de especialidad.</em>', 45000, '/assets/items/bar-el-olimpico.png', 'landmark')`).run();
+  db.prepare(`UPDATE items SET image_url = '/assets/items/bar-el-ocho.png' WHERE id = 'bar-el-ocho'`).run();
 })();
 
 // ── Superuser bootstrap ────────────────────────────────────────────────────────
