@@ -654,13 +654,44 @@ function sanitizeForList(room) {
 
 function broadcast(code) {
   const room = rooms[code];
-  if (room) io.to(code).emit('room_state', sanitize(room));
+  if (!room) return;
+  room.lastActivityAt = Date.now();
+  io.to(code).emit('room_state', sanitize(room));
 }
 
 function broadcastRoomList() {
   const list = Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId).map(sanitizeForList);
   io.emit('rooms_list', list);
 }
+
+// ── Stale room cleanup (runs every 5 minutes) ─────────────────────────────────
+const ROOM_TTL = {
+  finished: 10 * 60 * 1000,   // 10 min — enough time for rematch
+  lobby:    30 * 60 * 1000,   // 30 min — abandoned before starting
+  playing: 120 * 60 * 1000,   // 2 h    — stuck game safety net
+  results: 120 * 60 * 1000,
+  tiebreak: 120 * 60 * 1000,
+};
+
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [code, room] of Object.entries(rooms)) {
+    const ttl = ROOM_TTL[room.phase] ?? ROOM_TTL.playing;
+    const idle = now - (room.lastActivityAt ?? now);
+    if (idle < ttl) continue;
+    clearTurnTimer(room);
+    clearContinueTimer(room);
+    clearTiebreakerTimer(room);
+    io.to(code).emit('room_destroyed', { byPlayer: null });
+    delete rooms[code];
+    cleaned++;
+  }
+  if (cleaned > 0) {
+    console.log(`[cleanup] Removed ${cleaned} stale room(s)`);
+    broadcastRoomList();
+  }
+}, 5 * 60 * 1000);
 
 function startRound(room) {
   room.phase = 'playing';
@@ -967,6 +998,7 @@ io.on('connection', (socket) => {
       roundNumber: 0,
       currentPlayerIndex: 0,
       maxRolls: null,
+      lastActivityAt: Date.now(),
       roundWinnerId: null,
       turnDeadline: null,
       tournamentId: tournamentId ?? null,
