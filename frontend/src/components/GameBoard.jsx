@@ -477,7 +477,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     )}
                   </div>
                   <div className="results__dice">
-                    {sortDice(p.currentDice ?? []).map((v, i) => <Die key={i} value={v} small skin={p.diceSkin ?? undefined} />)}
+                    {sortDice(p.currentDice ?? []).map((v, i) => <Die key={i} value={v} small skin={p.diceSkin} />)}
                   </div>
                   <span className="results__wins">{p.wins}</span>
                 </div>
@@ -566,7 +566,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     </span>
                     <div className="tiebreak__die-slot">
                       {result
-                        ? <Die value={result} skin={player?.diceSkin ?? undefined} />
+                        ? <Die value={result} skin={player?.diceSkin ?? null} />
                         : <span className="tiebreak__pending">{isCurrent ? '🎲' : '·  ·  ·'}</span>
                       }
                     </div>
@@ -631,7 +631,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   {p.inDesempate && <span className="tag tag--desempate">DESEMPATE</span>}
                   {dice.length > 0 && (
                     <div className="scoreboard__dice">
-                      {sortDice(dice).map((v, j) => <Die key={j} value={v} small skin={p.diceSkin ?? undefined} />)}
+                      {sortDice(dice).map((v, j) => <Die key={j} value={v} small skin={p.diceSkin} />)}
                     </div>
                   )}
                   <span className="scoreboard__pts-num" style={{ position: 'relative' }}>
