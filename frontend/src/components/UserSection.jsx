@@ -331,7 +331,7 @@ function ItemsTab({ user }) {
               </div>
               <p className="mkt__sheet-name">{selected.name}</p>
               {selected.description && (
-                <p className="mkt__sheet-desc" dangerouslySetInnerHTML={{ __html: selected.description }}</p>
+                <p className="mkt__sheet-desc" dangerouslySetInnerHTML={{ __html: selected.description }} />
               )}
               <p className="mkt__sheet-price">
                 {selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} Bules`}

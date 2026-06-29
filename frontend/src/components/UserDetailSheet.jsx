@@ -270,7 +270,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
               </div>
               <p className="mkt__sheet-name">{selectedItem.name}</p>
               {selectedItem.description && (
-                <p className="mkt__sheet-desc" dangerouslySetInnerHTML={{ __html: selectedItem.description }}</p>
+                <p className="mkt__sheet-desc" dangerouslySetInnerHTML={{ __html: selectedItem.description }} />
               )}
               <p className="mkt__sheet-price">
                 {selectedItem.price === 0 ? 'Gratis' : `${selectedItem.price.toLocaleString()} Bules`}
