@@ -37,6 +37,7 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
           initialPicture={viewingUser.picture}
           user={user}
           playerName={playerName}
+          hideChallenge
           onClose={() => setViewingUser(null)}
         />
       )}

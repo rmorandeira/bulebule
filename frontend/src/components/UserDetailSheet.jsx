@@ -31,7 +31,7 @@ function getPlayerType(handStats, rollStats) {
   return 'Jugador equilibrado'
 }
 
-export default function UserDetailSheet({ userId, initialName, initialPicture, onClose, user, playerName }) {
+export default function UserDetailSheet({ userId, initialName, initialPicture, onClose, user, playerName, hideChallenge = false }) {
   const [profile, setProfile]   = useState(null)
   const [loading, setLoading]   = useState(true)
   const [closing, setClosing]   = useState(false)
@@ -244,7 +244,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
 
         {error && <p className="bs__error">{error}</p>}
 
-        {canChallenge ? (
+        {!hideChallenge && (canChallenge ? (
           <button className="bs__submit" onClick={handleChallenge} disabled={challenging}>
             {challenging ? 'Creando reto...' : `⚔️ Retar a ${name}`}
           </button>
@@ -252,7 +252,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
           <p className="uds__hint">Inicia sesión para retar a este jugador</p>
         ) : isSelf ? (
           <p className="uds__hint">Este es tu perfil</p>
-        ) : null}
+        ) : null)}
       </div>
 
       {selectedItem && (
