@@ -38,7 +38,11 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
   const [challenging, setChallenging] = useState(false)
   const [error, setError]       = useState('')
   const [isFavorite, setIsFavorite] = useState(() => !!getFavorites()[userId])
+  const [selectedItem, setSelectedItem]   = useState(null)
+  const [itemClosing, setItemClosing]     = useState(false)
+  const [activeSkin, setActiveSkin]       = useState(() => localStorage.getItem('bule_dice_skin') ?? null)
   const closeRef = useRef(null)
+  const itemCloseRef = useRef(null)
 
   useEffect(() => {
     if (!userId) return
@@ -67,6 +71,27 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
       setIsFavorite(true)
     }
     saveFavorites(favs)
+  }
+
+  function openItem(item) {
+    clearTimeout(itemCloseRef.current)
+    setItemClosing(false)
+    setSelectedItem(item)
+  }
+
+  function closeItem() {
+    setItemClosing(true)
+    itemCloseRef.current = setTimeout(() => { setSelectedItem(null); setItemClosing(false) }, CLOSE_DURATION)
+  }
+
+  function handleEquip(itemId) {
+    localStorage.setItem('bule_dice_skin', itemId)
+    setActiveSkin(itemId)
+  }
+
+  function handleUnequip() {
+    localStorage.removeItem('bule_dice_skin')
+    setActiveSkin(null)
   }
 
   function handleChallenge() {
@@ -201,7 +226,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
             <p className="uds__section-title">ITEMS</p>
             <div className="uds__items">
               {items.map(item => (
-                <div key={item.id} className="uds__item">
+                <div key={item.id} className="uds__item" onClick={() => openItem(item)} style={{ cursor: 'pointer' }}>
                   <img src={item.image_url} alt={item.name} className="uds__item-img"
                     onError={e => { e.currentTarget.style.display = 'none' }} />
                   <p className="uds__item-name">{item.name}</p>
@@ -223,6 +248,46 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
           <p className="uds__hint">Este es tu perfil</p>
         ) : null}
       </div>
+
+      {selectedItem && (
+        <>
+          <div
+            className={`bs-overlay${itemClosing ? ' bs-overlay--closing' : ''}`}
+            onClick={closeItem}
+          />
+          <div className={`bs${itemClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
+            <div className="bs__handle" />
+            <div className="mkt__sheet">
+              <div className="mkt__sheet-img-wrap">
+                <img
+                  className="mkt__sheet-img"
+                  src={selectedItem.image_url}
+                  alt={selectedItem.name}
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                />
+              </div>
+              <p className="mkt__sheet-name">{selectedItem.name}</p>
+              {selectedItem.description && (
+                <p className="mkt__sheet-desc">{selectedItem.description}</p>
+              )}
+              <p className="mkt__sheet-price">
+                {selectedItem.price === 0 ? 'Gratis' : `${selectedItem.price.toLocaleString()} puntos`}
+              </p>
+              {isSelf && selectedItem.category === 'dice' && (
+                activeSkin === selectedItem.id ? (
+                  <button className="bs__submit bs__submit--secondary" onClick={handleUnequip}>
+                    Desactivar skin
+                  </button>
+                ) : (
+                  <button className="bs__submit" onClick={() => handleEquip(selectedItem.id)}>
+                    Activar skin
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }
