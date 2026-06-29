@@ -2165,6 +2165,9 @@ body {
 .bs-overlay--closing {
   animation: bs-fade-out 0.26s ease forwards;
 }
+.bs-overlay--layer2 {
+  z-index: 150;
+}
 
 .bs {
   position: fixed;
@@ -2185,6 +2188,9 @@ body {
 }
 .bs--closing {
   animation: bs-slide-down 0.26s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+.bs--layer2 {
+  z-index: 151;
 }
 
 .bs.uds {

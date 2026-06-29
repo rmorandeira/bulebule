@@ -258,10 +258,10 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
       {selectedItem && (
         <>
           <div
-            className={`bs-overlay${itemClosing ? ' bs-overlay--closing' : ''}`}
+            className={`bs-overlay bs-overlay--layer2${itemClosing ? ' bs-overlay--closing' : ''}`}
             onClick={closeItem}
           />
-          <div className={`bs${itemClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
+          <div className={`bs bs--layer2${itemClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
             <div className="bs__handle" />
             <div className="mkt__sheet">
               <div className="mkt__sheet-img-wrap">
