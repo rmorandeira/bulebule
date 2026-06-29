@@ -378,6 +378,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
         const sorted = [...room.players].sort((a, b) => b.wins - a.wins)
         const gameLoser = room.players.find(p => p.id === room.gameLoserId)
         return (
+          <>
           <div className="game-body game-body--full">
           <div className="results">
             {gameLoser ? (
@@ -428,6 +429,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 )
               })}
             </div>
+          </div>
           </div>
           {room.hostId === myId
             ? <button className="results-action-btn btn btn--primary" onClick={handleRematch}>Otra partida</button>
@@ -530,7 +532,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           <div className="game-ad-bottom">
             <AdBanner />
           </div>
-          </div>
+          </>
         )
       })() : room.phase === 'tiebreak' ? (() => {
         const tb = room.tiebreaker
@@ -789,8 +791,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           <div className="game-ad-bottom">
             <AdBanner />
           </div>
-          </div>{/* /game-main */}
-        </div>{/* /game-body */}
+          </div>
+        </div>
       )}
 
       {nextPlayerVisible && (
