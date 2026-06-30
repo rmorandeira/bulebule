@@ -131,6 +131,13 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS config (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`);
+
 // ── Schema migrations ─────────────────────────────────────────────────────────
 ;(function migrateItemsSchema() {
   const cols = db.prepare('PRAGMA table_info(items)').all().map(c => c.name);
@@ -972,11 +979,24 @@ function endRound(room) {
 
 app.get('/api/rankings', (_, res) => res.json({ rankings: buildRankings().slice(0, 100) }));
 
+// ── Backoffice admin token (persisted in SQLite) ──────────────────────────────
+const crypto = require('crypto');
+const ADMIN_TOKEN = (() => {
+  const row = db.prepare('SELECT value FROM config WHERE key=?').get('admin_token');
+  if (row) return row.value;
+  const token = crypto.randomBytes(32).toString('hex');
+  db.prepare('INSERT INTO config (key, value) VALUES (?, ?)').run('admin_token', token);
+  console.log('╔══════════════════════════════════════════════════════════════════╗');
+  console.log('║  BACKOFFICE ADMIN TOKEN (cópialo, no cambiará)                  ║');
+  console.log(`║  ${token}  ║`);
+  console.log('╚══════════════════════════════════════════════════════════════════╝');
+  return token;
+})();
+
 // ── Backoffice admin API ──────────────────────────────────────────────────────
 function requireAdmin(req, res, next) {
-  const secret = process.env.BACKOFFICE_SECRET;
-  if (!secret) return res.status(503).json({ error: 'Backoffice no configurado (BACKOFFICE_SECRET no definido)' });
-  if (req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ error: 'No autorizado' });
+  const expected = process.env.BACKOFFICE_SECRET || ADMIN_TOKEN;
+  if (req.headers.authorization !== `Bearer ${expected}`) return res.status(401).json({ error: 'No autorizado' });
   next();
 }
 
