@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -130,6 +131,34 @@ db.exec(`
   );
 `);
 
+// ── Schema migrations ─────────────────────────────────────────────────────────
+;(function migrateItemsSchema() {
+  const cols = db.prepare('PRAGMA table_info(items)').all().map(c => c.name);
+  if (!cols.includes('sale_start'))  db.prepare('ALTER TABLE items ADD COLUMN sale_start  INTEGER').run();
+  if (!cols.includes('sale_end'))    db.prepare('ALTER TABLE items ADD COLUMN sale_end    INTEGER').run();
+  if (!cols.includes('texture_url')) db.prepare('ALTER TABLE items ADD COLUMN texture_url TEXT').run();
+  if (!cols.includes('sort_order'))  db.prepare('ALTER TABLE items ADD COLUMN sort_order  INTEGER DEFAULT 0').run();
+})();
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tournaments (
+    id            TEXT    PRIMARY KEY,
+    name          TEXT    NOT NULL,
+    description   TEXT,
+    tier          TEXT    NOT NULL DEFAULT 'Bronce',
+    type          TEXT    NOT NULL DEFAULT 'tier',
+    min_score     INTEGER NOT NULL DEFAULT 0,
+    max_score     INTEGER NOT NULL DEFAULT -1,
+    required_item TEXT,
+    rules         TEXT,
+    starts_at     INTEGER,
+    ends_at       INTEGER,
+    active        INTEGER NOT NULL DEFAULT 1,
+    sort_order    INTEGER NOT NULL DEFAULT 0,
+    created_at    INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+`);
+
 // ── Migrate from old JSON file if it exists ───────────────────────────────────
 (function migrateFromJson() {
   const jsonFile = path.join(__dirname, 'data', 'playerStats.json');
@@ -192,16 +221,38 @@ const TIERS = [
 function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
 
 // ── Tournaments ───────────────────────────────────────────────────────────────
-const TOURNAMENT_DEFS = [
-  { id: 'bronce',     name: 'Torneo Bronce',   tier: 'Bronce',   minScore: 0,   maxScore: 99   },
-  { id: 'plata',      name: 'Torneo Plata',     tier: 'Plata',    minScore: 100, maxScore: 299  },
-  { id: 'oro',        name: 'Torneo Oro',       tier: 'Oro',      minScore: 300, maxScore: 699  },
-  { id: 'diamante',   name: 'Torneo Diamante',  tier: 'Diamante', minScore: 700, maxScore: Infinity },
-  { id: 'bar-o-doce', name: 'Bar Doce',          tier: 'Especial', minScore: 0,   maxScore: Infinity, requiredItem: 'bar-doce' },
-];
+// Seed default tournament definitions on first run
+;(function seedTournamentDefs() {
+  const ins = db.prepare(`INSERT OR IGNORE INTO tournaments (id, name, tier, type, min_score, max_score, required_item, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  db.transaction(() => {
+    ins.run('bronce',     'Torneo Bronce',   'Bronce',   'tier',    0,   99,  null,       0);
+    ins.run('plata',      'Torneo Plata',    'Plata',    'tier',    100, 299, null,       1);
+    ins.run('oro',        'Torneo Oro',      'Oro',      'tier',    300, 699, null,       2);
+    ins.run('diamante',   'Torneo Diamante', 'Diamante', 'tier',    700, -1,  null,       3);
+    ins.run('bar-o-doce', 'Bar Doce',        'Especial', 'special', 0,   -1,  'bar-doce', 4);
+  })();
+})();
 
 const tournamentPlayers = {};
-TOURNAMENT_DEFS.forEach(t => { tournamentPlayers[t.id] = {}; });
+let TOURNAMENT_DEFS = [];
+
+function reloadTournamentDefs() {
+  TOURNAMENT_DEFS = db.prepare('SELECT * FROM tournaments ORDER BY sort_order ASC, created_at ASC').all().map(t => ({
+    id:           t.id,
+    name:         t.name,
+    description:  t.description ?? null,
+    tier:         t.tier,
+    type:         t.type,
+    minScore:     t.min_score,
+    maxScore:     t.max_score === -1 ? Infinity : t.max_score,
+    requiredItem: t.required_item ?? null,
+    active:       t.active === 1,
+    starts_at:    t.starts_at,
+    ends_at:      t.ends_at,
+  }));
+  TOURNAMENT_DEFS.forEach(t => { if (!tournamentPlayers[t.id]) tournamentPlayers[t.id] = {}; });
+}
+reloadTournamentDefs();
 
 function getTournamentDef(id) { return TOURNAMENT_DEFS.find(t => t.id === id); }
 
@@ -385,8 +436,16 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*';
 
 const app = express();
 app.use(cors({ origin: ALLOWED_ORIGIN }));
+app.use(express.json());
 app.get('/', (_, res) => res.send('OK'));
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
+
+// ── Backoffice static files ───────────────────────────────────────────────────
+const BACKOFFICE_DIST = path.join(__dirname, 'backoffice-dist');
+if (fs.existsSync(BACKOFFICE_DIST)) {
+  app.use('/backoffice', express.static(BACKOFFICE_DIST));
+  app.get('/backoffice/*', (_, res) => res.sendFile(path.join(BACKOFFICE_DIST, 'index.html')));
+}
 app.get('/api/vapid-public-key', (_, res) => res.json({ key: VAPID_PUBLIC }));
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -911,6 +970,137 @@ function endRound(room) {
 }
 
 app.get('/api/rankings', (_, res) => res.json({ rankings: buildRankings().slice(0, 100) }));
+
+// ── Backoffice admin API ──────────────────────────────────────────────────────
+function requireAdmin(req, res, next) {
+  const secret = process.env.BACKOFFICE_SECRET;
+  if (!secret) return res.status(503).json({ error: 'Backoffice no configurado (BACKOFFICE_SECRET no definido)' });
+  if (req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ error: 'No autorizado' });
+  next();
+}
+
+// Items CRUD
+app.get('/api/admin/items', requireAdmin, (req, res) => {
+  res.json({ items: db.prepare('SELECT * FROM items ORDER BY sort_order ASC, price ASC').all() });
+});
+
+app.post('/api/admin/items', requireAdmin, (req, res) => {
+  const { id, name, description, price, image_url, texture_url, category, available, sale_start, sale_end, sort_order } = req.body;
+  if (!id?.trim() || !name?.trim()) return res.status(400).json({ error: 'id y name son obligatorios' });
+  try {
+    db.prepare(`INSERT INTO items (id, name, description, price, image_url, texture_url, category, available, sale_start, sale_end, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(id.trim(), name.trim(), description ?? null, price ?? 0, image_url ?? null, texture_url ?? null, category ?? 'collectible', available !== false ? 1 : 0, sale_start ?? null, sale_end ?? null, sort_order ?? 0);
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return res.status(409).json({ error: 'Ya existe un item con ese ID' });
+    throw e;
+  }
+});
+
+app.put('/api/admin/items/:id', requireAdmin, (req, res) => {
+  const { name, description, price, image_url, texture_url, category, available, sale_start, sale_end, sort_order } = req.body;
+  const r = db.prepare(`UPDATE items SET name=?, description=?, price=?, image_url=?, texture_url=?, category=?, available=?, sale_start=?, sale_end=?, sort_order=? WHERE id=?`)
+    .run(name, description ?? null, price ?? 0, image_url ?? null, texture_url ?? null, category ?? 'collectible', available !== false ? 1 : 0, sale_start ?? null, sale_end ?? null, sort_order ?? 0, req.params.id);
+  if (r.changes === 0) return res.status(404).json({ error: 'Item no encontrado' });
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/items/:id', requireAdmin, (req, res) => {
+  const owners = db.prepare('SELECT COUNT(*) as c FROM user_items WHERE item_id=?').get(req.params.id).c;
+  if (owners > 0) return res.status(409).json({ error: `${owners} usuario(s) poseen este item. Desactívalo en su lugar.` });
+  db.prepare('DELETE FROM items WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// Tournaments CRUD
+app.get('/api/admin/tournaments', requireAdmin, (req, res) => {
+  res.json({ tournaments: db.prepare('SELECT * FROM tournaments ORDER BY sort_order ASC, created_at ASC').all() });
+});
+
+app.post('/api/admin/tournaments', requireAdmin, (req, res) => {
+  const { id, name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, sort_order } = req.body;
+  if (!id?.trim() || !name?.trim()) return res.status(400).json({ error: 'id y name son obligatorios' });
+  try {
+    db.prepare(`INSERT INTO tournaments (id, name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(id.trim(), name.trim(), description ?? null, tier ?? 'Bronce', type ?? 'tier', min_score ?? 0, max_score ?? -1, required_item ?? null, rules ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null, starts_at ?? null, ends_at ?? null, active !== false ? 1 : 0, sort_order ?? 0);
+    reloadTournamentDefs();
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return res.status(409).json({ error: 'Ya existe un torneo con ese ID' });
+    throw e;
+  }
+});
+
+app.put('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
+  const { name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, sort_order } = req.body;
+  const r = db.prepare(`UPDATE tournaments SET name=?, description=?, tier=?, type=?, min_score=?, max_score=?, required_item=?, rules=?, starts_at=?, ends_at=?, active=?, sort_order=? WHERE id=?`)
+    .run(name, description ?? null, tier ?? 'Bronce', type ?? 'tier', min_score ?? 0, max_score ?? -1, required_item ?? null, rules ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null, starts_at ?? null, ends_at ?? null, active !== false ? 1 : 0, sort_order ?? 0, req.params.id);
+  if (r.changes === 0) return res.status(404).json({ error: 'Torneo no encontrado' });
+  reloadTournamentDefs();
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM tournaments WHERE id=?').run(req.params.id);
+  delete tournamentPlayers[req.params.id];
+  reloadTournamentDefs();
+  res.json({ ok: true });
+});
+
+// Users management
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  const { q, limit = 50, offset = 0 } = req.query;
+  const base = `SELECT u.user_id, u.name, u.email, u.picture, u.created_at, ps.score, ps.games_played, ps.games_won
+    FROM users u LEFT JOIN player_stats ps ON u.user_id=ps.user_id`;
+  if (q) {
+    const like = `%${q}%`;
+    const users = db.prepare(`${base} WHERE u.name LIKE ? OR u.email LIKE ? OR u.user_id LIKE ? ORDER BY COALESCE(ps.score,0) DESC LIMIT ? OFFSET ?`).all(like, like, like, +limit, +offset);
+    const total = db.prepare('SELECT COUNT(*) as c FROM users WHERE name LIKE ? OR email LIKE ? OR user_id LIKE ?').get(like, like, like).c;
+    return res.json({ users, total });
+  }
+  const users = db.prepare(`${base} ORDER BY COALESCE(ps.score,0) DESC LIMIT ? OFFSET ?`).all(+limit, +offset);
+  const total = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+  res.json({ users, total });
+});
+
+app.get('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const user = db.prepare(`SELECT u.*, ps.score, ps.games_played, ps.games_won FROM users u LEFT JOIN player_stats ps ON u.user_id=ps.user_id WHERE u.user_id=?`).get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  const items    = db.prepare(`SELECT i.*, ui.bought_at FROM user_items ui JOIN items i ON ui.item_id=i.id WHERE ui.user_id=? ORDER BY ui.bought_at DESC`).all(req.params.id);
+  const sessions = db.prepare(`SELECT result, score_delta, played_at FROM game_sessions WHERE user_id=? ORDER BY played_at DESC LIMIT 20`).all(req.params.id);
+  res.json({ user, items, sessions });
+});
+
+app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const { name, email, score } = req.body;
+  const uid = req.params.id;
+  if (name  !== undefined) db.prepare('UPDATE users SET name=?, updated_at=unixepoch() WHERE user_id=?').run(name, uid);
+  if (email !== undefined) db.prepare('UPDATE users SET email=?, updated_at=unixepoch() WHERE user_id=?').run(email, uid);
+  if (score !== undefined) {
+    if (db.prepare('SELECT 1 FROM player_stats WHERE user_id=?').get(uid))
+      db.prepare('UPDATE player_stats SET score=?, updated_at=unixepoch() WHERE user_id=?').run(score, uid);
+  }
+  if (registeredUsers[uid]) {
+    if (name  !== undefined) registeredUsers[uid].name  = name;
+    if (email !== undefined) registeredUsers[uid].email = email;
+  }
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const uid = req.params.id;
+  db.transaction(() => {
+    db.prepare('DELETE FROM user_items          WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM hand_stats          WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM roll_stats          WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM game_sessions       WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM push_subscriptions  WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM player_stats        WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM users               WHERE user_id=?').run(uid);
+  })();
+  delete registeredUsers[uid];
+  res.json({ ok: true });
+});
 
 io.on('connection', (socket) => {
   const rl = {
