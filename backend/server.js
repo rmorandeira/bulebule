@@ -439,7 +439,18 @@ function buildRankings() {
   });
 }
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*';
+const _ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*';
+const ALLOWED_ORIGIN = _ALLOWED_ORIGIN === '*'
+  ? '*'
+  : (origin, cb) => {
+      const allowed = [
+        ..._ALLOWED_ORIGIN.split(',').map(o => o.trim()),
+        'capacitor://localhost',
+        'http://localhost',
+      ]
+      if (!origin || allowed.includes(origin)) cb(null, true)
+      else cb(new Error('Not allowed by CORS'))
+    }
 
 const app = express();
 app.use(cors({ origin: ALLOWED_ORIGIN }));
