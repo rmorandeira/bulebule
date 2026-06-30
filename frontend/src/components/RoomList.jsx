@@ -619,6 +619,7 @@ export default function RoomList({
               >
                 <span className="rl__rank-pos">{r.rank}</span>
                 <span className="rl__rank-name">
+                  {getFavorites()[r.userId] && <span className="rl__fav-star">★</span>}
                   {r.name}<TierDot tier={r.tier} />
                   {r.isPlaying && <span className="rl__playing-pill">jugando</span>}
                   {r.userId === user?.email && <span className="rl__you-pill">tú</span>}

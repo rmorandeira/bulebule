@@ -1,10 +1,31 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import socket from '../socket'
 import UserDetailSheet from './UserDetailSheet'
+
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem('bule_favorites') ?? '{}') } catch { return {} }
+}
 
 export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
   const isHost = room.hostId === myId
   const [viewingUser, setViewingUser] = useState(null)
+  const [inviting, setInviting] = useState({})
+
+  const favorites = useMemo(() => {
+    const favs = getFavorites()
+    const inRoom = new Set(room.players.map(p => p.userId).filter(Boolean))
+    return Object.entries(favs)
+      .filter(([userId]) => userId !== user?.email && !inRoom.has(userId))
+      .map(([userId, data]) => ({ userId, ...data }))
+  }, [room.players, user?.email])
+
+  function inviteFavorite(userId, name) {
+    if (inviting[userId]) return
+    setInviting(s => ({ ...s, [userId]: true }))
+    socket.emit('invite_to_room', { toUserId: userId, roomCode: room.code, roomName: room.name }, () => {
+      setTimeout(() => setInviting(s => ({ ...s, [userId]: false })), 3000)
+    })
+  }
 
   function shareWhatsApp() {
     const url = `${window.location.origin}/?join=${room.code}`
@@ -56,6 +77,28 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
           </svg>
           Invitar por WhatsApp
         </button>
+
+        {user && favorites.length > 0 && (
+          <div className="wr__favorites">
+            <p className="wr__favorites-title">★ Favoritos</p>
+            {favorites.map(f => (
+              <div key={f.userId} className="wr__fav-row">
+                {f.picture
+                  ? <img src={f.picture} referrerPolicy="no-referrer" className="wr__fav-avatar" />
+                  : <div className="wr__fav-avatar wr__fav-avatar--placeholder" />
+                }
+                <span className="wr__fav-name">{f.name}</span>
+                <button
+                  className={`wr__fav-invite${inviting[f.userId] ? ' wr__fav-invite--sent' : ''}`}
+                  onClick={() => inviteFavorite(f.userId, f.name)}
+                  disabled={!!inviting[f.userId]}
+                >
+                  {inviting[f.userId] ? 'Enviado' : 'Invitar'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="player-list">
