@@ -996,7 +996,7 @@ body {
   background: #f5f2ee;
   padding: 6px 14px;
   border-radius: 20px;
-  color: var(--text);
+  color: #1a1a1a;
 }
 
 .waiting-room__hint { font-size: 13px; color: var(--text-subtle); }
