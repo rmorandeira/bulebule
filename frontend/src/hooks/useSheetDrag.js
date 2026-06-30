@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react'
 
 const DISMISS_THRESHOLD = 80  // px dragged down to trigger dismiss
-const SAFETY_TOP = 90         // px from screen top the handle cannot cross
+const SAFETY_TOP = 180        // px from screen top the handle cannot cross
 
 export function useSheetDrag(onClose) {
   const sheetRef    = useRef(null)
