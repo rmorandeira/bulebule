@@ -188,7 +188,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
           className="rl__create-bar-btn"
           onClick={openCreate}
           disabled={!canPlay}>
-          {canPlay ? 'Crear sala' : `Necesitas nivel ${tournament.tier}`}
+          {canPlay ? 'Jugar' : `Necesitas nivel ${tournament.tier}`}
         </button>
       </div>
 
@@ -217,7 +217,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
             </div>
             {createError && <p className="bs__error">{createError}</p>}
             <button className="bs__submit" onClick={handleCreate} disabled={creating}>
-              {creating ? 'Creando...' : 'Crear sala'}
+              {creating ? 'Creando...' : 'Jugar'}
             </button>
           </div>
         </>

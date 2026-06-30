@@ -242,7 +242,7 @@ export default function CreateRoom({ playerName, user, onBack, musicOn, onToggle
         {error && <p className="error">{error}</p>}
 
         <button className="btn btn--primary btn--full" onClick={create} disabled={loading}>
-          {loading ? 'Creando...' : vsBot ? 'Jugar' : 'Crear sala'}
+          {loading ? 'Creando...' : 'Jugar'}
         </button>
       </div>
     </div>

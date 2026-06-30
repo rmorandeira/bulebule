@@ -1585,7 +1585,7 @@ body {
 .splash {
   position: fixed;
   inset: 0;
-  background: #000;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1620,7 +1620,7 @@ body {
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  background: #0e1117;
+  background: #ffffff;
 }
 .intro__bg {
   position: absolute;
@@ -1953,8 +1953,8 @@ body {
   height: 54px;
   border-radius: 18px;
   border: none;
-  background: #111;
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-text);
   font-size: 17px;
   font-weight: 700;
   cursor: pointer;
@@ -2251,7 +2251,7 @@ body {
 }
 
 .bs.uds {
-  max-height: 92dvh;
+  max-height: calc(100dvh - 60px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }

@@ -47,8 +47,8 @@ async function setupPush(userId) {
 export default function App() {
   const [screen, setScreen] = useState(() => {
     const p = new URLSearchParams(window.location.search).get('join')
-    return p ? 'list' : 'intro'
-  }) // 'intro' | 'list' | 'create'
+    return p ? 'list' : 'splash'
+  }) // 'splash' | 'intro' | 'list' | 'create'
   const [room, setRoom] = useState(null)
   const [myId, setMyId] = useState(null)
   const [user, setUser] = useState(loadUser)
@@ -58,12 +58,21 @@ export default function App() {
     if (p) window.history.replaceState({}, '', '/')
     return p?.toUpperCase() || null
   })
+  const [splashPhase, setSplashPhase] = useState('in') // 'in' | 'hold' | 'out'
+  const [introVisible, setIntroVisible] = useState(false)
+  useEffect(() => {
+    if (screen !== 'splash') return
+    const tHold = setTimeout(() => setSplashPhase('out'), 300 + 2000)
+    const tDone = setTimeout(() => { setScreen('intro'); setIntroVisible(false) }, 300 + 2000 + 300)
+    return () => { clearTimeout(tHold); clearTimeout(tDone) }
+  }, [screen])
+
   const [introBgVisible, setIntroBgVisible] = useState(false)
   const [introLogoPhase, setIntroLogoPhase] = useState('hidden')
   const [introLeaving, setIntroLeaving] = useState(false)
   useEffect(() => {
     if (screen !== 'intro') return
-    const r = requestAnimationFrame(() => setIntroBgVisible(true))
+    const r = requestAnimationFrame(() => { setIntroBgVisible(true); setIntroVisible(true) })
     const t1 = setTimeout(() => setIntroLogoPhase('center'), 300)
     return () => { cancelAnimationFrame(r); clearTimeout(t1) }
   }, [screen])
@@ -282,9 +291,17 @@ export default function App() {
     setPendingInvite(null)
   }
 
+  if (screen === 'splash') {
+    return (
+      <div className={`splash splash--${splashPhase}`}>
+        <img src="/assets/intro-logo.png" alt="" className="splash__logo" draggable={false} />
+      </div>
+    )
+  }
+
   if (screen === 'intro') {
     return (
-      <div className={`intro${introLeaving ? ' intro--leaving' : ''}`}>
+      <div className={`intro${introLeaving ? ' intro--leaving' : ''}${introVisible ? ' intro--visible' : ''}`}>
         <div className="intro__bg-wrapper">
           <div className={`intro__bg${introBgVisible ? ' intro__bg--visible' : ''}`} />
         </div>

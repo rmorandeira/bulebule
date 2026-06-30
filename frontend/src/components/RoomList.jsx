@@ -288,7 +288,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
 
         {error && <p className="bs__error">{error}</p>}
         <button className="bs__submit" onClick={create} disabled={loading}>
-          {loading ? 'Creando...' : mode === 'solo' ? 'Jugar' : 'Crear sala'}
+          {loading ? 'Creando...' : 'Jugar'}
         </button>
       </div>
     </>
@@ -481,7 +481,8 @@ export default function RoomList({
       onLogin({ name: user.name, email: user.email, picture: user.imageUrl, googleId: user.id })
       setError('')
     } catch (e) {
-      setError('Error al iniciar sesión con Google')
+      console.error('[GoogleAuth] signIn error:', e)
+      setError('Error: ' + (e?.message || e?.error || JSON.stringify(e) || 'desconocido'))
     }
   }
 
@@ -742,7 +743,7 @@ export default function RoomList({
       {activeTab === 'online' && (
         <div className="rl__create-bar">
           <button className="rl__create-bar-btn" onClick={openCreate} disabled={!connected}>
-            Crear sala
+            Jugar
           </button>
         </div>
       )}
