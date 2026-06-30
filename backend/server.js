@@ -1230,7 +1230,12 @@ io.on('connection', (socket) => {
 
   socket.on('get_tournaments', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
-    const result = TOURNAMENT_DEFS.filter(t => t.active).map(t => {
+    const now = Math.floor(Date.now() / 1000);
+    const result = TOURNAMENT_DEFS.filter(t =>
+      t.active &&
+      (t.starts_at == null || t.starts_at <= now) &&
+      (t.ends_at   == null || t.ends_at   >= now)
+    ).map(t => {
       const requiredItemData = t.requiredItem
         ? db.prepare(`SELECT id, name, image_url FROM items WHERE id = ?`).get(t.requiredItem)
         : null;
