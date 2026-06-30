@@ -32,6 +32,32 @@ function loadGuestName() {
 }
 
 
+async function setupNativePush(userId, setPendingJoinCode) {
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications')
+    const perm = await PushNotifications.checkPermissions()
+    if (perm.receive === 'prompt') {
+      const req = await PushNotifications.requestPermissions()
+      if (req.receive !== 'granted') return
+    } else if (perm.receive !== 'granted') return
+
+    await PushNotifications.register()
+
+    PushNotifications.addListener('registration', ({ value: token }) => {
+      socket.emit('register_fcm_token', { userId, token })
+    })
+    PushNotifications.addListener('registrationError', (err) => {
+      console.warn('FCM registration error:', err)
+    })
+    PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+      const roomCode = notification.data?.roomCode
+      if (roomCode) setPendingJoinCode(roomCode.toUpperCase())
+    })
+  } catch (e) {
+    console.warn('Native push setup failed:', e)
+  }
+}
+
 async function setupPush(userId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
   try {
@@ -86,6 +112,7 @@ export default function App() {
   const [pendingInvite, setPendingInvite] = useState(null)
   const swRegistered       = useRef(false)
   const sessionTrackedRef  = useRef(false)
+  const nativePushSetup    = useRef(false)
   const roomRef            = useRef(null)
   const playerNameRef      = useRef(playerName)
   const musicRef           = useRef(null)
@@ -215,7 +242,10 @@ export default function App() {
   useEffect(() => {
     if (user && myId) {
       socket.emit('register_user', { userId: user.email, name: user.name, email: user.email, picture: user.picture })
-      if (!Capacitor.isNativePlatform() && Notification.permission === 'granted') {
+      if (Capacitor.isNativePlatform() && !nativePushSetup.current) {
+        nativePushSetup.current = true
+        setupNativePush(user.email, setPendingJoinCode)
+      } else if (!Capacitor.isNativePlatform() && Notification.permission === 'granted') {
         setupPush(user.email)
       }
     }

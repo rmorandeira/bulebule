@@ -18,21 +18,31 @@ function fmtDate(ts) {
 
 export default function Users() {
   const toast = useToast();
-  const [users, setUsers]       = useState([]);
-  const [total, setTotal]       = useState(0);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState('');
-  const [offset, setOffset]     = useState(0);
-  const [panel, setPanel]       = useState(null);   // selected user detail
-  const [panelData, setPanelData] = useState(null);
+  const [users, setUsers]           = useState([]);
+  const [total, setTotal]           = useState(0);
+  const [loading, setLoading]       = useState(true);
+  const [search, setSearch]         = useState('');
+  const [offset, setOffset]         = useState(0);
+  const [panel, setPanel]           = useState(null);
+  const [panelData, setPanelData]   = useState(null);
   const [panelLoading, setPanelLoading] = useState(false);
-  const [editModal, setEditModal]  = useState(null);
-  const [editForm, setEditForm]    = useState({ name: '', email: '', score: 0 });
-  const [saving, setSaving]        = useState(false);
-  const [confirm, setConfirm]      = useState(null);
+  const [editModal, setEditModal]   = useState(null);
+  const [editForm, setEditForm]     = useState({ name: '', email: '', score: 0 });
+  const [saving, setSaving]         = useState(false);
+  const [confirm, setConfirm]       = useState(null);
   const [filterTier, setFilterTier] = useState('');
+
+  // ── Multi-select ────────────────────────────────────────────
+  const [selected, setSelected]       = useState(new Set());
+  const [batchConfirm, setBatchConfirm] = useState(false);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
   const LIMIT = 50;
   const searchRef = useRef(null);
+
+  const visibleUsers = users.filter(u => !filterTier || getTier(u.score).name === filterTier);
+  const allVisible   = visibleUsers.length > 0 && visibleUsers.every(u => selected.has(u.user_id));
+  const someVisible  = visibleUsers.some(u => selected.has(u.user_id));
 
   const load = useCallback(async (q = search, off = offset) => {
     setLoading(true);
@@ -55,6 +65,54 @@ export default function Users() {
     const id = setTimeout(() => { setOffset(0); load(search, 0); }, 350);
     return () => clearTimeout(id);
   }, [search]);
+
+  // Clear selection when page changes
+  useEffect(() => { setSelected(new Set()); }, [offset, search]);
+
+  function toggleSelect(userId, e) {
+    e.stopPropagation();
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(userId) ? next.delete(userId) : next.add(userId);
+      return next;
+    });
+  }
+
+  function toggleAll(e) {
+    e.stopPropagation();
+    if (allVisible) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        visibleUsers.forEach(u => next.delete(u.user_id));
+        return next;
+      });
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev);
+        visibleUsers.forEach(u => next.add(u.user_id));
+        return next;
+      });
+    }
+  }
+
+  async function handleBatchDelete() {
+    setBatchDeleting(true);
+    const ids = [...selected];
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try {
+        await api.users.delete(id);
+        ok++;
+      } catch { fail++; }
+    }
+    setBatchDeleting(false);
+    setBatchConfirm(false);
+    setSelected(new Set());
+    if (panel && selected.has(panel.user_id)) setPanel(null);
+    load(search, offset);
+    if (fail > 0) toast(`${ok} eliminados, ${fail} fallaron`, 'error');
+    else toast(`${ok} usuario${ok !== 1 ? 's' : ''} eliminado${ok !== 1 ? 's' : ''}`, 'success');
+  }
 
   async function openPanel(user) {
     setPanel(user);
@@ -107,12 +165,11 @@ export default function Users() {
     }
   }
 
-  const RESULT_LABELS  = { win: 'Victoria', loss: 'Derrota', participate: 'Participó' };
-  const RESULT_COLORS  = { win: 'badge-green', loss: 'badge-red', participate: 'badge-gray' };
+  const RESULT_LABELS = { win: 'Victoria', loss: 'Derrota', participate: 'Participó' };
+  const RESULT_COLORS = { win: 'badge-green', loss: 'badge-red', participate: 'badge-gray' };
 
   return (
     <div style={{ display: 'flex', gap: 20, height: '100%', alignItems: 'flex-start' }}>
-      {/* Main list */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="page-header">
           <h1>👥 Usuarios</h1>
@@ -137,12 +194,24 @@ export default function Users() {
           ))}
         </div>
 
+        {/* Batch action bar */}
+        {selected.size > 0 && (
+          <div className="batch-bar">
+            <span className="batch-bar__count">{selected.size} seleccionado{selected.size !== 1 ? 's' : ''}</span>
+            <div style={{ flex: 1 }} />
+            <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>Cancelar</button>
+            <button className="btn btn-danger btn-sm" onClick={() => setBatchConfirm(true)}>
+              Eliminar {selected.size}
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="loading">Cargando…</div>
-        ) : users.length === 0 ? (
+        ) : visibleUsers.length === 0 ? (
           <div className="empty-state">
             <div className="icon">👥</div>
-            <p>{search ? 'No hay resultados' : 'No hay usuarios todavía'}</p>
+            <p>{search || filterTier ? 'No hay resultados' : 'No hay usuarios todavía'}</p>
           </div>
         ) : (
           <>
@@ -150,6 +219,15 @@ export default function Users() {
               <table>
                 <thead>
                   <tr>
+                    <th style={{ width: 36, paddingRight: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={allVisible}
+                        ref={el => { if (el) el.indeterminate = someVisible && !allVisible; }}
+                        onChange={toggleAll}
+                        title="Seleccionar todos"
+                      />
+                    </th>
                     <th>Usuario</th>
                     <th>Puntos</th>
                     <th>Tier</th>
@@ -160,20 +238,22 @@ export default function Users() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.filter(u => !filterTier || getTier(u.score).name === filterTier).map(u => {
-                    const tier = getTier(u.score);
+                  {visibleUsers.map(u => {
+                    const tier    = getTier(u.score);
+                    const checked = selected.has(u.user_id);
                     return (
                       <tr
                         key={u.user_id}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', background: checked ? 'rgba(110,64,201,0.08)' : undefined }}
                         onClick={() => openPanel(u)}
                       >
+                        <td style={{ paddingRight: 0 }} onClick={e => toggleSelect(u.user_id, e)}>
+                          <input type="checkbox" checked={checked} onChange={() => {}} />
+                        </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 16 }}>
-                              {u.picture
-                                ? <img src={u.picture} alt="" />
-                                : u.name?.[0]?.toUpperCase() ?? '?'}
+                              {u.picture ? <img src={u.picture} alt="" /> : u.name?.[0]?.toUpperCase() ?? '?'}
                             </div>
                             <div>
                               <div style={{ fontWeight: 600 }}>{u.name}</div>
@@ -231,7 +311,6 @@ export default function Users() {
                 <div className="loading">Cargando…</div>
               ) : panelData ? (
                 <>
-                  {/* User info */}
                   <div className="user-info">
                     <div className="user-avatar">
                       {panelData.user.picture
@@ -245,7 +324,6 @@ export default function Users() {
                     </div>
                   </div>
 
-                  {/* Stats */}
                   <div className="stats-grid">
                     <div className="stat-card">
                       <div className="val">{(panelData.user.score ?? 0).toLocaleString('es-ES')}</div>
@@ -262,15 +340,10 @@ export default function Users() {
                   </div>
 
                   <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                    <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => openEdit(panelData.user)}>
-                      ✎ Editar
-                    </button>
-                    <button className="btn btn-danger" onClick={() => setConfirm(panelData.user)}>
-                      Eliminar
-                    </button>
+                    <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => openEdit(panelData.user)}>✎ Editar</button>
+                    <button className="btn btn-danger" onClick={() => setConfirm(panelData.user)}>Eliminar</button>
                   </div>
 
-                  {/* Items */}
                   <div className="panel-section">
                     <h3>Items ({panelData.items.length})</h3>
                     {panelData.items.length === 0 ? (
@@ -287,7 +360,6 @@ export default function Users() {
                     )}
                   </div>
 
-                  {/* Last sessions */}
                   <div className="panel-section">
                     <h3>Últimas partidas ({panelData.sessions.length})</h3>
                     {panelData.sessions.length === 0 ? (
@@ -336,13 +408,23 @@ export default function Users() {
         </Modal>
       )}
 
-      {/* Delete confirm */}
+      {/* Single delete */}
       {confirm && (
         <Confirm
           title="¿Eliminar usuario?"
           message={`Se eliminarán todos los datos de "${confirm.name}": partidas, items, estadísticas y suscripciones push. Esta acción es irreversible.`}
           onConfirm={() => handleDelete(confirm)}
           onCancel={() => setConfirm(null)}
+        />
+      )}
+
+      {/* Batch delete */}
+      {batchConfirm && (
+        <Confirm
+          title={`¿Eliminar ${selected.size} usuario${selected.size !== 1 ? 's' : ''}?`}
+          message={`Se eliminarán permanentemente ${selected.size} usuario${selected.size !== 1 ? 's' : ''} con todos sus datos (partidas, items, estadísticas). Esta acción es irreversible.`}
+          onConfirm={handleBatchDelete}
+          onCancel={() => setBatchConfirm(false)}
         />
       )}
     </div>

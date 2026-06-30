@@ -21,6 +21,34 @@ if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
 }
 webpush.setVapidDetails('mailto:rmorandeira@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
 
+// Firebase Admin for FCM native push notifications
+let messaging = null;
+try {
+  const admin = require('firebase-admin');
+  const svcAcct = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (svcAcct && !admin.apps.length) {
+    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(svcAcct)) });
+    messaging = admin.messaging();
+    console.log('Firebase Admin initialized (FCM ready)');
+  }
+} catch (e) {
+  console.warn('Firebase Admin init failed (FCM unavailable):', e.message);
+}
+
+async function sendFcm(fcmToken, { title, body, roomCode }) {
+  if (!messaging || !fcmToken) return;
+  try {
+    await messaging.send({
+      token: fcmToken,
+      notification: { title, body },
+      data: { roomCode: roomCode ?? '' },
+      android: { priority: 'high' },
+    });
+  } catch (e) {
+    console.warn('FCM send error:', e.message);
+  }
+}
+
 const UMAMI_URL = process.env.UMAMI_URL;
 const UMAMI_WEBSITE_ID = process.env.UMAMI_WEBSITE_ID;
 
@@ -71,6 +99,12 @@ db.exec(`
     endpoint   TEXT NOT NULL,
     p256dh     TEXT NOT NULL,
     auth       TEXT NOT NULL,
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TABLE IF NOT EXISTS fcm_tokens (
+    user_id    TEXT PRIMARY KEY REFERENCES users(user_id),
+    token      TEXT NOT NULL,
     updated_at INTEGER NOT NULL DEFAULT (unixepoch())
   );
 
@@ -211,7 +245,14 @@ db.exec(`
       subCount++;
     }
   }
-  console.log(`Loaded ${Object.keys(registeredUsers).length} users, ${subCount} push subscriptions from DB`);
+  let fcmCount = 0;
+  for (const f of db.prepare('SELECT user_id, token FROM fcm_tokens').all()) {
+    if (registeredUsers[f.user_id]) {
+      registeredUsers[f.user_id].fcmToken = f.token;
+      fcmCount++;
+    }
+  }
+  console.log(`Loaded ${Object.keys(registeredUsers).length} users, ${subCount} push subscriptions, ${fcmCount} FCM tokens from DB`);
 })();
 
 // Puntos por ronda: base + rank * multiplicador (rank 0–7)
@@ -298,6 +339,9 @@ const stmts = {
                                ON CONFLICT(user_id) DO UPDATE
                                  SET endpoint=excluded.endpoint, p256dh=excluded.p256dh, auth=excluded.auth, updated_at=unixepoch()`),
   deletePushSub:  db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`),
+  upsertFcmToken: db.prepare(`INSERT INTO fcm_tokens (user_id, token) VALUES (?, ?)
+                               ON CONFLICT(user_id) DO UPDATE SET token=excluded.token, updated_at=unixepoch()`),
+  deleteFcmToken: db.prepare(`DELETE FROM fcm_tokens WHERE user_id=?`),
   rankings:       db.prepare(`SELECT ps.user_id, u.name, u.picture, ps.score, ps.games_played, ps.games_won
                                FROM player_stats ps JOIN users u ON ps.user_id=u.user_id
                                ORDER BY ps.score DESC LIMIT 100`),
@@ -1641,6 +1685,12 @@ io.on('connection', (socket) => {
     if (endpoint && p256dh && auth) stmts.upsertPushSub.run(userId, endpoint, p256dh, auth);
   });
 
+  socket.on('register_fcm_token', ({ userId, token }) => {
+    if (!userId || !token) return;
+    if (registeredUsers[userId]) registeredUsers[userId].fcmToken = token;
+    stmts.upsertFcmToken.run(userId, token);
+  });
+
   socket.on('search_users', ({ query = '' }, cb) => {
     if (!rl.social()) return cb?.({ users: [] });
     const q = query.toLowerCase();
@@ -1676,6 +1726,11 @@ io.on('connection', (socket) => {
         }
       });
     }
+    sendFcm(invitee.fcmToken, {
+      title: '¡Te han invitado!',
+      body: `${inviterName} te invita a "${roomName}"`,
+      roomCode,
+    });
     cb?.({ ok: true });
   });
 
@@ -1745,6 +1800,11 @@ io.on('connection', (socket) => {
         }
       });
     }
+    sendFcm(target.fcmToken, {
+      title: '¡Te han retado!',
+      body: `${myName} te reta a una partida`,
+      roomCode: code,
+    });
 
     cb?.({ ok: true, code, roomName });
     broadcast(code);
