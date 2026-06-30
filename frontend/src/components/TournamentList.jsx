@@ -6,6 +6,14 @@ const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉
 const TIER_ORDER = ['Diamante', 'Oro', 'Plata', 'Bronce', 'Especial', 'Abierto']
 const TIER_RANK  = { Diamante: 3, Oro: 2, Plata: 1, Bronce: 0, Especial: -1, Abierto: -1 }
 
+function fmtPeriod(starts_at, ends_at) {
+  if (!starts_at && !ends_at) return null
+  const fmt = ts => new Date(ts * 1000).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+  if (starts_at && ends_at) return `${fmt(starts_at)} – ${fmt(ends_at)}`
+  if (starts_at) return `Desde ${fmt(starts_at)}`
+  return `Hasta ${fmt(ends_at)}`
+}
+
 export default function TournamentList({ user, myStats, onEnter }) {
   const [tournaments, setTournaments] = useState([])
   const [userItems, setUserItems]     = useState([])
@@ -51,6 +59,9 @@ export default function TournamentList({ user, myStats, onEnter }) {
             <span className="tl__card-emoji">{TIER_EMOJI[t.tier]}</span>
             <div className="tl__card-body">
               <p className="tl__card-name">{t.name}</p>
+              {fmtPeriod(t.starts_at, t.ends_at) && (
+                <p className="tl__card-period">{fmtPeriod(t.starts_at, t.ends_at)}</p>
+              )}
               <p className="tl__card-meta">
                 {t.playerCount} en sala. {t.openRooms} {t.openRooms === 1 ? 'Partida abierta' : 'Partidas abiertas'}
                 {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
@@ -82,6 +93,9 @@ export default function TournamentList({ user, myStats, onEnter }) {
                   <p className="tl__card-req">
                     Requiere: <strong>{t.requiredItemName ?? t.requiredItem}</strong>
                   </p>
+                  {fmtPeriod(t.starts_at, t.ends_at) && (
+                    <p className="tl__card-period">{fmtPeriod(t.starts_at, t.ends_at)}</p>
+                  )}
                   <p className="tl__card-meta">
                     {t.playerCount} en sala · {t.openRooms} {t.openRooms === 1 ? 'partida abierta' : 'partidas abiertas'}
                     {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
