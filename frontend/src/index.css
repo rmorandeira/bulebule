@@ -2294,6 +2294,8 @@ body {
   align-self: center;
   margin-bottom: 4px;
   flex-shrink: 0;
+  pointer-events: auto;
+  touch-action: none;
 }
 
 .bs__field {

@@ -1,0 +1,12 @@
+{
+  "appId": "com.bulebule.app",
+  "appName": "Bule Bule",
+  "webDir": "frontend/dist",
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "203508195375-sodhu79mepbqof7kuinmrckjndmmqej1.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
+  }
+}

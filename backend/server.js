@@ -1601,8 +1601,26 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
-  socket.on('register_user', ({ userId, name, email, picture }) => {
+  socket.on('register_user', async ({ userId, name, email, picture, idToken }) => {
     if (!userId || !name) return;
+
+    // If an idToken is provided, verify it with Google before trusting client data
+    if (idToken) {
+      try {
+        const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (payload.error || !payload.email) return;
+        // Use verified data from Google, ignoring client-provided values
+        userId = payload.email;
+        name   = payload.name   || name;
+        email  = payload.email;
+        picture = payload.picture || picture;
+      } catch (_) {
+        return;
+      }
+    }
+
     const prev = registeredUsers[userId];
     if (prev?.socketId) delete socketToUser[prev.socketId];
     registeredUsers[userId] = { ...(prev || {}), userId, name, email: email ?? null, picture: picture ?? null, socketId: socket.id };

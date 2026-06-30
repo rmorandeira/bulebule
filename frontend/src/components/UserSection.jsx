@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { googleLogout } from '@react-oauth/google'
+import { Capacitor } from '@capacitor/core'
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'
 import socket from '../socket'
 import { setTheme, getTheme } from '../theme'
 import { imgSrc } from '../utils/imgSrc'
@@ -480,8 +482,12 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
     reader.readAsDataURL(file)
   }
 
-  function handleLogout() {
-    googleLogout()
+  async function handleLogout() {
+    if (Capacitor.isNativePlatform()) {
+      try { await GoogleAuth.signOut() } catch (_) {}
+    } else {
+      googleLogout()
+    }
     onLogout()
   }
 

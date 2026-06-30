@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSheetDrag } from '../hooks/useSheetDrag'
 import { GoogleLogin } from '@react-oauth/google'
 import { Capacitor } from '@capacitor/core'
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'
@@ -53,12 +54,13 @@ const DEFAULT_ROOM_FILTER = { sort: 'default', status: 'all', favoritesOnly: fal
 
 function RoomFilterSheet({ filter, onApply, closing, onClose }) {
   const [local, setLocal] = useState(filter)
+  const { sheetRef, handleProps } = useSheetDrag(onClose)
 
   return (
     <>
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
-      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-        <div className="bs__handle" />
+      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
+        <div className="bs__handle" {...handleProps} />
 
         <p className="bs__label">ESTADO</p>
         <div className="bs__pills">
@@ -109,12 +111,13 @@ const DEFAULT_RANK_FILTER = { sort: 'score', favoritesOnly: false, tier: 'Todos'
 
 function FilterSheet({ filter, onApply, closing, onClose }) {
   const [local, setLocal] = useState(filter)
+  const { sheetRef, handleProps } = useSheetDrag(onClose)
 
   return (
     <>
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
-      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-        <div className="bs__handle" />
+      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
+        <div className="bs__handle" {...handleProps} />
 
         <p className="bs__label">ORDENAR POR</p>
         <div className="bs__pills">
@@ -159,6 +162,7 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
 function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
+  const { sheetRef, handleProps } = useSheetDrag(onClose)
   const [mode, setMode]             = useState('multi') // 'multi' | 'solo'
   const [guestName, setGuestName]   = useState(playerName || '')
   const [roomName, setRoomName]     = useState('')
@@ -219,8 +223,8 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
   return (
     <>
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
-      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-        <div className="bs__handle" />
+      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
+        <div className="bs__handle" {...handleProps} />
 
         {/* Guest name input */}
         {!user && (
@@ -471,14 +475,15 @@ export default function RoomList({
   function handleGoogleSuccess(credentialResponse) {
     const payload = decodeJwt(credentialResponse.credential)
     if (!payload) return setError('Error al iniciar sesión con Google')
-    onLogin({ name: payload.name, email: payload.email, picture: payload.picture, googleId: payload.sub })
+    onLogin({ name: payload.name, email: payload.email, picture: payload.picture, googleId: payload.sub, idToken: credentialResponse.credential })
     setError('')
   }
 
   async function handleNativeGoogleLogin() {
     try {
+      try { await GoogleAuth.signOut() } catch (_) {}
       const user = await GoogleAuth.signIn()
-      onLogin({ name: user.name, email: user.email, picture: user.imageUrl, googleId: user.id })
+      onLogin({ name: user.name, email: user.email, picture: user.imageUrl, googleId: user.id, idToken: user.authentication?.idToken })
       setError('')
     } catch (e) {
       console.error('[GoogleAuth] signIn error:', e)

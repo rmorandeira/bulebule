@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bule Bule</string>
+    <string name="title_activity_main">Bule Bule</string>
+    <string name="package_name">com.bulebule.app</string>
+    <string name="custom_url_scheme">com.bulebule.app</string>
+    <string name="server_client_id">203508195375-sodhu79mepbqof7kuinmrckjndmmqej1.apps.googleusercontent.com</string>
+</resources>

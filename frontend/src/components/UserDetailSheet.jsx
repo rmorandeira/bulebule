@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
 import { imgSrc } from '../utils/imgSrc'
+import { useSheetDrag } from '../hooks/useSheetDrag'
 
 const CLOSE_DURATION = 260
 
@@ -33,6 +34,7 @@ function getPlayerType(handStats, rollStats) {
 }
 
 export default function UserDetailSheet({ userId, initialName, initialPicture, onClose, user, playerName, hideChallenge = false }) {
+  const { sheetRef, handleProps } = useSheetDrag(() => close())
   const [profile, setProfile]   = useState(null)
   const [loading, setLoading]   = useState(true)
   const [closing, setClosing]   = useState(false)
@@ -135,8 +137,8 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
   return (
     <>
       <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={close} />
-      <div className={`bs uds${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-        <div className="uds__handle-sticky"><div className="bs__handle" /></div>
+      <div className={`bs uds${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
+        <div className="uds__handle-sticky"><div className="bs__handle" {...handleProps} /></div>
 
         {/* Header */}
         <div className="uds__header">

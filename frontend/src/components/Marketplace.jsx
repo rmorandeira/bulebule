@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
 import { imgSrc } from '../utils/imgSrc'
+import { useSheetDrag } from '../hooks/useSheetDrag'
 
 const CLOSE_DURATION = 260
 
@@ -15,6 +16,7 @@ const CATEGORIES = [
 
 
 export default function Marketplace({ user }) {
+  const { sheetRef, handleProps } = useSheetDrag(() => closeItem())
   const [items, setItems]         = useState([])
   const [userItems, setUserItems] = useState([])
   const [credits, setCredits]     = useState(0)
@@ -146,8 +148,8 @@ export default function Marketplace({ user }) {
             className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`}
             onClick={closeItem}
           />
-          <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-            <div className="bs__handle" />
+          <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
+            <div className="bs__handle" {...handleProps} />
             <div className="mkt__sheet">
               <div className="mkt__sheet-img-wrap">
                 <img

@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
+import { useSheetDrag } from '../hooks/useSheetDrag'
 
 const TIER_COLOR  = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 const CLOSE_DURATION = 260
 
 export default function TournamentLobby({ tournament, user, playerName, onBack, onViewUser }) {
+  const { sheetRef: createSheetRef, handleProps: createHandleProps } = useSheetDrag(() => closeCreate())
   const [lobbyState, setLobbyState]   = useState({ players: [], rooms: [] })
   const [canPlay, setCanPlay]         = useState(false)
   const [myTier, setMyTier]           = useState(null)
@@ -196,8 +198,8 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
       {createSheet && (
         <>
           <div className={`bs-overlay${createClosing ? ' bs-overlay--closing' : ''}`} onClick={closeCreate} />
-          <div className={`bs${createClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true">
-            <div className="bs__handle" />
+          <div className={`bs${createClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={createSheetRef}>
+            <div className="bs__handle" {...createHandleProps} />
             <p className="bs__label">NOMBRE DE LA SALA</p>
             <input
               className="bs__input"

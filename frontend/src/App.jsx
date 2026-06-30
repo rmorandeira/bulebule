@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Capacitor } from '@capacitor/core'
 import socket from './socket'
 import { track } from './analytics'
 import RoomList from './components/RoomList'
@@ -214,7 +215,7 @@ export default function App() {
   useEffect(() => {
     if (user && myId) {
       socket.emit('register_user', { userId: user.email, name: user.name, email: user.email, picture: user.picture })
-      if (Notification.permission === 'granted') {
+      if (!Capacitor.isNativePlatform() && Notification.permission === 'granted') {
         setupPush(user.email)
       }
     }
@@ -233,11 +234,12 @@ export default function App() {
 
   function handleLogin(userData) {
     track('login_google')
-    localStorage.setItem('bule_user', JSON.stringify(userData))
-    setUser(userData)
+    const { idToken, ...userToStore } = userData
+    localStorage.setItem('bule_user', JSON.stringify(userToStore))
+    setUser(userToStore)
     setPlayerName(userData.name)
-    socket.emit('register_user', { userId: userData.email, name: userData.name, email: userData.email, picture: userData.picture })
-    if ('Notification' in window) {
+    socket.emit('register_user', { userId: userData.email, name: userData.name, email: userData.email, picture: userData.picture, idToken })
+    if (!Capacitor.isNativePlatform() && 'Notification' in window) {
       Notification.requestPermission().then(perm => {
         if (perm === 'granted') setupPush(userData.email)
       })
