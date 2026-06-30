@@ -1230,7 +1230,7 @@ io.on('connection', (socket) => {
 
   socket.on('get_tournaments', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
-    const result = TOURNAMENT_DEFS.map(t => {
+    const result = TOURNAMENT_DEFS.filter(t => t.active).map(t => {
       const requiredItemData = t.requiredItem
         ? db.prepare(`SELECT id, name, image_url FROM items WHERE id = ?`).get(t.requiredItem)
         : null;

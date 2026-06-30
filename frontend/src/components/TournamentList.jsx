@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import socket from '../socket'
 
-const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
-const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉' }
-const TIER_ORDER = ['Diamante', 'Oro', 'Plata', 'Bronce']
-const TIER_RANK  = { Diamante: 3, Oro: 2, Plata: 1, Bronce: 0 }
+const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32', Especial: '#a78bfa', Abierto: '#34d399' }
+const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉', Especial: '⭐', Abierto: '🌐' }
+const TIER_ORDER = ['Diamante', 'Oro', 'Plata', 'Bronce', 'Especial', 'Abierto']
+const TIER_RANK  = { Diamante: 3, Oro: 2, Plata: 1, Bronce: 0, Especial: -1, Abierto: -1 }
 
 export default function TournamentList({ user, myStats, onEnter }) {
   const [tournaments, setTournaments] = useState([])
@@ -31,8 +31,9 @@ export default function TournamentList({ user, myStats, onEnter }) {
   const myTier = myStats?.tier
   const myRank = TIER_RANK[myTier] ?? -1
 
-  const tierTournaments = TIER_ORDER.map(tierName => tournaments.find(t => t.tier === tierName)).filter(Boolean)
   const itemTournaments = tournaments.filter(t => t.requiredItem)
+  const itemIds = new Set(itemTournaments.map(t => t.id))
+  const tierTournaments = TIER_ORDER.flatMap(tierName => tournaments.filter(t => t.tier === tierName && !itemIds.has(t.id)))
 
   return (
     <div className="tl">
