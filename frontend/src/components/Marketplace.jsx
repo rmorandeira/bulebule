@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
+import { imgSrc } from '../utils/imgSrc'
 
 const CLOSE_DURATION = 260
 
@@ -123,7 +124,7 @@ export default function Marketplace({ user }) {
             <div className="mkt__card-img-wrap">
               <img
                 className="mkt__card-img"
-                src={item.image_url}
+                src={imgSrc(item.image_url)}
                 alt={item.name}
                 onError={e => { e.currentTarget.style.display = 'none' }}
               />
@@ -151,7 +152,7 @@ export default function Marketplace({ user }) {
               <div className="mkt__sheet-img-wrap">
                 <img
                   className="mkt__sheet-img"
-                  src={selected.image_url}
+                  src={imgSrc(selected.image_url)}
                   alt={selected.name}
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />

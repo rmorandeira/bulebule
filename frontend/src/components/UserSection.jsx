@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { googleLogout } from '@react-oauth/google'
 import socket from '../socket'
 import { setTheme, getTheme } from '../theme'
+import { imgSrc } from '../utils/imgSrc'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
@@ -299,7 +300,7 @@ function ItemsTab({ user }) {
             <div className="mkt__card-img-wrap">
               <img
                 className="mkt__card-img"
-                src={item.image_url}
+                src={imgSrc(item.image_url)}
                 alt={item.name}
                 onError={e => { e.currentTarget.style.display = 'none' }}
               />
@@ -324,7 +325,7 @@ function ItemsTab({ user }) {
               <div className="mkt__sheet-img-wrap">
                 <img
                   className="mkt__sheet-img"
-                  src={selected.image_url}
+                  src={imgSrc(selected.image_url)}
                   alt={selected.name}
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />
@@ -415,7 +416,7 @@ function HistorialTab() {
           </div>
         ) : (
           <div key={`p${i}`} className="hist__row hist__row--purchase">
-            <img src={entry.image_url} alt={entry.name} className="hist__item-img"
+            <img src={imgSrc(entry.image_url)} alt={entry.name} className="hist__item-img"
               onError={e => { e.currentTarget.style.display = 'none' }} />
             <div className="hist__info">
               <p className="hist__title">{entry.name}</p>

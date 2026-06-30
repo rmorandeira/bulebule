@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import socket from '../socket'
+import { imgSrc } from '../utils/imgSrc'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32', Especial: '#a78bfa', Abierto: '#34d399' }
 const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉', Especial: '⭐', Abierto: '🌐' }
@@ -85,7 +86,7 @@ export default function TournamentList({ user, myStats, onEnter }) {
             return (
               <div key={t.id} className={cardClass} onClick={() => !isLocked && onEnter(t)}>
                 {t.requiredItemImageUrl
-                  ? <img className="tl__card-item-img" src={t.requiredItemImageUrl} alt={t.requiredItemName ?? ''} />
+                  ? <img className="tl__card-item-img" src={imgSrc(t.requiredItemImageUrl)} alt={t.requiredItemName ?? ''} />
                   : <span className="tl__card-emoji">🔑</span>
                 }
                 <div className="tl__card-body">

@@ -1025,7 +1025,9 @@ app.post('/api/admin/upload', requireAdmin, (req, res) => {
   const buffer = Buffer.from(data, 'base64');
   if (buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Imagen demasiado grande (máx 5 MB)' });
   fs.writeFileSync(path.join(UPLOADS_DIR, name), buffer);
-  res.json({ ok: true, url: `/uploads/${name}` });
+  const proto = req.headers['x-forwarded-proto'] || req.protocol;
+  const base  = `${proto}://${req.get('host')}`;
+  res.json({ ok: true, url: `${base}/uploads/${name}` });
 });
 
 // Items CRUD

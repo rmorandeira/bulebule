@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
+import { imgSrc } from '../utils/imgSrc'
 
 const CLOSE_DURATION = 260
 
@@ -233,7 +234,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
             <div className="uds__items">
               {items.map(item => (
                 <div key={item.id} className="uds__item" onClick={() => openItem(item)} style={{ cursor: 'pointer' }}>
-                  <img src={item.image_url} alt={item.name} className="uds__item-img"
+                  <img src={imgSrc(item.image_url)} alt={item.name} className="uds__item-img"
                     onError={e => { e.currentTarget.style.display = 'none' }} />
                   <p className="uds__item-name">{item.name}</p>
                 </div>
@@ -267,7 +268,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
               <div className="mkt__sheet-img-wrap">
                 <img
                   className="mkt__sheet-img"
-                  src={selectedItem.image_url}
+                  src={imgSrc(selectedItem.image_url)}
                   alt={selectedItem.name}
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />
