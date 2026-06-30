@@ -454,7 +454,7 @@ const ALLOWED_ORIGIN = _ALLOWED_ORIGIN === '*'
 
 const app = express();
 app.use(cors({ origin: ALLOWED_ORIGIN }));
-app.use(express.json());
+app.use(express.json({ limit: '12mb' }));
 app.get('/', (_, res) => res.send('OK'));
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 // ── Uploads ───────────────────────────────────────────────────────────────────
