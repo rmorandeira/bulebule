@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../api.js';
 import { imgSrc } from '../config.js';
 import Modal from '../components/Modal.jsx';
@@ -34,13 +34,49 @@ function slugify(str) {
   return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 const EMPTY_FORM = {
   id: '', name: '', description: '', price: 0,
   image_url: '', texture_url: '', category: 'collectible',
   available: true, sale_start: '', sale_end: '', sort_order: 0,
 };
 
-function ItemPanel({ item, onEdit, onDelete, onClose }) {
+// ── Clickable uploadable image ────────────────────────────────────────────────
+function UploadableImage({ src, alt, style, onUpload, uploading }) {
+  const ref = useRef(null);
+  return (
+    <div
+      className="img-upload"
+      style={style}
+      onClick={() => !uploading && ref.current?.click()}
+      title="Clic para cambiar imagen"
+    >
+      {src
+        ? <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} onError={e => { e.target.style.display = 'none'; }} />
+        : <div style={{ width: '100%', height: '100%', background: 'var(--surface3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Sin imagen</div>
+      }
+      <div className="img-upload__overlay">{uploading ? '⏳' : '📷'}</div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => { if (e.target.files[0]) onUpload(e.target.files[0]); e.target.value = ''; }}
+      />
+    </div>
+  );
+}
+
+// ── Item detail panel ─────────────────────────────────────────────────────────
+function ItemPanel({ item, onEdit, onDelete, onClose, onUploadImage, uploading }) {
   return (
     <>
       <div className="panel-overlay" onClick={onClose} />
@@ -50,16 +86,17 @@ function ItemPanel({ item, onEdit, onDelete, onClose }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="panel-body">
-          {/* Image */}
-          {item.image_url && (
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <img
-                src={imgSrc(item.image_url)}
-                alt={item.name}
-                style={{ maxWidth: 160, maxHeight: 160, objectFit: 'contain', borderRadius: 8, background: 'var(--surface2)', padding: 12 }}
-              />
-            </div>
-          )}
+
+          {/* Cover image — clickable to upload */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <UploadableImage
+              src={imgSrc(item.image_url)}
+              alt={item.name}
+              style={{ width: 160, height: 160, borderRadius: 8, background: 'var(--surface2)', padding: item.image_url ? 12 : 0 }}
+              onUpload={file => onUploadImage('image_url', file)}
+              uploading={uploading === 'image_url'}
+            />
+          </div>
 
           {/* Name + ID */}
           <div style={{ marginBottom: 16 }}>
@@ -103,32 +140,29 @@ function ItemPanel({ item, onEdit, onDelete, onClose }) {
                     <td>{fmtDate(item.sale_start)} – {fmtDate(item.sale_end)}</td>
                   </tr>
                 )}
-                {item.texture_url && (
-                  <tr>
-                    <td style={{ color: 'var(--text-muted)', paddingBottom: 6 }}>Textura</td>
-                    <td style={{ fontSize: 11, wordBreak: 'break-all' }}>{item.texture_url}</td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
 
-          {/* Texture preview */}
-          {item.texture_url && (
+          {/* Texture (dice) — clickable to upload */}
+          {item.category === 'dice' && (
             <div className="panel-section">
-              <h3>Preview textura</h3>
-              <img
+              <h3>Textura dado</h3>
+              <UploadableImage
                 src={imgSrc(item.texture_url)}
                 alt="textura"
-                style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, background: 'var(--surface2)' }}
+                style={{ width: 80, height: 80, borderRadius: 8, background: 'var(--surface2)' }}
+                onUpload={file => onUploadImage('texture_url', file)}
+                uploading={uploading === 'texture_url'}
               />
             </div>
           )}
 
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onEdit}>✎ Editar</button>
+          {/* Actions: delete LEFT, edit RIGHT */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <button className="btn btn-danger" onClick={onDelete}>Eliminar</button>
+            <div style={{ flex: 1 }} />
+            <button className="btn btn-secondary" onClick={onEdit}>✎ Editar</button>
           </div>
         </div>
       </div>
@@ -136,16 +170,18 @@ function ItemPanel({ item, onEdit, onDelete, onClose }) {
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function Items() {
   const toast = useToast();
-  const [items, setItems]     = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch]   = useState('');
-  const [selected, setSelected] = useState(null);   // item shown in panel
-  const [editModal, setEditModal] = useState(null);  // null | 'create' | item
-  const [form, setForm]       = useState(EMPTY_FORM);
-  const [saving, setSaving]   = useState(false);
-  const [confirm, setConfirm] = useState(null);
+  const [items, setItems]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState('');
+  const [selected, setSelected] = useState(null);
+  const [editModal, setEditModal] = useState(null);
+  const [form, setForm]         = useState(EMPTY_FORM);
+  const [saving, setSaving]     = useState(false);
+  const [confirm, setConfirm]   = useState(null);
+  const [uploading, setUploading] = useState(null); // 'image_url' | 'texture_url' | null
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -161,10 +197,7 @@ export default function Items() {
 
   useEffect(() => { load(); }, [load]);
 
-  function openCreate() {
-    setForm(EMPTY_FORM);
-    setEditModal('create');
-  }
+  function openCreate() { setForm(EMPTY_FORM); setEditModal('create'); }
 
   function openEdit(item) {
     setForm({
@@ -213,7 +246,6 @@ export default function Items() {
       } else {
         await api.items.update(editModal.id, payload);
         toast('Item actualizado', 'success');
-        // Sync panel with updated data
         setSelected(prev => prev?.id === editModal.id ? { ...prev, ...payload } : prev);
       }
       setEditModal(null);
@@ -235,6 +267,37 @@ export default function Items() {
     } catch (e) {
       toast(e.message, 'error');
       setConfirm(null);
+    }
+  }
+
+  async function handleUploadImage(field, file) {
+    setUploading(field);
+    try {
+      const base64 = await readFileAsBase64(file);
+      const { url } = await api.upload(base64, file.name);
+      // Patch just the changed field, keep all other item data
+      const patch = { [field]: url };
+      await api.items.update(selected.id, {
+        name:        selected.name,
+        description: selected.description ?? null,
+        price:       selected.price,
+        image_url:   selected.image_url ?? null,
+        texture_url: selected.texture_url ?? null,
+        category:    selected.category,
+        available:   selected.available === 1,
+        sale_start:  selected.sale_start ?? null,
+        sale_end:    selected.sale_end ?? null,
+        sort_order:  selected.sort_order ?? 0,
+        ...patch,
+      });
+      const updated = { ...selected, ...patch };
+      setSelected(updated);
+      setItems(prev => prev.map(i => i.id === selected.id ? updated : i));
+      toast('Imagen actualizada', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setUploading(null);
     }
   }
 
@@ -279,11 +342,7 @@ export default function Items() {
               </thead>
               <tbody>
                 {filtered.map(item => (
-                  <tr
-                    key={item.id}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => setSelected(item)}
-                  >
+                  <tr key={item.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(item)}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {item.image_url ? (
@@ -302,21 +361,11 @@ export default function Items() {
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <span className={`badge ${CAT_BADGE[item.category] ?? 'badge-gray'}`}>
-                        {item.category}
-                      </span>
-                    </td>
+                    <td><span className={`badge ${CAT_BADGE[item.category] ?? 'badge-gray'}`}>{item.category}</span></td>
                     <td>{item.price.toLocaleString('es-ES')} ₿</td>
-                    <td>
-                      <span className={`badge ${item.available ? 'badge-green' : 'badge-red'}`}>
-                        {item.available ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
+                    <td><span className={`badge ${item.available ? 'badge-green' : 'badge-red'}`}>{item.available ? 'Activo' : 'Inactivo'}</span></td>
                     <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {item.sale_start || item.sale_end
-                        ? `${fmtDate(item.sale_start)} – ${fmtDate(item.sale_end)}`
-                        : '—'}
+                      {item.sale_start || item.sale_end ? `${fmtDate(item.sale_start)} – ${fmtDate(item.sale_end)}` : '—'}
                     </td>
                   </tr>
                 ))}
@@ -326,17 +375,17 @@ export default function Items() {
         )}
       </div>
 
-      {/* Detail panel */}
       {selected && (
         <ItemPanel
           item={selected}
           onClose={() => setSelected(null)}
           onEdit={() => openEdit(selected)}
           onDelete={() => setConfirm(selected)}
+          onUploadImage={handleUploadImage}
+          uploading={uploading}
         />
       )}
 
-      {/* Edit / Create modal */}
       {editModal && (
         <Modal
           title={editModal === 'create' ? 'Nuevo item' : `Editar: ${editModal.name}`}

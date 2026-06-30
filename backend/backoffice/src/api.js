@@ -34,6 +34,7 @@ export const api = {
     update: (id, data)   => apiFetch(`/api/admin/tournaments/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id)         => apiFetch(`/api/admin/tournaments/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   },
+  upload: (base64, filename) => apiFetch('/api/admin/upload', { method: 'POST', body: JSON.stringify({ data: base64, filename }) }),
   users: {
     list:   (params = {})  => apiFetch(`/api/admin/users?${new URLSearchParams(params)}`),
     get:    (id)           => apiFetch(`/api/admin/users/${encodeURIComponent(id)}`),

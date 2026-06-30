@@ -15,7 +15,6 @@ export default function Login({ onLogin }) {
         headers: { Authorization: `Bearer ${token.trim()}` },
       });
       if (res.status === 401) { setError('Token incorrecto'); return; }
-      if (res.status === 503) { setError('Backoffice no configurado en el servidor'); return; }
       if (!res.ok) { setError(`Error del servidor (${res.status})`); return; }
       onLogin(token.trim());
     } catch {
@@ -39,7 +38,7 @@ export default function Login({ onLogin }) {
             <input
               id="token"
               type="password"
-              placeholder="Introduce el token BACKOFFICE_SECRET"
+              placeholder="Token del log de Railway…"
               value={token}
               onChange={e => setToken(e.target.value)}
               autoFocus
@@ -55,6 +54,10 @@ export default function Login({ onLogin }) {
             {loading ? 'Verificando…' : 'Acceder'}
           </button>
         </form>
+
+        <p style={{ marginTop: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+          El token aparece en los logs de Railway al arrancar el servidor por primera vez.
+        </p>
       </div>
     </div>
   );

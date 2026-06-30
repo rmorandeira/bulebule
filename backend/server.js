@@ -446,7 +446,10 @@ app.use(cors({ origin: ALLOWED_ORIGIN }));
 app.use(express.json());
 app.get('/', (_, res) => res.send('OK'));
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
-app.get('/api/debug-env', (_, res) => res.json({ hasSecret: !!process.env.BACKOFFICE_SECRET, len: process.env.BACKOFFICE_SECRET?.length ?? 0 }));
+// ── Uploads ───────────────────────────────────────────────────────────────────
+const UPLOADS_DIR = path.join(__dirname, 'data', 'uploads');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ── Backoffice static files ───────────────────────────────────────────────────
 const BACKOFFICE_DIST = path.join(__dirname, 'backoffice-dist');
@@ -999,6 +1002,20 @@ function requireAdmin(req, res, next) {
   if (req.headers.authorization !== `Bearer ${expected}`) return res.status(401).json({ error: 'No autorizado' });
   next();
 }
+
+// Image upload (base64 JSON → saved to data/uploads/)
+app.post('/api/admin/upload', requireAdmin, (req, res) => {
+  const { data, filename } = req.body;
+  if (!data || !filename) return res.status(400).json({ error: 'Faltan datos' });
+  const ext = path.extname(filename).toLowerCase();
+  if (!['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'].includes(ext))
+    return res.status(400).json({ error: 'Formato no permitido' });
+  const name = `${Date.now()}-${path.basename(filename, ext).replace(/[^a-z0-9_-]/gi, '_')}${ext}`;
+  const buffer = Buffer.from(data, 'base64');
+  if (buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Imagen demasiado grande (máx 5 MB)' });
+  fs.writeFileSync(path.join(UPLOADS_DIR, name), buffer);
+  res.json({ ok: true, url: `/uploads/${name}` });
+});
 
 // Items CRUD
 app.get('/api/admin/items', requireAdmin, (req, res) => {

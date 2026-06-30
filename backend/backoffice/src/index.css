@@ -537,6 +537,27 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .confirm-box p  { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
 .confirm-box .actions { display: flex; justify-content: flex-end; gap: 8px; }
 
+/* ── Uploadable image ── */
+.img-upload {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.img-upload__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition);
+  font-size: 26px;
+}
+.img-upload:hover .img-upload__overlay { opacity: 1; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .sidebar {
