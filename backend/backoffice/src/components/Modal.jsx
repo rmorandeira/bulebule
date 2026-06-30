@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-export default function Modal({ title, onClose, onSubmit, submitting, children, wide }) {
+export default function Modal({ title, onClose, onSubmit, submitting, onDelete, children, wide }) {
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -27,6 +27,10 @@ export default function Modal({ title, onClose, onSubmit, submitting, children, 
         </form>
         {onSubmit && (
           <div className="modal-footer">
+            {onDelete && (
+              <button type="button" className="btn btn-danger" onClick={onDelete}>Eliminar</button>
+            )}
+            <div style={{ flex: 1 }} />
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
             <button type="submit" form="modal-form" className="btn btn-primary" disabled={submitting}>
               {submitting ? 'Guardando…' : 'Guardar'}
