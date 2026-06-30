@@ -439,6 +439,7 @@ app.use(cors({ origin: ALLOWED_ORIGIN }));
 app.use(express.json());
 app.get('/', (_, res) => res.send('OK'));
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
+app.get('/api/debug-env', (_, res) => res.json({ hasSecret: !!process.env.BACKOFFICE_SECRET, len: process.env.BACKOFFICE_SECRET?.length ?? 0 }));
 
 // ── Backoffice static files ───────────────────────────────────────────────────
 const BACKOFFICE_DIST = path.join(__dirname, 'backoffice-dist');
