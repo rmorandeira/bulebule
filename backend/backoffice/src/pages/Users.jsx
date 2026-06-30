@@ -30,6 +30,7 @@ export default function Users() {
   const [editForm, setEditForm]    = useState({ name: '', email: '', score: 0 });
   const [saving, setSaving]        = useState(false);
   const [confirm, setConfirm]      = useState(null);
+  const [filterTier, setFilterTier] = useState('');
   const LIMIT = 50;
   const searchRef = useRef(null);
 
@@ -129,6 +130,13 @@ export default function Users() {
           </div>
         </div>
 
+        <div className="filter-bar">
+          <button className={`filter-chip ${filterTier === '' ? 'active' : ''}`} onClick={() => setFilterTier('')}>Todos</button>
+          {TIERS.map(t => (
+            <button key={t.name} className={`filter-chip ${filterTier === t.name ? 'active' : ''}`} onClick={() => setFilterTier(filterTier === t.name ? '' : t.name)}>{t.name}</button>
+          ))}
+        </div>
+
         {loading ? (
           <div className="loading">Cargando…</div>
         ) : users.length === 0 ? (
@@ -152,7 +160,7 @@ export default function Users() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(u => {
+                  {users.filter(u => !filterTier || getTier(u.score).name === filterTier).map(u => {
                     const tier = getTier(u.score);
                     return (
                       <tr

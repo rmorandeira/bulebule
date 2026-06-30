@@ -139,6 +139,8 @@ export default function Tournaments() {
   const [form, setForm]         = useState(EMPTY_FORM);
   const [saving, setSaving]     = useState(false);
   const [confirm, setConfirm]   = useState(null);
+  const [filterTier, setFilterTier]     = useState('');
+  const [filterActive, setFilterActive] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -234,6 +236,13 @@ export default function Tournaments() {
     }
   }
 
+  const filtered = list.filter(t => {
+    if (filterTier   && t.tier !== filterTier) return false;
+    if (filterActive === 'active'   && !t.active) return false;
+    if (filterActive === 'inactive' &&  t.active) return false;
+    return true;
+  });
+
   return (
     <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -242,12 +251,23 @@ export default function Tournaments() {
           <button className="btn btn-primary" onClick={openCreate}>+ Nuevo campeonato</button>
         </div>
 
+        <div className="filter-bar">
+          <button className={`filter-chip ${filterTier === '' ? 'active' : ''}`} onClick={() => setFilterTier('')}>Todos</button>
+          {TIERS.map(t => (
+            <button key={t} className={`filter-chip ${filterTier === t ? 'active' : ''}`} onClick={() => setFilterTier(filterTier === t ? '' : t)}>{t}</button>
+          ))}
+          <div className="filter-sep" />
+          <button className={`filter-chip ${filterActive === '' ? 'active' : ''}`} onClick={() => setFilterActive('')}>Todos</button>
+          <button className={`filter-chip ${filterActive === 'active' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'active' ? '' : 'active')}>Activos</button>
+          <button className={`filter-chip ${filterActive === 'inactive' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'inactive' ? '' : 'inactive')}>Inactivos</button>
+        </div>
+
         {loading ? (
           <div className="loading">Cargando…</div>
-        ) : list.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="empty-state">
             <div className="icon">🏆</div>
-            <p>No hay campeonatos todavía</p>
+            <p>No hay campeonatos{filterTier || filterActive ? ' con estos filtros' : ' todavía'}</p>
           </div>
         ) : (
           <div className="table-wrap">
@@ -262,7 +282,7 @@ export default function Tournaments() {
                 </tr>
               </thead>
               <tbody>
-                {list.map(t => (
+                {filtered.map(t => (
                   <tr key={t.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(t)}>
                     <td>
                       <div style={{ fontWeight: 600 }}>{t.name}</div>
