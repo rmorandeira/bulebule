@@ -12,11 +12,12 @@ const DIE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
 const handPts = rank => 8 + (rank ?? 0) * 4
 const sortDice = arr => [...arr].sort((a, b) => (DIE_RANK[b] ?? 0) - (DIE_RANK[a] ?? 0))
 
-function playDiscardSound() {
-  new Audio('/assets/cogerdado.mp3').play().catch(() => {})
-}
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
-const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+const _audioDiscard    = new Audio('/assets/cogerdado.mp3')
+const _audioPalillo    = new Audio('/assets/romper_palillo.mp3')
+function playDiscardSound() { _audioDiscard.currentTime = 0; _audioDiscard.play().catch(() => {}) }
+function playPalilloSound() { _audioPalillo.currentTime = 0; _audioPalillo.play().catch(() => {}) }
 
 function PalilloState({ player }) {
   if (player.liberado) return <span className="tag tag--liberado">Liberado</span>
@@ -66,7 +67,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     prevPhaseRef.current = room.phase
     if ((prev === 'playing' || prev === 'tiebreak') && (room.phase === 'results' || room.phase === 'finished') && (room.roundLoserId || room.gameLoserId)) {
       setPalilloRotoShowing(true)
-      new Audio('/assets/romper_palillo.mp3').play().catch(() => {})
+      playPalilloSound()
     }
     if (room.phase === 'playing' || room.phase === 'tiebreak') setPalilloRotoShowing(false)
   }, [room.phase, room.roundLoserId, room.gameLoserId])
@@ -246,7 +247,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
 
   // Shake to roll
   useEffect(() => {
-    if (isMobile() && !needsMotionPermission()) setShakeEnabled(true)
+    if (IS_MOBILE && !needsMotionPermission()) setShakeEnabled(true)
   }, [])
 
   useEffect(() => {
@@ -765,7 +766,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     </div>
                   </>
                 )}
-                {isMobile() && needsMotionPermission() && !shakeEnabled && (
+                {IS_MOBILE && needsMotionPermission() && !shakeEnabled && (
                   <button className="btn btn--secondary btn--full" onClick={enableShakeIOS} style={{ marginTop: 8 }}>
                     Activar agitar
                   </button>

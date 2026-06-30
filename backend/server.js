@@ -202,7 +202,7 @@ db.exec(`
 // ── Load persisted users + push subscriptions into memory ─────────────────────
 (function loadPersistedData() {
   for (const u of db.prepare('SELECT user_id, name, email, picture FROM users').all()) {
-    registeredUsers[u.user_id] = { userId: u.user_id, name: u.name, email: u.email ?? null, picture: u.picture ?? null, socketId: null, pushSubscription: null };
+    registeredUsers[u.user_id] = { userId: u.user_id, name: u.name, email: u.email ?? null, picture: u.picture ?? null, socketId: null, pushSubscription: null, isGoogleUser: true };
   }
   let subCount = 0;
   for (const s of db.prepare('SELECT user_id, endpoint, p256dh, auth FROM push_subscriptions').all()) {
@@ -1751,8 +1751,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    if (socket.data.userId && registeredUsers[socket.data.userId]) {
-      registeredUsers[socket.data.userId].socketId = null;
+    if (socket.data.userId) {
+      const ru = registeredUsers[socket.data.userId];
+      if (ru) {
+        if (ru.isGoogleUser) {
+          ru.socketId = null;
+        } else {
+          delete registeredUsers[socket.data.userId];
+        }
+      }
     }
     delete socketToUser[socket.id];
     const tid = socket.data.tournamentId;
