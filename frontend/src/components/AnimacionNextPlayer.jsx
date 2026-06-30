@@ -112,7 +112,7 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
             <div className="next-player-hand">
               <p className="next-player-hand__title">Jugada mínima a superar</p>
               <div className="next-player-hand__dice">
-                {[...(toBeat.currentDice ?? [])].sort((a, b) => (VALUE_RANK[b] ?? 0) - (VALUE_RANK[a] ?? 0)).map((v, i) => <Die key={i} value={v} />)}
+                {[...(toBeat.currentDice ?? [])].sort((a, b) => (VALUE_RANK[b] ?? 0) - (VALUE_RANK[a] ?? 0)).map((v, i) => <Die key={i} value={v} skin={toBeat.diceSkin} />)}
               </div>
               <span className="next-player-hand__name">{toBeat.hand.desc}</span>
               <span className="next-player-hand__rolls">

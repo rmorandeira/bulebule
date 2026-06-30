@@ -2232,6 +2232,9 @@ body {
   right: 0;
   bottom: 0;
   max-width: 430px;
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 0 auto;
   background: var(--surface);
   border-radius: 28px 28px 0 0;
@@ -2251,9 +2254,7 @@ body {
 }
 
 .bs.uds {
-  max-height: calc(100dvh - 60px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  max-height: calc(100dvh - 90px);
 }
 .uds__handle-sticky {
   position: sticky;
