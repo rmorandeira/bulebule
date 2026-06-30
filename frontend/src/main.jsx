@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { Capacitor } from '@capacitor/core'
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'
 import App from './App'
 import './index.css'
 import { initAnalytics } from './analytics'
@@ -13,10 +12,12 @@ initTheme()
 initAnalytics()
 
 if (Capacitor.isNativePlatform()) {
-  GoogleAuth.initialize({
-    clientId,
-    scopes: ['profile', 'email'],
-    grantOfflineAccess: false,
+  import('@codetrix-studio/capacitor-google-auth').then(({ GoogleAuth }) => {
+    GoogleAuth.initialize({
+      clientId,
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: false,
+    })
   })
 }
 

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useSheetDrag } from '../hooks/useSheetDrag'
 import { GoogleLogin } from '@react-oauth/google'
 import { Capacitor } from '@capacitor/core'
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'
 import socket from '../socket'
 import { track } from '../analytics'
 import UserSection from './UserSection'
@@ -481,6 +480,7 @@ export default function RoomList({
 
   async function handleNativeGoogleLogin() {
     try {
+      const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
       try { await GoogleAuth.signOut() } catch (_) {}
       const user = await GoogleAuth.signIn()
       onLogin({ name: user.name, email: user.email, picture: user.imageUrl, googleId: user.id, idToken: user.authentication?.idToken })
