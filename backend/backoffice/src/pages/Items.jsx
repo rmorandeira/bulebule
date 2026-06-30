@@ -91,7 +91,9 @@ export default function Items() {
   const toast = useToast();
   const [items, setItems]         = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState('');
+  const [search, setSearch]         = useState('');
+  const [filterCat, setFilterCat]   = useState('');
+  const [filterAvail, setFilterAvail] = useState('');
   const [editModal, setEditModal] = useState(null);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [saving, setSaving]       = useState(false);
@@ -201,9 +203,13 @@ export default function Items() {
     }
   }
 
-  const filtered = items.filter(i =>
-    !search || i.name.toLowerCase().includes(search.toLowerCase()) || i.id.includes(search.toLowerCase())
-  );
+  const filtered = items.filter(i => {
+    if (search && !i.name.toLowerCase().includes(search.toLowerCase()) && !i.id.includes(search.toLowerCase())) return false;
+    if (filterCat && i.category !== filterCat) return false;
+    if (filterAvail === 'active' && !i.available) return false;
+    if (filterAvail === 'inactive' && i.available) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -218,6 +224,17 @@ export default function Items() {
           />
           <button className="btn btn-primary" onClick={openCreate}>+ Nuevo item</button>
         </div>
+      </div>
+
+      <div className="filter-bar">
+        <button className={`filter-chip ${filterCat === '' ? 'active' : ''}`} onClick={() => setFilterCat('')}>Todos</button>
+        {CATEGORIES.map(c => (
+          <button key={c} className={`filter-chip ${filterCat === c ? 'active' : ''}`} onClick={() => setFilterCat(filterCat === c ? '' : c)}>{c}</button>
+        ))}
+        <div className="filter-sep" />
+        <button className={`filter-chip ${filterAvail === '' ? 'active' : ''}`} onClick={() => setFilterAvail('')}>Todos</button>
+        <button className={`filter-chip ${filterAvail === 'active' ? 'active' : ''}`} onClick={() => setFilterAvail(filterAvail === 'active' ? '' : 'active')}>Activos</button>
+        <button className={`filter-chip ${filterAvail === 'inactive' ? 'active' : ''}`} onClick={() => setFilterAvail(filterAvail === 'inactive' ? '' : 'inactive')}>Inactivos</button>
       </div>
 
       {loading ? (

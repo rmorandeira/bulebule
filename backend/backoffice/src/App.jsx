@@ -5,6 +5,16 @@ import Items from './pages/Items.jsx';
 import Tournaments from './pages/Tournaments.jsx';
 import Users from './pages/Users.jsx';
 
+function useTheme() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('bo_theme') || 'dark');
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('bo_theme', theme);
+  }, [theme]);
+  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  return [theme, toggle];
+}
+
 const NAV_LABELS = {
   items:       '🎁 Items',
   tournaments: '🏆 Campeonatos',
@@ -22,6 +32,7 @@ const PAGES = { items: Items, tournaments: Tournaments, users: Users };
 function AppShell({ token, onLogout }) {
   const [page, setPage] = useState('items');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, toggleTheme] = useTheme();
 
   const Page = PAGES[page];
 
@@ -66,6 +77,9 @@ function AppShell({ token, onLogout }) {
         <header className="topbar">
           <button className="hamburger" onClick={() => setSidebarOpen(o => !o)}>☰</button>
           <span className="topbar-title">{NAV_LABELS[page]}</span>
+          <button className="theme-toggle" onClick={toggleTheme} title="Cambiar tema">
+            {theme === 'dark' ? '☀️ Claro' : '🌙 Oscuro'}
+          </button>
         </header>
 
         <main className="page-content">
