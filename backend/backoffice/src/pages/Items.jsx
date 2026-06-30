@@ -43,6 +43,19 @@ function readFileAsBase64(file) {
   });
 }
 
+// Maps dice item IDs to their texture image paths (served by Firebase)
+const DICE_TEXTURE = {
+  'dice-marble':       '/assets/dice/marble-texture.png',
+  'dice-marble-black': '/assets/dice/marble-black-texture.png',
+  'dice-marble-red':   '/assets/dice/marble-red-texture.png',
+  'dice-marble-green': '/assets/dice/marble-green-texture.png',
+};
+
+function deriveDiceTexture(id, stored) {
+  if (stored) return stored;
+  return DICE_TEXTURE[id] ?? '';
+}
+
 const EMPTY_FORM = {
   id: '', name: '', description: '', price: 0,
   image_url: '', texture_url: '', category: 'collectible',
@@ -111,7 +124,7 @@ export default function Items() {
       description: item.description ?? '',
       price:       item.price,
       image_url:   item.image_url ?? '',
-      texture_url: item.texture_url ?? '',
+      texture_url: item.category === 'dice' ? deriveDiceTexture(item.id, item.texture_url) : (item.texture_url ?? ''),
       category:    item.category,
       available:   item.available === 1,
       sale_start:  tsToDatetimeLocal(item.sale_start),
