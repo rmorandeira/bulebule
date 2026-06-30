@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import { track } from '../analytics'
 import Die from './Die'
-import AdBanner from './AdBanner'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 import DiceRollerScene from './DiceRollerScene'
@@ -529,9 +528,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
               </p>
           )}
-          <div className="game-ad-bottom">
-            <AdBanner />
-          </div>
           </>
         )
       })() : room.phase === 'tiebreak' ? (() => {
@@ -787,9 +783,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 Esperando la tirada del otro jugador ({waitTimeLeft}s)
               </p>
             )}
-          </div>
-          <div className="game-ad-bottom">
-            <AdBanner />
           </div>
           </div>
         </div>

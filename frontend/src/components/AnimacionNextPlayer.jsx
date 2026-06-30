@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Die from './Die'
 
 const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
@@ -38,6 +38,26 @@ const style = `
 }
 `
 
+function AdTop() {
+  const ref = useRef(null)
+  const pushed = useRef(false)
+  useEffect(() => {
+    if (pushed.current) return
+    pushed.current = true
+    try { ;(window.adsbygoogle = window.adsbygoogle || []).push({}) } catch (e) {}
+  }, [])
+  return (
+    <div className="next-player-ad" ref={ref}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'inline-block', width: '728px', height: '90px', maxWidth: '100%' }}
+        data-ad-client="ca-pub-4894674675461010"
+        data-ad-slot="3916695286"
+      />
+    </div>
+  )
+}
+
 export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinue, onDone }) {
   const [exitPhase, setExitPhase] = useState(null) // null | 'out' | 'fade'
   const [secondsLeft, setSecondsLeft] = useState(null)
@@ -69,6 +89,7 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
         className={`next-player-overlay${exitPhase === 'fade' ? ' next-player-overlay--closing' : ''}`}
         onTransitionEnd={(e) => { if (exitPhase === 'fade' && e.target === e.currentTarget) onDone?.() }}
       >
+        {!exitPhase && <AdTop />}
         <div className="next-player-content">
           <img
             className="next-player-img"
