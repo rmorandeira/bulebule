@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Capacitor } from '@capacitor/core'
 import socket from './socket'
+import { initAdMob } from './utils/admob'
 import { track } from './analytics'
 import RoomList from './components/RoomList'
 import CreateRoom from './components/CreateRoom'
@@ -72,6 +73,8 @@ async function setupPush(userId) {
 }
 
 export default function App() {
+  useEffect(() => { initAdMob() }, [])
+
   const [screen, setScreen] = useState(() => {
     const p = new URLSearchParams(window.location.search).get('join')
     return p ? 'list' : 'splash'

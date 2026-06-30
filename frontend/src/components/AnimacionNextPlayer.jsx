@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Die from './Die'
+import { IS_NATIVE, showBanner, removeBanner } from '../utils/admob'
 
 const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
 
@@ -39,15 +40,19 @@ const style = `
 `
 
 function AdTop() {
-  const ref = useRef(null)
-  const pushed = useRef(false)
   useEffect(() => {
-    if (pushed.current) return
-    pushed.current = true
+    if (IS_NATIVE) {
+      showBanner('TOP_CENTER')
+      return () => removeBanner()
+    }
+    // Web: AdSense
     try { ;(window.adsbygoogle = window.adsbygoogle || []).push({}) } catch (e) {}
   }, [])
+
+  if (IS_NATIVE) return null
+
   return (
-    <div className="next-player-ad" ref={ref}>
+    <div className="next-player-ad">
       <ins
         className="adsbygoogle"
         style={{ display: 'inline-block', width: '728px', height: '90px', maxWidth: '100%' }}
