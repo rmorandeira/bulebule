@@ -24,11 +24,12 @@ webpush.setVapidDetails('mailto:rmorandeira@gmail.com', VAPID_PUBLIC, VAPID_PRIV
 // Firebase Admin for FCM native push notifications
 let messaging = null;
 try {
-  const admin = require('firebase-admin');
+  const { initializeApp, cert, getApps } = require('firebase-admin/app');
+  const { getMessaging } = require('firebase-admin/messaging');
   const svcAcct = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (svcAcct && !admin.apps?.length) {
-    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(svcAcct)) });
-    messaging = admin.messaging();
+  if (svcAcct && !getApps().length) {
+    initializeApp({ credential: cert(JSON.parse(svcAcct)) });
+    messaging = getMessaging();
     console.log('Firebase Admin initialized (FCM ready)');
   }
 } catch (e) {
