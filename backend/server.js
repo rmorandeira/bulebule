@@ -35,8 +35,9 @@ try {
   console.warn('Firebase Admin init failed (FCM unavailable):', e.message);
 }
 
-async function sendFcm(fcmToken, { title, body, roomCode }) {
-  if (!messaging || !fcmToken) return;
+async function sendFcm(fcmToken, { title, body, roomCode }, userId = null) {
+  if (!messaging) { console.warn('FCM: messaging not initialized (check FIREBASE_SERVICE_ACCOUNT)'); return; }
+  if (!fcmToken)  { console.warn('FCM: no token for user', userId ?? '?'); return; }
   try {
     await messaging.send({
       token: fcmToken,
@@ -44,8 +45,14 @@ async function sendFcm(fcmToken, { title, body, roomCode }) {
       data: { roomCode: roomCode ?? '' },
       android: { priority: 'high' },
     });
+    console.log('FCM sent to', userId ?? fcmToken.slice(0, 12) + '…');
   } catch (e) {
     console.warn('FCM send error:', e.message);
+    // Token expirado/inválido → limpiar de memoria y BD
+    if (userId && (e.code === 'messaging/invalid-registration-token' || e.code === 'messaging/registration-token-not-registered')) {
+      if (registeredUsers[userId]) registeredUsers[userId].fcmToken = null;
+      stmts.deleteFcmToken.run(userId);
+    }
   }
 }
 
@@ -1730,7 +1737,7 @@ io.on('connection', (socket) => {
       title: '¡Te han invitado!',
       body: `${inviterName} te invita a "${roomName}"`,
       roomCode,
-    });
+    }, toUserId);
     cb?.({ ok: true });
   });
 
@@ -1821,7 +1828,7 @@ io.on('connection', (socket) => {
       title: '¡Te han retado!',
       body: `${myName} te reta a una partida`,
       roomCode: code,
-    });
+    }, toUserId);
 
     cb?.({ ok: true, code, roomName });
     broadcast(code);

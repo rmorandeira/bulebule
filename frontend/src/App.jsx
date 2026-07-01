@@ -69,7 +69,15 @@ export default function App() {
         PushNotifications.addListener('registration', ({ value: token }) => {
           _pendingFcmToken = token
           const uid = loadUser()?.email
-          if (uid) socket.emit('register_fcm_token', { userId: uid, token })
+          if (uid) {
+            // Enviar inmediatamente si el socket ya está conectado
+            if (socket.connected) {
+              socket.emit('register_fcm_token', { userId: uid, token })
+            } else {
+              // Si no está conectado, enviar en cuanto conecte
+              socket.once('connect', () => socket.emit('register_fcm_token', { userId: uid, token }))
+            }
+          }
         })
         PushNotifications.addListener('registrationError', (err) => {
           console.warn('FCM registration error:', err)
