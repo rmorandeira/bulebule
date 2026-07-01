@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import socket from '../socket'
 import { track } from '../analytics'
+import { IS_NATIVE, showBanner, removeBanner } from '../utils/admob'
 import Die from './Die'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
@@ -60,6 +61,19 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     if (awaitingContinue) setNextPlayerVisible(true)
     if (room.phase !== 'playing') setNextPlayerVisible(false)
   }, [awaitingContinue, room.phase])
+
+  // Banner nativo inferior — se muestra durante la partida
+  useEffect(() => {
+    if (!IS_NATIVE) return
+    showBanner('BOTTOM_CENTER')
+    return () => removeBanner()
+  }, [])
+
+  // Re-mostrar banner inferior al cerrar la animación entre turnos
+  // (AnimacionNextPlayer muestra el TOP y llama removeBanner al desmontar)
+  useEffect(() => {
+    if (IS_NATIVE && !nextPlayerVisible) showBanner('BOTTOM_CENTER')
+  }, [nextPlayerVisible])
 
   const [palilloRotoShowing, setPalilloRotoShowing] = useState(false)
   const prevPhaseRef = useRef(room.phase)
@@ -810,6 +824,23 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           </div>
         </div>
       )}
+
+      {/* Banner inferior — spacer nativo o AdSense web */}
+      {IS_NATIVE
+        ? <div style={{ height: 60, flexShrink: 0 }} />
+        : (
+          <div className="gameboard__ad-bottom">
+            <ins
+              className="adsbygoogle"
+              style={{ display: 'block' }}
+              data-ad-client="ca-pub-4894674675461010"
+              data-ad-slot="3712072343"
+              data-full-width-responsive="true"
+              data-ad-format="banner"
+            />
+          </div>
+        )
+      }
 
       {nextPlayerVisible && (
         <AnimacionNextPlayer

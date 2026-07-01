@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core'
 //              android:value="ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX"/>
 const ADMOB_APP_ID   = 'ca-app-pub-4894674675461010~3259923426'
 const BANNER_TOP_ID  = 'ca-app-pub-4894674675461010/3549330940'
-const BANNER_BOT_ID  = 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX'  // TODO: banner unit inferior
+const BANNER_BOT_ID  = 'ca-app-pub-4894674675461010/3712072343'
 
 // IDs de prueba de Google (activos mientras los de producción sean placeholder)
 const TEST_APP_ID    = 'ca-app-pub-3940256099942544~3347511713'
