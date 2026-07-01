@@ -1637,7 +1637,10 @@ io.on('connection', (socket) => {
     player.rollCount += 1;
     player.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
     player.pendingDiscards = [];
-    startTurnTimer(room);
+    // El contador de 30s se reinicia cuando los dados se paran (report_faces),
+    // no al lanzar — así no cuenta el tiempo de animación con los botones disabled
+    clearTurnTimer(room);
+    room.turnDeadline = null;
 
     cb?.({ ok: true });
     broadcast(room.code);
@@ -1657,6 +1660,7 @@ io.on('connection', (socket) => {
     if (!Array.isArray(faces) || faces.length !== 5 || !faces.every(f => VALID.has(f))) return cb?.({ ok: false });
     player.currentDice = faces;
     player.hand = evaluateHand(faces);
+    startTurnTimer(room);
     cb?.({ ok: true });
     broadcast(room.code);
   });
@@ -1857,7 +1861,7 @@ io.on('connection', (socket) => {
     cb?.({ ok: true, name: user?.name ?? userId, picture: user?.picture ?? null, stats, items, handStats, rollStats });
   });
 
-  socket.on('challenge_user', ({ toUserId, playerName } = {}, cb) => {
+  socket.on('challenge_user', ({ toUserId, playerName, diceSkin = null } = {}, cb) => {
     if (!rl.social()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid = socket.data.userId;
     if (!uid)     return cb?.({ ok: false, error: 'Debes iniciar sesión para retar a otros jugadores' });
@@ -1904,7 +1908,7 @@ io.on('connection', (socket) => {
       roundWinnerId: null,
       turnDeadline: null,
       tournamentId: null,
-      players: [makePlayer(socket.id, myName)],
+      players: [{ ...makePlayer(socket.id, myName), diceSkin: diceSkin ?? null }],
     };
 
     rooms[code] = room;

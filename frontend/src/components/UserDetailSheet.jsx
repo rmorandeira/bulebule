@@ -109,7 +109,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
     setChallenging(true)
     setError('')
     const myName = user?.name ?? playerName ?? 'Jugador'
-    socket.emit('challenge_user', { toUserId: userId, playerName: myName }, (res) => {
+    socket.emit('challenge_user', { toUserId: userId, playerName: myName, diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       setChallenging(false)
       if (!res?.ok) return setError(res?.error ?? 'Error al crear el reto')
       close()
