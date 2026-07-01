@@ -69,6 +69,23 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     return () => removeBanner()
   }, [])
 
+  // Wake lock — evitar que la pantalla se apague durante la partida
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return
+    let lock = null
+    navigator.wakeLock.request('screen').then(l => { lock = l }).catch(() => {})
+    const reacquire = () => {
+      if (document.visibilityState === 'visible') {
+        navigator.wakeLock.request('screen').then(l => { lock = l }).catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', reacquire)
+    return () => {
+      document.removeEventListener('visibilitychange', reacquire)
+      lock?.release().catch(() => {})
+    }
+  }, [])
+
   // Re-mostrar banner inferior al cerrar la animación entre turnos
   // (AnimacionNextPlayer muestra el TOP y llama removeBanner al desmontar)
   useEffect(() => {
@@ -746,11 +763,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 <div className="dice-box__footer">
                   {minHand ? (
                     <>
-                      <span className="dice-box__tirada">
-                        {isMyTurn
-                          ? `Supera en ${minHand.rollCount} ${minHand.rollCount === 1 ? 'tirada' : 'tiradas'}`
-                          : 'Jugada mínima a superar'}
-                      </span>
+                      <span className="dice-box__tirada">Jugada mínima a superar</span>
                       <span className="dice-box__beat">
                         {minHand.hand.desc}
                         <span className="dice-box__beat-who"> · {minHand.name}</span>
@@ -758,7 +771,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     </>
                   ) : (
                     <span className="dice-box__tirada">
-                      {rollNum > 0 ? `Tirada ${rollNum} de ${maxAllowed}` : 'Tira los dados para empezar'}
+                      {rollNum > 0
+                        ? `Tirada ${rollNum} de ${maxAllowed}`
+                        : isMyTurn ? 'Tira los dados para empezar' : `Turno de ${currentPlayer?.name}`}
                     </span>
                   )}
                 </div>
