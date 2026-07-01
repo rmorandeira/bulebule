@@ -1887,6 +1887,12 @@ body {
   user-select: none;
   flex-shrink: 0;
 }
+.rl__hd-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
 .rl__hd-music {
   display: flex;
   align-items: center;
