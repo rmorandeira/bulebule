@@ -67,7 +67,20 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
           <button className="btn-back" onClick={leave}>← Salir</button>
           {room.isPrivate && <span className="room-code-badge">{room.code}</span>}
         </div>
-        <h2 className="waiting-room__title">{room.name}</h2>
+        <h2 className="waiting-room__title">
+          {room.isChallenge && (
+            <svg style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/>
+              <line x1="13" y1="19" x2="19" y2="13"/>
+              <line x1="16" y1="16" x2="20" y2="20"/>
+              <line x1="19" y1="21" x2="21" y2="19"/>
+              <polyline points="9.5 6.5 6 3 3 3 3 6 6.5 9.5"/>
+              <line x1="5" y1="11" x2="11" y2="5"/>
+              <line x1="8" y1="8" x2="4" y2="4"/>
+            </svg>
+          )}
+          {room.name}
+        </h2>
         <p className="waiting-room__hint">
           {room.isPrivate ? 'Comparte el código para que se unan' : 'Invita a tus amigos a unirse'}
         </p>

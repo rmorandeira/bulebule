@@ -684,12 +684,22 @@ export default function RoomList({
                     <div className="rl__room-info">
                       <span className="rl__room-name">
                         {room.name}
-                        {room.isPrivate && (
+                        {room.isChallenge ? (
+                          <svg className="rl__lock" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/>
+                            <line x1="13" y1="19" x2="19" y2="13"/>
+                            <line x1="16" y1="16" x2="20" y2="20"/>
+                            <line x1="19" y1="21" x2="21" y2="19"/>
+                            <polyline points="9.5 6.5 6 3 3 3 3 6 6.5 9.5"/>
+                            <line x1="5" y1="11" x2="11" y2="5"/>
+                            <line x1="8" y1="8" x2="4" y2="4"/>
+                          </svg>
+                        ) : room.isPrivate ? (
                           <svg className="rl__lock" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="11" width="18" height="11" rx="2"/>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                           </svg>
-                        )}
+                        ) : null}
                       </span>
                       <span className="rl__room-meta">
                         {room.playerCount} / {room.maxPlayers} Jugadores

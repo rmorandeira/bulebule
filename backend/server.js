@@ -180,6 +180,15 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pending_challenges (
+    from_user_id TEXT NOT NULL,
+    to_user_id   TEXT NOT NULL,
+    room_code    TEXT NOT NULL PRIMARY KEY,
+    created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+`);
+
 // ── Schema migrations ─────────────────────────────────────────────────────────
 ;(function migrateItemsSchema() {
   const cols = db.prepare('PRAGMA table_info(items)').all().map(c => c.name);
@@ -349,7 +358,10 @@ const stmts = {
   deletePushSub:  db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`),
   upsertFcmToken: db.prepare(`INSERT INTO fcm_tokens (user_id, token) VALUES (?, ?)
                                ON CONFLICT(user_id) DO UPDATE SET token=excluded.token, updated_at=unixepoch()`),
-  deleteFcmToken: db.prepare(`DELETE FROM fcm_tokens WHERE user_id=?`),
+  deleteFcmToken:          db.prepare(`DELETE FROM fcm_tokens WHERE user_id=?`),
+  insertPendingChallenge:  db.prepare(`INSERT OR REPLACE INTO pending_challenges (from_user_id, to_user_id, room_code) VALUES (?,?,?)`),
+  deletePendingChallenge:  db.prepare(`DELETE FROM pending_challenges WHERE room_code=?`),
+  getPendingChallenges:    db.prepare(`SELECT from_user_id, room_code FROM pending_challenges WHERE to_user_id=?`),
   rankings:       db.prepare(`SELECT ps.user_id, u.name, u.picture, ps.score, ps.games_played, ps.games_won
                                FROM player_stats ps JOIN users u ON ps.user_id=u.user_id
                                ORDER BY ps.score DESC LIMIT 100`),
@@ -775,6 +787,7 @@ function sanitize(room) {
     maxPlayers: room.maxPlayers,
     vsBot: room.vsBot ?? false,
     isPrivate: !!room.isPrivate,
+    isChallenge: !!room.isChallenge,
     hostId: room.hostId,
     phase: room.phase,
     roundNumber: room.roundNumber,
@@ -827,6 +840,7 @@ function sanitizeForList(room) {
     maxPlayers: room.maxPlayers,
     phase: room.phase,
     isPrivate: !!room.isPrivate,
+    isChallenge: !!room.isChallenge,
     tournamentId: room.tournamentId ?? null,
     playerIds: room.players.map(p => p.id),
   };
@@ -864,6 +878,7 @@ setInterval(() => {
     clearContinueTimer(room);
     clearTiebreakerTimer(room);
     io.to(code).emit('room_destroyed', { byPlayer: null });
+    stmts.deletePendingChallenge.run(code);
     delete rooms[code];
     cleaned++;
   }
@@ -1457,10 +1472,16 @@ io.on('connection', (socket) => {
       return;
     }
 
+    if (room.isChallenge && room.challengedUserId && socket.data.userId !== room.challengedUserId) {
+      return cb?.({ ok: false, error: 'Esta sala es un reto privado' });
+    }
     if (room.players.length >= room.maxPlayers) return cb?.({ ok: false, error: 'Sala llena' });
     room.players.push({ ...makePlayer(socket.id, playerName.trim()), diceSkin: diceSkin ?? null });
     socket.join(normalCode);
     socket.data.roomCode = normalCode;
+    if (room.isChallenge && socket.data.userId === room.challengedUserId) {
+      stmts.deletePendingChallenge.run(normalCode);
+    }
     console.log(`join_room: "${room.name}" player="${playerName}"`);
     cb?.({ ok: true, code: normalCode });
     broadcast(normalCode);
@@ -1483,6 +1504,7 @@ io.on('connection', (socket) => {
     if (!room || room.hostId !== socket.id) return cb?.({ ok: false });
 
     io.to(code).emit('room_destroyed');
+    stmts.deletePendingChallenge.run(code);
     delete rooms[code];
     socket.data.roomCode = null;
     cb?.({ ok: true });
@@ -1505,6 +1527,7 @@ io.on('connection', (socket) => {
       clearContinueTimer(room);
       const byPlayer = room.phase !== 'lobby' ? (leavingPlayer?.name ?? null) : null;
       io.to(code).emit('room_destroyed', { byPlayer });
+      stmts.deletePendingChallenge.run(code);
       delete rooms[code];
     } else {
       if (room.hostId === socket.id) room.hostId = room.players[0].id;
@@ -1690,6 +1713,22 @@ io.on('connection', (socket) => {
       stmts.upsertUser.run(userId, name, email ?? null, picture ?? null);
       stmts.ensureStats.run(userId);
     }
+
+    // Emitir retos pendientes (llegaron cuando estaba offline)
+    const pending = stmts.getPendingChallenges.all(userId);
+    for (const p of pending) {
+      const pendingRoom = rooms[p.room_code];
+      if (pendingRoom) {
+        const fromUser = registeredUsers[p.from_user_id];
+        socket.emit('room_invite', {
+          roomCode: p.room_code,
+          roomName: pendingRoom.name,
+          inviterName: fromUser?.name ?? 'Alguien',
+        });
+      } else {
+        stmts.deletePendingChallenge.run(p.room_code);
+      }
+    }
   });
 
   socket.on('subscribe_push', ({ userId, subscription }) => {
@@ -1799,6 +1838,8 @@ io.on('connection', (socket) => {
       maxPlayers: 2,
       vsBot: false,
       isPrivate: true,
+      isChallenge: true,
+      challengedUserId: toUserId,
       maxRounds: 0,
       hostId: socket.id,
       phase: 'lobby',
@@ -1814,6 +1855,7 @@ io.on('connection', (socket) => {
     rooms[code] = room;
     socket.join(code);
     socket.data.roomCode = code;
+    stmts.insertPendingChallenge.run(uid, toUserId, code);
 
     if (target.socketId) {
       io.to(target.socketId).emit('room_invite', { roomCode: code, roomName, inviterName: myName });
@@ -1865,6 +1907,7 @@ io.on('connection', (socket) => {
 
     if (room.vsBot) {
       clearTiebreakerTimer(room);
+      stmts.deletePendingChallenge.run(code);
       delete rooms[code];
       return;
     }
@@ -1879,6 +1922,7 @@ io.on('connection', (socket) => {
         const byPlayer = r.phase !== 'lobby' ? disconnectingName : null;
         io.to(code).emit('room_destroyed', { byPlayer });
         const tId = r.tournamentId;
+        stmts.deletePendingChallenge.run(code);
         delete rooms[code];
         if (tId) broadcastTournament(tId);
         else broadcastRoomList();
