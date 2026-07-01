@@ -1754,8 +1754,25 @@ io.on('connection', (socket) => {
     if (!rl.social()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid = socket.data.userId;
     if (!uid)     return cb?.({ ok: false, error: 'Debes iniciar sesión para retar a otros jugadores' });
-    const target = registeredUsers[toUserId];
-    if (!target)  return cb?.({ ok: false, error: 'Usuario no disponible' });
+
+    // Buscar en memoria primero; si no está (guest desconectado o sesión expirada),
+    // intentar reconstruir desde BD para Google users con push/FCM registrado.
+    let target = registeredUsers[toUserId];
+    if (!target) {
+      const dbUser  = db.prepare('SELECT user_id, name FROM users WHERE user_id=?').get(toUserId);
+      const fcmRow  = dbUser && db.prepare('SELECT token FROM fcm_tokens WHERE user_id=?').get(toUserId);
+      const pushRow = dbUser && db.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id=?').get(toUserId);
+      if (!dbUser || (!fcmRow && !pushRow)) return cb?.({ ok: false, error: 'Usuario no disponible' });
+      target = {
+        userId: dbUser.user_id,
+        name: dbUser.name,
+        socketId: null,
+        fcmToken: fcmRow?.token ?? null,
+        pushSubscription: pushRow
+          ? { endpoint: pushRow.endpoint, keys: { p256dh: pushRow.p256dh, auth: pushRow.auth } }
+          : null,
+      };
+    }
 
     let code;
     do { code = genCode(); } while (rooms[code]);
