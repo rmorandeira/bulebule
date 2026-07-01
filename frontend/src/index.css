@@ -124,6 +124,9 @@ body {
   font-size: 11px;
   border-radius: 5px;
 }
+.die--small .die-letter {
+  font-size: 1.4em;
+}
 
 /* ── Die faces ───────────────────────────────────────────── */
 .die-letter {
@@ -3642,13 +3645,11 @@ body {
   border-radius: 20px;
 }
 
-.mkt__card--disabled {
+.mkt__card--inactive {
   opacity: 0.45;
-  cursor: default;
-  pointer-events: none;
 }
 
-.mkt__disabled-badge {
+.mkt__inactive-badge {
   position: absolute;
   top: 8px;
   left: 8px;
