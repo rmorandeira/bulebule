@@ -302,6 +302,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
 
 export default function RoomList({
   user, playerName, onNameChange, onLogin, onUpdate, onLogout, onDeleteAccount,
+  musicOn, onToggleMusic,
 }) {
   const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
   const [rooms, setRooms]                   = useState([])
@@ -547,18 +548,30 @@ export default function RoomList({
 
       {/* Header */}
       <header className="rl__header">
-        <div className="rl__hd-user">
-          <span className="rl__hd-name">{user?.name || playerName}</span>
-          {myStats && <TierDot tier={myStats.tier} />}
-          {!connected && <span className="rl__offline">off</span>}
+        <div className="rl__hd-left">
+          <div className="rl__hd-name-row">
+            <span className="rl__hd-name">{user?.name || playerName}</span>
+            {myStats && <TierDot tier={myStats.tier} />}
+            {!connected && <span className="rl__offline">off</span>}
+          </div>
+          {myStats && <span className="rl__hd-pts">{myStats.score.toLocaleString()} B</span>}
+          {myRank && <span className="rl__hd-rank">Ranking {myRank}/{rankTotal}</span>}
         </div>
-        <img className="rl__logo" src="/assets/logo-bulebule.png" alt="Bule Bule" draggable={false} />
-        <div className="rl__hd-score">
-          {myStats && <>
-            <span className="rl__hd-pts">{myStats.score.toLocaleString()} B</span>
-            {myRank && <span className="rl__hd-rank">Ranking {myRank}/{rankTotal}</span>}
-          </>}
-        </div>
+        <button className="rl__hd-music" onClick={onToggleMusic} aria-label={musicOn ? 'Silenciar música' : 'Activar música'}>
+          {musicOn ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          )}
+        </button>
       </header>
 
       {/* Horizontal card carousel — peek mode (hidden on user tab) */}
