@@ -161,11 +161,11 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     (rollCount === 0 || pendingDiscards.length > 0)
   const isAnimating = rolling || rollingIndices.length > 0
 
-  // Deadline congelado al inicio de cada turno — no se actualiza con broadcasts intermedios
+  // Deadline congelado al inicio de turno/tirada — no se actualiza con broadcasts intermedios ajenos
   const [turnDeadline, setTurnDeadline] = useState(room.turnDeadline)
   useEffect(() => {
     setTurnDeadline(room.turnDeadline)
-  }, [room.currentPlayerIndex, room.roundNumber])
+  }, [room.currentPlayerIndex, room.roundNumber, currentPlayer?.rollCount])
 
   // Reset al cambiar turno o ronda
   useEffect(() => {

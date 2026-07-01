@@ -1282,10 +1282,17 @@ io.on('connection', (socket) => {
   socket.on('get_marketplace', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const uid       = socket.data.userId;
-    const items     = stmts.getItems.all();
     const userItems = uid ? stmts.getUserItems.all(uid).map(r => r.item_id) : [];
+    const items     = stmts.getItems.all();
+    // Los items ocultos no deben verse en la tienda, pero si el usuario ya
+    // los posee (comprados antes de ocultarse) siguen visibles en su inventario
+    const shownIds  = new Set(items.map(i => i.id));
+    const ownedHidden = userItems
+      .filter(id => !shownIds.has(id))
+      .map(id => stmts.getItemById.get(id))
+      .filter(Boolean);
     const credits   = uid ? (stmts.getStats.get(uid)?.score ?? 0) : 0;
-    cb?.({ ok: true, items, userItems, credits });
+    cb?.({ ok: true, items: [...items, ...ownedHidden], userItems, credits });
   });
 
   socket.on('buy_item', ({ itemId } = {}, cb) => {
@@ -1623,6 +1630,7 @@ io.on('connection', (socket) => {
     player.rollCount += 1;
     player.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
     player.pendingDiscards = [];
+    startTurnTimer(room);
 
     cb?.({ ok: true });
     broadcast(room.code);
