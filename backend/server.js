@@ -1678,6 +1678,12 @@ io.on('connection', (socket) => {
     socketToUser[socket.id] = userId;
     socket.data.userId = userId;
 
+    // Si el token FCM no está en memoria, cargarlo de BD (puede llegar register_fcm_token antes que register_user)
+    if (!registeredUsers[userId].fcmToken) {
+      const fcmRow = db.prepare('SELECT token FROM fcm_tokens WHERE user_id=?').get(userId);
+      if (fcmRow) registeredUsers[userId].fcmToken = fcmRow.token;
+    }
+
     // Solo persistir en BD los usuarios autenticados con Google
     if (isGoogleUser) {
       stmts.upsertUser.run(userId, name, email ?? null, picture ?? null);
@@ -1824,6 +1830,7 @@ io.on('connection', (socket) => {
         }
       });
     }
+    console.log(`challenge_user: ${uid} → ${toUserId} | socketId=${target.socketId ?? 'null'} fcmToken=${target.fcmToken ? target.fcmToken.slice(0,16)+'…' : 'NONE'} pushSub=${!!target.pushSubscription}`);
     sendFcm(target.fcmToken, {
       title: '¡Te han retado!',
       body: `${myName} te reta a una partida`,
