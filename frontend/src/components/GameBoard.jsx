@@ -711,10 +711,10 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               <div className="dice-box">
                 <div className="dice-box__header">
                   {displayPlayer?.hand?.rank != null && (
-                    <div className="dice-box__hand dice-box__hand--centered">
+                    <>
                       <span className="dice-box__hand-desc">{displayPlayer.hand.desc}</span>
                       <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} Bules</span>
-                    </div>
+                    </>
                   )}
                 </div>
                 <div className="dice-box__scene">

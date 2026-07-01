@@ -446,9 +446,10 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 32px;
+  gap: 16px;
   width: 100%;
   padding: 0 24px;
+  transform: translateY(-24px);
 }
 
 .next-player-img {
@@ -483,14 +484,14 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 16px;
   width: 100%;
   max-width: 380px;
   animation: next-player-btn-in 0.25s ease-out 0.45s both;
 }
 
 .next-player-hand__title {
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.5px;
 }
@@ -501,14 +502,14 @@ body {
   justify-content: center;
 }
 
-.next-player-hand__name { font-size: 22px; font-weight: 800; }
-.next-player-hand__rolls { font-size: 18px; font-weight: 400; margin-top: -14px; }
+.next-player-hand__name { font-size: 18px; font-weight: 800; }
+.next-player-hand__rolls { font-size: 18px; font-weight: 400; }
 
 .next-player-footer {
   position: absolute;
   left: 16px;
   right: 16px;
-  bottom: calc(84px + env(safe-area-inset-bottom));
+  bottom: calc(108px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -529,7 +530,7 @@ body {
 
 .next-player-footer--waiting {
   justify-content: center;
-  bottom: calc(108px + env(safe-area-inset-bottom));
+  bottom: calc(132px + env(safe-area-inset-bottom));
 }
 
 .next-player-waiting {
@@ -1341,21 +1342,15 @@ body {
 
 .dice-box__header {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-start;
   padding: 12px 0 0;
   margin: 0 16px;
   flex-shrink: 0;
 }
 
-.dice-box__hand--centered {
-  width: 100%;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 2px;
-}
 .dice-box__hand-desc {
+  text-align: left;
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
@@ -1412,25 +1407,11 @@ body {
   line-height: 1.2;
 }
 
-.dice-box__hand {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  text-align: right;
-}
 .dice-box__hand-pts {
   font-size: 13px;
   font-weight: 700;
   color: #22c55e;
   white-space: nowrap;
-}
-.dice-box__hand--centered .dice-box__hand-pts {
-  display: block;
-  width: 100%;
-  text-align: center;
 }
 
 /* ── Game hand (dice slots below dice-box) ───────────────── */

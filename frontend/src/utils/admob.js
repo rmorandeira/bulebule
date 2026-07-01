@@ -28,21 +28,31 @@ export const AD_IDS = {
 
 export const IS_NATIVE = Capacitor.isNativePlatform()
 
-let admobReady = false
+let initPromise = null
 
-export async function initAdMob() {
-  if (!IS_NATIVE || admobReady) return
-  try {
-    const { AdMob } = await import('@capacitor-community/admob')
-    await AdMob.initialize({ testingDevices: [], initializeForTesting: isTesting })
-    admobReady = true
-  } catch (e) {
-    console.warn('AdMob init failed:', e)
+// Cachea la promesa de inicialización para que cualquier llamada a showBanner
+// (aunque llegue antes de que termine el arranque de AdMob) espere a que esté
+// lista — si no, el banner del anfitrión (que suele llegar a la partida antes
+// de que AdMob termine de inicializar) se pedía contra un SDK aún no listo y
+// fallaba en silencio.
+export function initAdMob() {
+  if (!IS_NATIVE) return Promise.resolve()
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        const { AdMob } = await import('@capacitor-community/admob')
+        await AdMob.initialize({ testingDevices: [], initializeForTesting: isTesting })
+      } catch (e) {
+        console.warn('AdMob init failed:', e)
+      }
+    })()
   }
+  return initPromise
 }
 
 export async function showBanner(position = 'TOP_CENTER') {
   if (!IS_NATIVE) return
+  await initAdMob()
   try {
     const { AdMob, BannerAdSize, BannerAdPosition } = await import('@capacitor-community/admob')
     const adId = position === 'BOTTOM_CENTER' ? AD_IDS.bannerBot : AD_IDS.bannerTop
