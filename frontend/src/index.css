@@ -1412,6 +1412,7 @@ body {
   font-weight: 700;
   color: #22c55e;
   white-space: nowrap;
+  margin-left: 8px;
 }
 
 /* ── Game hand (dice slots below dice-box) ───────────────── */
@@ -1545,6 +1546,7 @@ body {
 .results__name { font-size: clamp(14px, 5.5vw, 24px); font-weight: 800; word-break: break-word; }
 .results__hand { font-size: 16px; color: var(--text-subtle); margin-top: 4px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .results__hand-pts { font-size: 13px; font-weight: 700; color: #22c55e; }
+.results__hand-pts--row { flex-shrink: 0; white-space: nowrap; }
 
 .results__hands {
   padding: 16px 20px;

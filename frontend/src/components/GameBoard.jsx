@@ -53,6 +53,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [nextPlayerVisible, setNextPlayerVisible] = useState(false)
   const [scoreDeltas, setScoreDeltas] = useState({})  // { [playerId]: deltaValue }
   const prevScoresRef = useRef({})                    // { [playerId]: score }
+  const [resultsDisplayScores, setResultsDisplayScores] = useState({})  // { [playerId]: número mostrado (animado) }
+  const [resultsScoreDeltas, setResultsScoreDeltas] = useState({})
+  const scoreAnimFrameRef = useRef(null)
 
   // animacion_next_player: el servidor pausa el turno (awaitingContinue) hasta
   // que alguien pulsa Continuar o expira su contador de 30s
@@ -85,6 +88,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
       lock?.release().catch(() => {})
     }
   }, [])
+
+  useEffect(() => () => cancelAnimationFrame(scoreAnimFrameRef.current), [])
 
   const [palilloRotoShowing, setPalilloRotoShowing] = useState(false)
   const prevPhaseRef = useRef(room.phase)
@@ -218,6 +223,39 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
 
   function handleNextRound() { socket.emit('next_round') }
   function handleRematch() { socket.emit('rematch') }
+
+  // Anima la puntuación de la pantalla de resumen de ronda de X a X + bules
+  // obtenidos, disparado justo después de que termine la animación de
+  // romper el palillo/capilla (no antes)
+  function runScoreReveal() {
+    cancelAnimationFrame(scoreAnimFrameRef.current)
+    const from = {}, to = {}, deltas = {}
+    for (const p of room.players) {
+      if (p.score == null) continue
+      const earned = handPts(p.hand?.rank ?? 0)
+      to[p.id] = p.score
+      from[p.id] = p.score - earned
+      if (earned > 0) deltas[p.id] = earned
+    }
+    setResultsDisplayScores(from)
+    if (Object.keys(deltas).length > 0) {
+      setResultsScoreDeltas(deltas)
+      setTimeout(() => setResultsScoreDeltas({}), 2500)
+    }
+    const start = performance.now()
+    const DURATION = 700
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / DURATION)
+      const eased = 1 - Math.pow(1 - t, 3)
+      const next = {}
+      for (const id of Object.keys(to)) {
+        next[id] = Math.round(from[id] + (to[id] - from[id]) * eased)
+      }
+      setResultsDisplayScores(next)
+      if (t < 1) scoreAnimFrameRef.current = requestAnimationFrame(tick)
+    }
+    scoreAnimFrameRef.current = requestAnimationFrame(tick)
+  }
 
   function confirmLeave() {
     allowUnloadRef.current = true
@@ -495,18 +533,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 <div key={p.id} className={`results__row ${p.id === room.roundWinnerId ? 'results__row--winner' : ''} ${p.id === room.roundLoserId ? 'results__row--loser' : ''}`}>
                   <div className="results__player-info">
                     <span className="results__player">{p.name}</span>
-                    {p.hand && (
-                      <span className="results__desc">
-                        {p.hand.desc}
-                        {p.id === room.roundWinnerId && p.hand?.rank != null && (
-                          <span className="results__hand-pts">+{handPts(p.hand.rank)} B</span>
-                        )}
-                      </span>
-                    )}
+                    {p.hand && <span className="results__desc">{p.hand.desc}</span>}
                   </div>
                   <div className="results__dice">
                     {sortDice(p.currentDice ?? []).map((v, i) => <Die key={i} value={v} small skin={p.diceSkin} />)}
                   </div>
+                  {p.score != null && (
+                    <span className="results__hand-pts results__hand-pts--row">+{handPts(p.hand?.rank ?? 0)} B</span>
+                  )}
                   <span className="results__wins">{p.wins}</span>
                 </div>
               ))}
@@ -515,7 +549,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               {palilloRotoShowing
                 ? <AnimacionPalilloRoto
                     room={room}
-                    onDone={() => setPalilloRotoShowing(false)}
+                    onDone={() => { setPalilloRotoShowing(false); runScoreReveal() }}
                   />
                 : <>
                     <div className="results__scores-header">
@@ -526,13 +560,13 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       </div>
                     </div>
                     {sorted.map((p) => {
-                      const delta = scoreDeltas[p.id]
+                      const delta = resultsScoreDeltas[p.id]
                       return (
                         <div key={p.id} className="results__score-row">
                           <PalilloState player={p} />
                           <span className="results__sname">{p.name}</span>
                           <span className="scoreboard__pts-num" style={{ position: 'relative' }}>
-                            {p.score != null ? p.score.toLocaleString() : '—'}
+                            {p.score != null ? (resultsDisplayScores[p.id] ?? p.score).toLocaleString() : '—'}
                             {delta !== undefined && (
                               <span className={`score-delta${delta >= 0 ? ' score-delta--pos' : ' score-delta--neg'}`}>
                                 {delta >= 0 ? '+' : ''}{delta}

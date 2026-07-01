@@ -931,7 +931,6 @@ function startRound(room) {
   // El perdedor de la ronda anterior abre la siguiente
   const starterIdx = room.players.findIndex(p => p.id === room.nextStarterId);
   room.startingPlayerIndex = starterIdx !== -1 ? starterIdx : 0;
-  room.currentPlayerIndex = room.startingPlayerIndex;
   room.maxRolls = null;
   room.roundWinnerId = null;
   room.botPhase = null;
@@ -951,6 +950,13 @@ function startRound(room) {
     p.hand = null;
     p.pendingDiscards = [];
   }
+  // Si quien abriría la ronda ya está liberado, pasa al siguiente jugador disponible
+  const n = room.players.length;
+  let idx = room.startingPlayerIndex;
+  for (let step = 0; step < n && room.players[idx].done; step++) {
+    idx = (idx + 1) % n;
+  }
+  room.currentPlayerIndex = idx;
   awaitContinue(room);
 }
 

@@ -40,8 +40,15 @@ export function initAdMob() {
   if (!initPromise) {
     initPromise = (async () => {
       try {
-        const { AdMob } = await import('@capacitor-community/admob')
+        const { AdMob, AdmobConsentStatus } = await import('@capacitor-community/admob')
         await AdMob.initialize({ testingDevices: [], initializeForTesting: isTesting })
+        // UMP: sin consentimiento (obligatorio en EEE/UK/Suiza), Google puede
+        // negarse a servir anuncios — de ahí que algunos dispositivos nunca
+        // vean el banner aunque el SDK se haya inicializado correctamente.
+        const consentInfo = await AdMob.requestConsentInfo()
+        if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
+          await AdMob.showConsentForm()
+        }
       } catch (e) {
         console.warn('AdMob init failed:', e)
       }
