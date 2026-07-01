@@ -122,6 +122,13 @@ export default function App() {
     return () => { clearTimeout(tHold); clearTimeout(tDone) }
   }, [screen])
 
+  // Opened via push notification: skip splash/intro entirely
+  useEffect(() => {
+    if (pendingJoinCode && (screen === 'splash' || screen === 'intro')) {
+      setScreen('list')
+    }
+  }, [pendingJoinCode]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const [introBgVisible, setIntroBgVisible] = useState(false)
   const [introLogoPhase, setIntroLogoPhase] = useState('hidden')
   const [introLeaving, setIntroLeaving] = useState(false)
