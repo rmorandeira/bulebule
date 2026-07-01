@@ -28,7 +28,8 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
   }
 
   function shareWhatsApp() {
-    const url = `${window.location.origin}/?join=${room.code}`
+    const origin = import.meta.env.VITE_APP_URL || window.location.origin
+    const url = `${origin}/?join=${room.code}`
     const text = room.isPrivate
       ? `¡Te invito a jugar al Bule Bule! 🎲\nSala privada: ${room.name}\nÚnete con este enlace: ${url}`
       : `¡Te invito a jugar al Bule Bule! 🎲\nSala: ${room.name}\nÚnete aquí: ${url}`
