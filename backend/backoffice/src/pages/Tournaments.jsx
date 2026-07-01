@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../api.js';
-import { imgSrc } from '../config.js';
 import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
+import Switch from '../components/Switch.jsx';
 import { useToast } from '../components/Toast.jsx';
 
 const TIERS      = ['Bronce', 'Plata', 'Oro', 'Diamante', 'Especial', 'Abierto'];
@@ -40,106 +40,20 @@ function slugify(str) {
 const EMPTY_FORM = {
   id: '', name: '', description: '', tier: 'Bronce', type: 'tier',
   min_score: 0, max_score: -1, required_item: '',
-  rules: '', starts_at: '', ends_at: '', active: true, sort_order: 0,
+  rules: '', starts_at: '', ends_at: '', active: true, visible: true, sort_order: 0,
 };
-
-function TournamentPanel({ t, items, onEdit, onDelete, onClose }) {
-  const reqItem = t.required_item ? items.find(i => i.id === t.required_item) : null;
-
-  return (
-    <>
-      <div className="panel-overlay" onClick={onClose} />
-      <div className="panel">
-        <div className="panel-header">
-          <h2>Detalle campeonato</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="panel-body">
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{t.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>ID: {t.id}</div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-            <span className={`badge ${TIER_BADGE[t.tier] ?? 'badge-gray'}`}>{t.tier}</span>
-            <span className="badge badge-gray">{TYPE_LABELS[t.type] ?? t.type}</span>
-            <span className={`badge ${t.active ? 'badge-green' : 'badge-red'}`}>
-              {t.active ? 'Activo' : 'Inactivo'}
-            </span>
-          </div>
-
-          {t.description && (
-            <div className="panel-section">
-              <h3>Descripción</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>{t.description}</p>
-            </div>
-          )}
-
-          <div className="panel-section">
-            <h3>Datos</h3>
-            <table style={{ width: '100%', fontSize: 13 }}>
-              <tbody>
-                <tr>
-                  <td style={{ color: 'var(--text-muted)', paddingBottom: 6, width: '45%' }}>Puntos</td>
-                  <td style={{ fontWeight: 600 }}>
-                    {t.min_score.toLocaleString()} – {t.max_score === -1 ? '∞' : t.max_score.toLocaleString()}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ color: 'var(--text-muted)', paddingBottom: 6 }}>Período</td>
-                  <td>{fmtDate(t.starts_at)} – {fmtDate(t.ends_at)}</td>
-                </tr>
-                <tr>
-                  <td style={{ color: 'var(--text-muted)', paddingBottom: 6 }}>Orden</td>
-                  <td>{t.sort_order ?? 0}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {reqItem && (
-            <div className="panel-section">
-              <h3>Item requerido</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', borderRadius: 6, padding: '10px 12px' }}>
-                {reqItem.image_url && (
-                  <img src={imgSrc(reqItem.image_url)} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
-                )}
-                <div>
-                  <div style={{ fontWeight: 600 }}>{reqItem.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{reqItem.id}</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {t.rules && (
-            <div className="panel-section">
-              <h3>Reglas</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{t.rules}</p>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onEdit}>✎ Editar</button>
-            <button className="btn btn-danger" onClick={onDelete}>Eliminar</button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 export default function Tournaments() {
   const toast = useToast();
   const [allItems, setAllItems] = useState([]);
   const [list, setList]         = useState([]);
   const [loading, setLoading]   = useState(true);
-  const [selected, setSelected] = useState(null);
   const [editModal, setEditModal] = useState(null);
   const [form, setForm]         = useState(EMPTY_FORM);
   const [saving, setSaving]     = useState(false);
   const [confirm, setConfirm]   = useState(null);
   const [filterTier, setFilterTier]     = useState('');
+  const [filterVisible, setFilterVisible] = useState('');
   const [filterActive, setFilterActive] = useState('');
 
   const load = useCallback(async () => {
@@ -176,6 +90,7 @@ export default function Tournaments() {
       starts_at:     tsToDatetimeLocal(t.starts_at),
       ends_at:       tsToDatetimeLocal(t.ends_at),
       active:        t.active === 1,
+      visible:       t.visible === 1,
       sort_order:    t.sort_order ?? 0,
     });
     setEditModal(t);
@@ -190,6 +105,10 @@ export default function Tournaments() {
         return next;
       });
     };
+  }
+
+  function setField(key, val) {
+    setForm(f => ({ ...f, [key]: val }));
   }
 
   async function handleSave() {
@@ -212,7 +131,6 @@ export default function Tournaments() {
       } else {
         await api.tournaments.update(editModal.id, payload);
         toast('Campeonato actualizado', 'success');
-        setSelected(prev => prev?.id === editModal.id ? { ...prev, ...payload } : prev);
       }
       setEditModal(null);
       load();
@@ -228,7 +146,7 @@ export default function Tournaments() {
       await api.tournaments.delete(t.id);
       toast('Campeonato eliminado', 'success');
       setConfirm(null);
-      setSelected(null);
+      setEditModal(null);
       load();
     } catch (e) {
       toast(e.message, 'error');
@@ -237,89 +155,84 @@ export default function Tournaments() {
   }
 
   const filtered = list.filter(t => {
-    if (filterTier   && t.tier !== filterTier) return false;
-    if (filterActive === 'active'   && !t.active) return false;
-    if (filterActive === 'inactive' &&  t.active) return false;
+    if (filterTier    && t.tier !== filterTier) return false;
+    if (filterVisible === 'visible' && !t.visible) return false;
+    if (filterVisible === 'hidden'  &&  t.visible) return false;
+    if (filterActive  === 'active'   && !t.active) return false;
+    if (filterActive  === 'inactive' &&  t.active) return false;
     return true;
   });
 
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="page-header">
-          <h1>🏆 Campeonatos</h1>
-          <button className="btn btn-primary" onClick={openCreate}>+ Nuevo campeonato</button>
-        </div>
-
-        <div className="filter-bar">
-          <button className={`filter-chip ${filterTier === '' ? 'active' : ''}`} onClick={() => setFilterTier('')}>Todos</button>
-          {TIERS.map(t => (
-            <button key={t} className={`filter-chip ${filterTier === t ? 'active' : ''}`} onClick={() => setFilterTier(filterTier === t ? '' : t)}>{t}</button>
-          ))}
-          <div className="filter-sep" />
-          <button className={`filter-chip ${filterActive === '' ? 'active' : ''}`} onClick={() => setFilterActive('')}>Todos</button>
-          <button className={`filter-chip ${filterActive === 'active' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'active' ? '' : 'active')}>Activos</button>
-          <button className={`filter-chip ${filterActive === 'inactive' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'inactive' ? '' : 'inactive')}>Inactivos</button>
-        </div>
-
-        {loading ? (
-          <div className="loading">Cargando…</div>
-        ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <div className="icon">🏆</div>
-            <p>No hay campeonatos{filterTier || filterActive ? ' con estos filtros' : ' todavía'}</p>
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Tier / Tipo</th>
-                  <th>Puntos</th>
-                  <th>Período</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(t => (
-                  <tr key={t.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(t)}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{t.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.id}</div>
-                    </td>
-                    <td>
-                      <span className={`badge ${TIER_BADGE[t.tier] ?? 'badge-gray'}`}>{t.tier}</span>
-                      {' '}
-                      <span className="badge badge-gray">{TYPE_LABELS[t.type] ?? t.type}</span>
-                    </td>
-                    <td style={{ fontSize: 12 }}>
-                      {t.min_score.toLocaleString()} – {t.max_score === -1 ? '∞' : t.max_score.toLocaleString()}
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {t.starts_at || t.ends_at ? `${fmtDate(t.starts_at)} – ${fmtDate(t.ends_at)}` : '—'}
-                    </td>
-                    <td>
-                      <span className={`badge ${t.active ? 'badge-green' : 'badge-red'}`}>
-                        {t.active ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+    <div>
+      <div className="page-header">
+        <h1>🏆 Campeonatos</h1>
+        <button className="btn btn-primary" onClick={openCreate}>+ Nuevo campeonato</button>
       </div>
 
-      {selected && (
-        <TournamentPanel
-          t={selected}
-          items={allItems}
-          onClose={() => setSelected(null)}
-          onEdit={() => openEdit(selected)}
-          onDelete={() => setConfirm(selected)}
-        />
+      <div className="filter-bar">
+        <button className={`filter-chip ${filterTier === '' ? 'active' : ''}`} onClick={() => setFilterTier('')}>Todos</button>
+        {TIERS.map(t => (
+          <button key={t} className={`filter-chip ${filterTier === t ? 'active' : ''}`} onClick={() => setFilterTier(filterTier === t ? '' : t)}>{t}</button>
+        ))}
+        <div className="filter-sep" />
+        <button className={`filter-chip ${filterVisible === '' ? 'active' : ''}`} onClick={() => setFilterVisible('')}>Todos</button>
+        <button className={`filter-chip ${filterVisible === 'visible' ? 'active' : ''}`} onClick={() => setFilterVisible(filterVisible === 'visible' ? '' : 'visible')}>Visibles</button>
+        <button className={`filter-chip ${filterVisible === 'hidden' ? 'active' : ''}`} onClick={() => setFilterVisible(filterVisible === 'hidden' ? '' : 'hidden')}>Ocultos</button>
+        <div className="filter-sep" />
+        <button className={`filter-chip ${filterActive === '' ? 'active' : ''}`} onClick={() => setFilterActive('')}>Todos</button>
+        <button className={`filter-chip ${filterActive === 'active' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'active' ? '' : 'active')}>Activos</button>
+        <button className={`filter-chip ${filterActive === 'inactive' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'inactive' ? '' : 'inactive')}>Inactivos</button>
+      </div>
+
+      {loading ? (
+        <div className="loading">Cargando…</div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <div className="icon">🏆</div>
+          <p>No hay campeonatos{filterTier || filterActive ? ' con estos filtros' : ' todavía'}</p>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Tier / Tipo</th>
+                <th>Puntos</th>
+                <th>Período</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(t => (
+                <tr key={t.id} style={{ cursor: 'pointer' }} onClick={() => openEdit(t)}>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.id}</div>
+                  </td>
+                  <td>
+                    <span className={`badge ${TIER_BADGE[t.tier] ?? 'badge-gray'}`}>{t.tier}</span>
+                    {' '}
+                    <span className="badge badge-gray">{TYPE_LABELS[t.type] ?? t.type}</span>
+                  </td>
+                  <td style={{ fontSize: 12 }}>
+                    {t.min_score.toLocaleString()} – {t.max_score === -1 ? '∞' : t.max_score.toLocaleString()}
+                  </td>
+                  <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {t.starts_at || t.ends_at ? `${fmtDate(t.starts_at)} – ${fmtDate(t.ends_at)}` : '—'}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <span className={`badge ${t.visible ? 'badge-green' : 'badge-gray'}`}>{t.visible ? 'Visible' : 'Oculto'}</span>
+                      <span className={`badge ${t.active ? 'badge-green' : 'badge-red'}`}>{t.active ? 'Activo' : 'Inactivo'}</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {editModal && (
@@ -328,6 +241,7 @@ export default function Tournaments() {
           onClose={() => setEditModal(null)}
           onSubmit={handleSave}
           submitting={saving}
+          onDelete={editModal !== 'create' ? () => setConfirm(editModal) : undefined}
           wide
         >
           <div className="form-row">
@@ -411,8 +325,12 @@ export default function Tournaments() {
           </div>
 
           <div className="toggle-row">
-            <input type="checkbox" id="active" checked={form.active} onChange={field('active')} />
-            <label htmlFor="active">Campeonato activo (visible para jugadores)</label>
+            <Switch checked={form.visible} onChange={v => setField('visible', v)} />
+            <label>Visible para jugadores</label>
+          </div>
+          <div className="toggle-row">
+            <Switch checked={form.active} onChange={v => setField('active', v)} disabled={!form.visible} />
+            <label style={!form.visible ? { opacity: 0.5 } : undefined}>Activo (inscribible)</label>
           </div>
         </Modal>
       )}

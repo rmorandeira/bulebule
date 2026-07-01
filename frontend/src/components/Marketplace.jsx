@@ -120,8 +120,8 @@ export default function Marketplace({ user }) {
         {visibleItems.map(item => (
           <div
             key={item.id}
-            className={`mkt__card${owned(item.id) ? ' mkt__card--owned' : ''}${!item.available ? ' mkt__card--disabled' : ''}`}
-            onClick={() => item.available ? openItem(item) : undefined}
+            className={`mkt__card${owned(item.id) ? ' mkt__card--owned' : ''}${!item.active ? ' mkt__card--inactive' : ''}`}
+            onClick={() => openItem(item)}
           >
             <div className="mkt__card-img-wrap">
               <img
@@ -130,9 +130,9 @@ export default function Marketplace({ user }) {
                 alt={item.name}
                 onError={e => { e.currentTarget.style.display = 'none' }}
               />
-              {!item.available && <span className="mkt__disabled-badge">Disabled</span>}
-              {item.available && activeSkin === item.id && <span className="mkt__active-badge">Activo</span>}
-              {item.available && owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
+              {!item.active && <span className="mkt__inactive-badge">NO DISPONIBLE</span>}
+              {item.active && activeSkin === item.id && <span className="mkt__active-badge">Activo</span>}
+              {owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
             </div>
             <p className="mkt__card-name">{item.name}</p>
             <p className="mkt__card-price">
@@ -192,6 +192,8 @@ export default function Marketplace({ user }) {
                     )
                   ) : owned(selected.id) ? (
                     <button className="bs__submit" disabled>Ya lo tienes ✓</button>
+                  ) : !selected.active ? (
+                    <button className="bs__submit" disabled>No disponible</button>
                   ) : !user ? (
                     <p className="mkt__sheet-hint">Inicia sesión para comprar</p>
                   ) : credits < selected.price ? (

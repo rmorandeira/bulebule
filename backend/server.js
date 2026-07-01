@@ -98,6 +98,8 @@ db.exec(`
     name       TEXT NOT NULL DEFAULT '',
     email      TEXT,
     picture    TEXT,
+    active     INTEGER NOT NULL DEFAULT 1,
+    visible    INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL DEFAULT (unixepoch()),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch())
   );
@@ -160,7 +162,8 @@ db.exec(`
     price       INTEGER NOT NULL DEFAULT 0,
     image_url   TEXT,
     category    TEXT    DEFAULT 'collectible',
-    available   INTEGER DEFAULT 1
+    active      INTEGER DEFAULT 1,
+    visible     INTEGER DEFAULT 1
   );
 
   CREATE TABLE IF NOT EXISTS user_items (
@@ -196,6 +199,18 @@ db.exec(`
   if (!cols.includes('sale_end'))    db.prepare('ALTER TABLE items ADD COLUMN sale_end    INTEGER').run();
   if (!cols.includes('texture_url')) db.prepare('ALTER TABLE items ADD COLUMN texture_url TEXT').run();
   if (!cols.includes('sort_order'))  db.prepare('ALTER TABLE items ADD COLUMN sort_order  INTEGER DEFAULT 0').run();
+  // `available` split into independent `active` (comprable) + `visible` (aparece en el marketplace) flags
+  if (cols.includes('available') && !cols.includes('active')) {
+    db.prepare('ALTER TABLE items RENAME COLUMN available TO active').run();
+  }
+  const cols2 = db.prepare('PRAGMA table_info(items)').all().map(c => c.name);
+  if (!cols2.includes('visible')) db.prepare('ALTER TABLE items ADD COLUMN visible INTEGER DEFAULT 1').run();
+})();
+
+;(function migrateUsersSchema() {
+  const cols = db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
+  if (!cols.includes('active'))  db.prepare('ALTER TABLE users ADD COLUMN active  INTEGER NOT NULL DEFAULT 1').run();
+  if (!cols.includes('visible')) db.prepare('ALTER TABLE users ADD COLUMN visible INTEGER NOT NULL DEFAULT 1').run();
 })();
 
 db.exec(`
@@ -212,10 +227,16 @@ db.exec(`
     starts_at     INTEGER,
     ends_at       INTEGER,
     active        INTEGER NOT NULL DEFAULT 1,
+    visible       INTEGER NOT NULL DEFAULT 1,
     sort_order    INTEGER NOT NULL DEFAULT 0,
     created_at    INTEGER NOT NULL DEFAULT (unixepoch())
   );
 `);
+
+;(function migrateTournamentsSchema() {
+  const cols = db.prepare('PRAGMA table_info(tournaments)').all().map(c => c.name);
+  if (!cols.includes('visible')) db.prepare('ALTER TABLE tournaments ADD COLUMN visible INTEGER NOT NULL DEFAULT 1').run();
+})();
 
 // ── Migrate from old JSON file if it exists ───────────────────────────────────
 (function migrateFromJson() {
@@ -285,6 +306,13 @@ const TIERS = [
 
 function getTier(score) { return TIERS.find(t => score >= t.min) ?? TIERS[TIERS.length - 1]; }
 
+// Guests have no `users` row (not persisted) — only Google-authenticated accounts can be banned/hidden
+function isUserBanned(userId) {
+  if (!userId) return false;
+  const row = stmts.getUserFlags.get(userId);
+  return !!row && row.active === 0;
+}
+
 // ── Tournaments ───────────────────────────────────────────────────────────────
 // Seed default tournament definitions on first run
 ;(function seedTournamentDefs() {
@@ -312,6 +340,7 @@ function reloadTournamentDefs() {
     maxScore:     t.max_score === -1 ? Infinity : t.max_score,
     requiredItem: t.required_item ?? null,
     active:       t.active === 1,
+    visible:      t.visible === 1,
     starts_at:    t.starts_at,
     ends_at:      t.ends_at,
   }));
@@ -364,7 +393,9 @@ const stmts = {
   getPendingChallenges:    db.prepare(`SELECT from_user_id, room_code FROM pending_challenges WHERE to_user_id=?`),
   rankings:       db.prepare(`SELECT ps.user_id, u.name, u.picture, ps.score, ps.games_played, ps.games_won
                                FROM player_stats ps JOIN users u ON ps.user_id=u.user_id
+                               WHERE u.visible = 1
                                ORDER BY ps.score DESC LIMIT 100`),
+  getUserFlags:   db.prepare(`SELECT active, visible FROM users WHERE user_id = ?`),
   upsertHandStat: db.prepare(`INSERT INTO hand_stats (user_id, hand_desc, hand_rank, count)
                                VALUES (?, ?, ?, 1)
                                ON CONFLICT(user_id, hand_desc) DO UPDATE SET count = count + 1`),
@@ -373,7 +404,7 @@ const stmts = {
                                ON CONFLICT(user_id, rolls) DO UPDATE SET count = count + 1`),
   getHandStats:   db.prepare(`SELECT hand_desc, hand_rank, count FROM hand_stats WHERE user_id = ? ORDER BY count DESC`),
   getRollStats:   db.prepare(`SELECT rolls, count FROM roll_stats WHERE user_id = ? ORDER BY rolls`),
-  getItems:       db.prepare(`SELECT * FROM items ORDER BY price ASC`),
+  getItems:       db.prepare(`SELECT * FROM items WHERE visible = 1 ORDER BY price ASC`),
   getItemById:    db.prepare(`SELECT * FROM items WHERE id = ?`),
   getUserItems:   db.prepare(`SELECT item_id FROM user_items WHERE user_id = ?`),
   insertUserItem: db.prepare(`INSERT OR IGNORE INTO user_items (user_id, item_id) VALUES (?, ?)`),
@@ -395,7 +426,7 @@ const stmts = {
     { id: 'dice-marble-red',   name: 'Mármol Rojo',           description: 'Dados con textura de mármol rojo. Para los jugadores más apasionados.',           price: 3000, image_url: '/assets/dice/marble-red.png',   category: 'dice' },
     { id: 'dice-marble-green', name: 'Mármol Verde',          description: 'Dados con textura de mármol verde. La suerte del tablero está de tu lado.',        price: 3000, image_url: '/assets/dice/marble-green.png', category: 'dice' },
     { id: 'dice-transp-red',   name: 'Dados Rojos Transparentes', description: 'Dados con acabado traslúcido en rojo. Minimalismo con estilo.', price: 3000, image_url: '/assets/dice/transparent-red.png', category: 'dice' },
-    { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack', available: 0 },
+    { id: 'pack-1000-bules',   name: '1.000 Bules',           description: 'Recarga tu saldo con 1.000 Bules. Pago único de 1 € por Bizum.',                   price: 0,    image_url: '/assets/items/pack-1000-bules.png', category: 'pack', active: 0 },
     { id: 'bar-el-polvorin',   name: 'Bar El Polvorín',       description: 'El bar más icónico del barrio. Un clásico para los jugadores de Bule Bule.',         price: 45000, image_url: '/assets/items/bar-el-polvorin.png', category: 'landmark' },
     { id: 'bar-el-olimpico',   name: 'Bar El Olímpico',       description: 'Un referente del barrio donde el tiempo se detiene entre partida y partida.<br><em>Especialidad en café, no café de especialidad.</em>', price: 45000, image_url: '/assets/items/bar-el-olimpico.png', category: 'landmark' },
     { id: 'bar-doce',          name: 'Bar Doce',              description: 'El número doce de la calle y el primero en tu corazón. Pintxos, conversación y alguna que otra mano ganada en la barra.', price: 45000, image_url: '/assets/items/bar-doce.png', category: 'landmark' },
@@ -1103,11 +1134,11 @@ app.get('/api/admin/items', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/items', requireAdmin, (req, res) => {
-  const { id, name, description, price, image_url, texture_url, category, available, sale_start, sale_end, sort_order } = req.body;
+  const { id, name, description, price, image_url, texture_url, category, active, visible, sale_start, sale_end, sort_order } = req.body;
   if (!id?.trim() || !name?.trim()) return res.status(400).json({ error: 'id y name son obligatorios' });
   try {
-    db.prepare(`INSERT INTO items (id, name, description, price, image_url, texture_url, category, available, sale_start, sale_end, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id.trim(), name.trim(), description ?? null, price ?? 0, image_url ?? null, texture_url ?? null, category ?? 'collectible', available !== false ? 1 : 0, sale_start ?? null, sale_end ?? null, sort_order ?? 0);
+    db.prepare(`INSERT INTO items (id, name, description, price, image_url, texture_url, category, active, visible, sale_start, sale_end, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(id.trim(), name.trim(), description ?? null, price ?? 0, image_url ?? null, texture_url ?? null, category ?? 'collectible', active !== false ? 1 : 0, visible !== false ? 1 : 0, sale_start ?? null, sale_end ?? null, sort_order ?? 0);
     res.json({ ok: true });
   } catch (e) {
     if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return res.status(409).json({ error: 'Ya existe un item con ese ID' });
@@ -1116,9 +1147,9 @@ app.post('/api/admin/items', requireAdmin, (req, res) => {
 });
 
 app.put('/api/admin/items/:id', requireAdmin, (req, res) => {
-  const { name, description, price, image_url, texture_url, category, available, sale_start, sale_end, sort_order } = req.body;
-  const r = db.prepare(`UPDATE items SET name=?, description=?, price=?, image_url=?, texture_url=?, category=?, available=?, sale_start=?, sale_end=?, sort_order=? WHERE id=?`)
-    .run(name, description ?? null, price ?? 0, image_url ?? null, texture_url ?? null, category ?? 'collectible', available !== false ? 1 : 0, sale_start ?? null, sale_end ?? null, sort_order ?? 0, req.params.id);
+  const { name, description, price, image_url, texture_url, category, active, visible, sale_start, sale_end, sort_order } = req.body;
+  const r = db.prepare(`UPDATE items SET name=?, description=?, price=?, image_url=?, texture_url=?, category=?, active=?, visible=?, sale_start=?, sale_end=?, sort_order=? WHERE id=?`)
+    .run(name, description ?? null, price ?? 0, image_url ?? null, texture_url ?? null, category ?? 'collectible', active !== false ? 1 : 0, visible !== false ? 1 : 0, sale_start ?? null, sale_end ?? null, sort_order ?? 0, req.params.id);
   if (r.changes === 0) return res.status(404).json({ error: 'Item no encontrado' });
   res.json({ ok: true });
 });
@@ -1136,11 +1167,11 @@ app.get('/api/admin/tournaments', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/tournaments', requireAdmin, (req, res) => {
-  const { id, name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, sort_order } = req.body;
+  const { id, name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, visible, sort_order } = req.body;
   if (!id?.trim() || !name?.trim()) return res.status(400).json({ error: 'id y name son obligatorios' });
   try {
-    db.prepare(`INSERT INTO tournaments (id, name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id.trim(), name.trim(), description ?? null, tier ?? 'Bronce', type ?? 'tier', min_score ?? 0, max_score ?? -1, required_item ?? null, rules ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null, starts_at ?? null, ends_at ?? null, active !== false ? 1 : 0, sort_order ?? 0);
+    db.prepare(`INSERT INTO tournaments (id, name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, visible, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(id.trim(), name.trim(), description ?? null, tier ?? 'Bronce', type ?? 'tier', min_score ?? 0, max_score ?? -1, required_item ?? null, rules ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null, starts_at ?? null, ends_at ?? null, active !== false ? 1 : 0, visible !== false ? 1 : 0, sort_order ?? 0);
     reloadTournamentDefs();
     res.json({ ok: true });
   } catch (e) {
@@ -1150,9 +1181,9 @@ app.post('/api/admin/tournaments', requireAdmin, (req, res) => {
 });
 
 app.put('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
-  const { name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, sort_order } = req.body;
-  const r = db.prepare(`UPDATE tournaments SET name=?, description=?, tier=?, type=?, min_score=?, max_score=?, required_item=?, rules=?, starts_at=?, ends_at=?, active=?, sort_order=? WHERE id=?`)
-    .run(name, description ?? null, tier ?? 'Bronce', type ?? 'tier', min_score ?? 0, max_score ?? -1, required_item ?? null, rules ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null, starts_at ?? null, ends_at ?? null, active !== false ? 1 : 0, sort_order ?? 0, req.params.id);
+  const { name, description, tier, type, min_score, max_score, required_item, rules, starts_at, ends_at, active, visible, sort_order } = req.body;
+  const r = db.prepare(`UPDATE tournaments SET name=?, description=?, tier=?, type=?, min_score=?, max_score=?, required_item=?, rules=?, starts_at=?, ends_at=?, active=?, visible=?, sort_order=? WHERE id=?`)
+    .run(name, description ?? null, tier ?? 'Bronce', type ?? 'tier', min_score ?? 0, max_score ?? -1, required_item ?? null, rules ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null, starts_at ?? null, ends_at ?? null, active !== false ? 1 : 0, visible !== false ? 1 : 0, sort_order ?? 0, req.params.id);
   if (r.changes === 0) return res.status(404).json({ error: 'Torneo no encontrado' });
   reloadTournamentDefs();
   res.json({ ok: true });
@@ -1168,7 +1199,7 @@ app.delete('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
 // Users management
 app.get('/api/admin/users', requireAdmin, (req, res) => {
   const { q, limit = 50, offset = 0 } = req.query;
-  const base = `SELECT u.user_id, u.name, u.email, u.picture, u.created_at, ps.score, ps.games_played, ps.games_won
+  const base = `SELECT u.user_id, u.name, u.email, u.picture, u.active, u.visible, u.created_at, ps.score, ps.games_played, ps.games_won
     FROM users u LEFT JOIN player_stats ps ON u.user_id=ps.user_id`;
   if (q) {
     const like = `%${q}%`;
@@ -1190,10 +1221,12 @@ app.get('/api/admin/users/:id', requireAdmin, (req, res) => {
 });
 
 app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
-  const { name, email, score } = req.body;
+  const { name, email, score, active, visible } = req.body;
   const uid = req.params.id;
-  if (name  !== undefined) db.prepare('UPDATE users SET name=?, updated_at=unixepoch() WHERE user_id=?').run(name, uid);
-  if (email !== undefined) db.prepare('UPDATE users SET email=?, updated_at=unixepoch() WHERE user_id=?').run(email, uid);
+  if (name    !== undefined) db.prepare('UPDATE users SET name=?, updated_at=unixepoch() WHERE user_id=?').run(name, uid);
+  if (email   !== undefined) db.prepare('UPDATE users SET email=?, updated_at=unixepoch() WHERE user_id=?').run(email, uid);
+  if (active  !== undefined) db.prepare('UPDATE users SET active=?, updated_at=unixepoch() WHERE user_id=?').run(active !== false ? 1 : 0, uid);
+  if (visible !== undefined) db.prepare('UPDATE users SET visible=?, updated_at=unixepoch() WHERE user_id=?').run(visible !== false ? 1 : 0, uid);
   if (score !== undefined) {
     if (db.prepare('SELECT 1 FROM player_stats WHERE user_id=?').get(uid))
       db.prepare('UPDATE player_stats SET score=?, updated_at=unixepoch() WHERE user_id=?').run(score, uid);
@@ -1261,6 +1294,7 @@ io.on('connection', (socket) => {
     if (!uid)    return cb?.({ ok: false, error: 'Debes iniciar sesión' });
     const item = stmts.getItemById.get(itemId);
     if (!item)   return cb?.({ ok: false, error: 'Item no encontrado' });
+    if (!item.active || !item.visible) return cb?.({ ok: false, error: 'Item no disponible' });
     const result = stmts.deductScore.run(item.price, uid, item.price);
     if (result.changes === 0) return cb?.({ ok: false, error: 'Créditos insuficientes' });
     stmts.insertUserItem.run(uid, itemId);
@@ -1274,6 +1308,7 @@ io.on('connection', (socket) => {
     if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión' });
     const pack = stmts.getItemById.get(packId);
     if (!pack || pack.category !== 'pack') return cb?.({ ok: false, error: 'Pack no válido' });
+    if (!pack.active || !pack.visible) return cb?.({ ok: false, error: 'Item no disponible' });
     db.prepare('UPDATE player_stats SET score = score + 1000 WHERE user_id = ?').run(uid);
     const newScore = stmts.getStats.get(uid)?.score ?? 0;
     cb?.({ ok: true, score: newScore });
@@ -1312,7 +1347,7 @@ io.on('connection', (socket) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const now = Math.floor(Date.now() / 1000);
     const result = TOURNAMENT_DEFS.filter(t =>
-      t.active &&
+      t.visible &&
       (t.starts_at == null || t.starts_at <= now) &&
       (t.ends_at   == null || t.ends_at   >= now)
     ).map(t => {
@@ -1334,7 +1369,7 @@ io.on('connection', (socket) => {
   socket.on('join_tournament', ({ tournamentId, userId, name, picture }, cb) => {
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const def = getTournamentDef(tournamentId);
-    if (!def) return cb?.({ ok: false, error: 'Torneo no encontrado' });
+    if (!def || !def.visible) return cb?.({ ok: false, error: 'Torneo no encontrado' });
 
     // Leave current tournament if any
     const prevTid = socket.data.tournamentId;
@@ -1360,6 +1395,7 @@ io.on('connection', (socket) => {
         }
       }
     }
+    if (!def.active) canPlay = false;
 
     tournamentPlayers[tournamentId][socket.id] = { socketId: socket.id, userId: userId ?? null, name, tier, score, picture: picture ?? null, canPlay };
     socket.join(`tournament:${tournamentId}`);
@@ -1382,6 +1418,7 @@ io.on('connection', (socket) => {
 
   socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null, diceSkin = null }, cb) => {
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
+    if (isUserBanned(socket.data.userId)) return cb?.({ ok: false, error: 'Tu cuenta está inactiva' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
     if (!vsBot && !roomName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
 
@@ -1393,7 +1430,8 @@ io.on('connection', (socket) => {
 
     if (tournamentId) {
       const def = getTournamentDef(tournamentId);
-      if (!def) return cb?.({ ok: false, error: 'Torneo no encontrado' });
+      if (!def || !def.visible) return cb?.({ ok: false, error: 'Torneo no encontrado' });
+      if (!def.active) return cb?.({ ok: false, error: 'Torneo no disponible' });
       if (!userId) return cb?.({ ok: false, error: 'Debes iniciar sesión para jugar en torneos' });
       if (def.requiredItem) {
         const owned = db.prepare(`SELECT 1 FROM user_items WHERE user_id = ? AND item_id = ?`).get(userId, def.requiredItem);
@@ -1448,6 +1486,7 @@ io.on('connection', (socket) => {
 
   socket.on('join_room', ({ code, playerName, diceSkin = null }, cb) => {
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
+    if (isUserBanned(socket.data.userId)) return cb?.({ ok: false, error: 'Tu cuenta está inactiva' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Introduce tu nombre' });
     const normalCode = code?.toUpperCase();
     const room = rooms[normalCode];
@@ -1749,6 +1788,7 @@ io.on('connection', (socket) => {
     const myUserId = socket.data.userId;
     const results = Object.values(registeredUsers)
       .filter(u => u.userId !== myUserId && (!q || u.name.toLowerCase().includes(q)))
+      .filter(u => stmts.getUserFlags.get(u.userId)?.visible !== 0)
       .slice(0, 20)
       .map(u => ({ userId: u.userId, name: u.name, picture: u.picture }));
     cb?.({ users: results });

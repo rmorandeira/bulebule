@@ -48,13 +48,15 @@ export default function TournamentList({ user, myStats, onEnter }) {
     <div className="tl">
       <p className="tl__hint">Entra en el torneo de tu nivel y reta a otros jugadores</p>
       {tierTournaments.map(t => {
-        const tierRank = TIER_RANK[t.tier]
-        const isMyTier = myTier === t.tier
-        const isLower  = myRank > tierRank
-        const isLocked = user && myRank < tierRank
+        const tierRank   = TIER_RANK[t.tier]
+        const isMyTier   = myTier === t.tier
+        const isLower    = myRank > tierRank
+        const isLocked   = user && myRank < tierRank
+        const isInactive = !t.active
         let cardClass = 'tl__card'
-        if (isMyTier)  cardClass += ' tl__card--mine'
-        if (isLocked)  cardClass += ' tl__card--locked'
+        if (isMyTier)   cardClass += ' tl__card--mine'
+        if (isLocked)   cardClass += ' tl__card--locked'
+        if (isInactive) cardClass += ' tl__card--inactive'
         return (
           <div key={t.id} className={cardClass} onClick={() => !isLocked && onEnter(t)}>
             <span className="tl__card-emoji">{TIER_EMOJI[t.tier]}</span>
@@ -68,9 +70,15 @@ export default function TournamentList({ user, myStats, onEnter }) {
                 {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
               </p>
             </div>
-            {isMyTier && <span className="tl__badge">Tu nivel</span>}
-            {isLower  && <span className="tl__badge tl__badge--lower">Accesible</span>}
-            {isLocked && <span className="tl__badge tl__badge--locked">🔒</span>}
+            {isInactive ? (
+              <span className="tl__badge tl__badge--inactive">NO DISPONIBLE</span>
+            ) : (
+              <>
+                {isMyTier && <span className="tl__badge">Tu nivel</span>}
+                {isLower  && <span className="tl__badge tl__badge--lower">Accesible</span>}
+                {isLocked && <span className="tl__badge tl__badge--locked">🔒</span>}
+              </>
+            )}
           </div>
         )
       })}
@@ -79,10 +87,12 @@ export default function TournamentList({ user, myStats, onEnter }) {
         <>
           <p className="tl__hint tl__hint--section">Torneos exclusivos</p>
           {itemTournaments.map(t => {
-            const hasItem  = userItems.includes(t.requiredItem)
-            const isLocked = user && !hasItem
+            const hasItem    = userItems.includes(t.requiredItem)
+            const isLocked   = user && !hasItem
+            const isInactive = !t.active
             let cardClass = 'tl__card tl__card--exclusive'
-            if (isLocked) cardClass += ' tl__card--locked'
+            if (isLocked)   cardClass += ' tl__card--locked'
+            if (isInactive) cardClass += ' tl__card--inactive'
             return (
               <div key={t.id} className={cardClass} onClick={() => !isLocked && onEnter(t)}>
                 {t.requiredItemImageUrl
@@ -102,8 +112,14 @@ export default function TournamentList({ user, myStats, onEnter }) {
                     {t.activeGames > 0 && ` · ${t.activeGames} en curso`}
                   </p>
                 </div>
-                {hasItem  && <span className="tl__badge tl__badge--key">Tienes acceso</span>}
-                {isLocked && <span className="tl__badge tl__badge--locked">🔒</span>}
+                {isInactive ? (
+                  <span className="tl__badge tl__badge--inactive">NO DISPONIBLE</span>
+                ) : (
+                  <>
+                    {hasItem  && <span className="tl__badge tl__badge--key">Tienes acceso</span>}
+                    {isLocked && <span className="tl__badge tl__badge--locked">🔒</span>}
+                  </>
+                )}
               </div>
             )
           })}

@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { imgSrc } from '../config.js';
 import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
+import Switch from '../components/Switch.jsx';
 import { useToast } from '../components/Toast.jsx';
 
 const CATEGORIES = ['collectible', 'landmark', 'figure', 'dice', 'pack'];
@@ -59,7 +60,7 @@ function deriveDiceTexture(id, stored) {
 const EMPTY_FORM = {
   id: '', name: '', description: '', price: 0,
   image_url: '', texture_url: '', category: 'collectible',
-  available: true, sale_start: '', sale_end: '', sort_order: 0,
+  active: true, visible: true, sale_start: '', sale_end: '', sort_order: 0,
 };
 
 function UploadableImage({ src, alt, style, onUpload, uploading }) {
@@ -93,7 +94,8 @@ export default function Items() {
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]         = useState('');
   const [filterCat, setFilterCat]   = useState('');
-  const [filterAvail, setFilterAvail] = useState('');
+  const [filterVisible, setFilterVisible] = useState('');
+  const [filterActive, setFilterActive] = useState('');
   const [editModal, setEditModal] = useState(null);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [saving, setSaving]       = useState(false);
@@ -128,7 +130,8 @@ export default function Items() {
       image_url:   item.image_url ?? '',
       texture_url: item.category === 'dice' ? deriveDiceTexture(item.id, item.texture_url) : (item.texture_url ?? ''),
       category:    item.category,
-      available:   item.available === 1,
+      active:      item.active === 1,
+      visible:     item.visible === 1,
       sale_start:  tsToDatetimeLocal(item.sale_start),
       sale_end:    tsToDatetimeLocal(item.sale_end),
       sort_order:  item.sort_order ?? 0,
@@ -145,6 +148,10 @@ export default function Items() {
         return next;
       });
     };
+  }
+
+  function setField(key, val) {
+    setForm(f => ({ ...f, [key]: val }));
   }
 
   async function handleUploadImage(fieldKey, file) {
@@ -206,8 +213,10 @@ export default function Items() {
   const filtered = items.filter(i => {
     if (search && !i.name.toLowerCase().includes(search.toLowerCase()) && !i.id.includes(search.toLowerCase())) return false;
     if (filterCat && i.category !== filterCat) return false;
-    if (filterAvail === 'active' && !i.available) return false;
-    if (filterAvail === 'inactive' && i.available) return false;
+    if (filterVisible === 'visible' && !i.visible) return false;
+    if (filterVisible === 'hidden' && i.visible) return false;
+    if (filterActive === 'active' && !i.active) return false;
+    if (filterActive === 'inactive' && i.active) return false;
     return true;
   });
 
@@ -232,9 +241,13 @@ export default function Items() {
           <button key={c} className={`filter-chip ${filterCat === c ? 'active' : ''}`} onClick={() => setFilterCat(filterCat === c ? '' : c)}>{c}</button>
         ))}
         <div className="filter-sep" />
-        <button className={`filter-chip ${filterAvail === '' ? 'active' : ''}`} onClick={() => setFilterAvail('')}>Todos</button>
-        <button className={`filter-chip ${filterAvail === 'active' ? 'active' : ''}`} onClick={() => setFilterAvail(filterAvail === 'active' ? '' : 'active')}>Activos</button>
-        <button className={`filter-chip ${filterAvail === 'inactive' ? 'active' : ''}`} onClick={() => setFilterAvail(filterAvail === 'inactive' ? '' : 'inactive')}>Inactivos</button>
+        <button className={`filter-chip ${filterVisible === '' ? 'active' : ''}`} onClick={() => setFilterVisible('')}>Todos</button>
+        <button className={`filter-chip ${filterVisible === 'visible' ? 'active' : ''}`} onClick={() => setFilterVisible(filterVisible === 'visible' ? '' : 'visible')}>Visibles</button>
+        <button className={`filter-chip ${filterVisible === 'hidden' ? 'active' : ''}`} onClick={() => setFilterVisible(filterVisible === 'hidden' ? '' : 'hidden')}>Ocultos</button>
+        <div className="filter-sep" />
+        <button className={`filter-chip ${filterActive === '' ? 'active' : ''}`} onClick={() => setFilterActive('')}>Todos</button>
+        <button className={`filter-chip ${filterActive === 'active' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'active' ? '' : 'active')}>Activos</button>
+        <button className={`filter-chip ${filterActive === 'inactive' ? 'active' : ''}`} onClick={() => setFilterActive(filterActive === 'inactive' ? '' : 'inactive')}>Inactivos</button>
       </div>
 
       {loading ? (
@@ -279,7 +292,12 @@ export default function Items() {
                   </td>
                   <td><span className={`badge ${CAT_BADGE[item.category] ?? 'badge-gray'}`}>{item.category}</span></td>
                   <td>{item.price.toLocaleString('es-ES')} ₿</td>
-                  <td><span className={`badge ${item.available ? 'badge-green' : 'badge-red'}`}>{item.available ? 'Activo' : 'Inactivo'}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <span className={`badge ${item.visible ? 'badge-green' : 'badge-gray'}`}>{item.visible ? 'Visible' : 'Oculto'}</span>
+                      <span className={`badge ${item.active ? 'badge-green' : 'badge-red'}`}>{item.active ? 'Activo' : 'Inactivo'}</span>
+                    </div>
+                  </td>
                   <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {item.sale_start || item.sale_end ? `${fmtDate(item.sale_start)} – ${fmtDate(item.sale_end)}` : '—'}
                   </td>
@@ -379,8 +397,12 @@ export default function Items() {
           </div>
 
           <div className="toggle-row">
-            <input type="checkbox" id="available" checked={form.available} onChange={field('available')} />
-            <label htmlFor="available">Disponible en el marketplace</label>
+            <Switch checked={form.visible} onChange={v => setField('visible', v)} />
+            <label>Visible en el marketplace</label>
+          </div>
+          <div className="toggle-row">
+            <Switch checked={form.active} onChange={v => setField('active', v)} disabled={!form.visible} />
+            <label style={!form.visible ? { opacity: 0.5 } : undefined}>Activo (comprable)</label>
           </div>
         </Modal>
       )}

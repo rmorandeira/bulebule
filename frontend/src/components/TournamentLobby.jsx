@@ -190,7 +190,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
           className="rl__create-bar-btn"
           onClick={openCreate}
           disabled={!canPlay}>
-          {canPlay ? 'Jugar' : `Necesitas nivel ${tournament.tier}`}
+          {canPlay ? 'Jugar' : !tournament.active ? 'Torneo no disponible' : `Necesitas nivel ${tournament.tier}`}
         </button>
       </div>
 
