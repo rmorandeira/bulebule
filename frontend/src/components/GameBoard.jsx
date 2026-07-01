@@ -161,12 +161,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     (rollCount === 0 || pendingDiscards.length > 0)
   const isAnimating = rolling || rollingIndices.length > 0
 
-  // Deadline congelado al inicio de turno/tirada — no se actualiza con broadcasts intermedios ajenos
-  const [turnDeadline, setTurnDeadline] = useState(room.turnDeadline)
-  useEffect(() => {
-    setTurnDeadline(room.turnDeadline)
-  }, [room.currentPlayerIndex, room.roundNumber, currentPlayer?.rollCount])
-
   // Reset al cambiar turno o ronda
   useEffect(() => {
     setPendingDiscards([])
@@ -561,14 +555,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           </div>
           {!palilloRotoShowing && (iCanAdvance
             ? <CountdownButton
-                className="btn--primary results-action-btn"
+                className="btn--primary results-action-btn results-action-btn--round"
                 deadline={room.continueDeadline}
                 totalMs={30_000}
                 onClick={handleNextRound}
               >
                 Siguiente ronda
               </CountdownButton>
-            : <p className="results-action-label">
+            : <p className="results-action-label results-action-label--round">
                 {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
               </p>
           )}
@@ -722,14 +716,11 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             return (
               <div className="dice-box">
                 <div className="dice-box__header">
-                  <span className="dice-box__label">
-                    {isMyTurn ? 'Tu jugada' : `Turno de ${currentPlayer?.name}`}
-                  </span>
                   {displayPlayer?.hand?.rank != null && (
-                    <span className="dice-box__hand">
-                      {displayPlayer.hand.desc}
+                    <div className="dice-box__hand dice-box__hand--centered">
+                      <span className="dice-box__hand-desc">{displayPlayer.hand.desc}</span>
                       <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} B</span>
-                    </span>
+                    </div>
                   )}
                 </div>
                 <div className="dice-box__scene">
@@ -797,7 +788,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   <div className="actions__row">
                     <CountdownButton
                       className="btn--full"
-                      deadline={turnDeadline}
+                      deadline={room.turnDeadline}
                       totalMs={30_000}
                       onClick={handleStand}
                       disabled={isAnimating}
@@ -816,7 +807,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       </button>
                       <CountdownButton
                         className="btn--primary"
-                        deadline={turnDeadline}
+                        deadline={room.turnDeadline}
                         totalMs={30_000}
                         onClick={handleRoll}
                         disabled={!canRoll || isAnimating}

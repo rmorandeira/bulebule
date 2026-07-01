@@ -1341,14 +1341,20 @@ body {
 
 .dice-box__header {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  justify-content: center;
+  align-items: center;
   padding: 12px 14px 0;
   flex-shrink: 0;
 }
 
-.dice-box__label {
-  font-size: 14px;
+.dice-box__hand--centered {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+}
+.dice-box__hand-desc {
+  font-size: 15px;
   font-weight: 700;
   color: var(--text);
 }
@@ -1637,6 +1643,9 @@ body {
   right: 16px;
   width: auto;
 }
+.results-action-btn--round { bottom: calc(88px + env(safe-area-inset-bottom)); }
+.results-action-label--round { bottom: calc(88px + env(safe-area-inset-bottom)); }
+
 .results-action-label {
   position: fixed;
   bottom: calc(64px + env(safe-area-inset-bottom));

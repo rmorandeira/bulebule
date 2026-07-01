@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import socket from '../socket'
 import UserDetailSheet from './UserDetailSheet'
 
@@ -10,6 +10,7 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
   const isHost = room.hostId === myId
   const [viewingUser, setViewingUser] = useState(null)
   const [inviting, setInviting] = useState({})
+  const joinedOnceRef = useRef(new Set())
 
   const favorites = useMemo(() => {
     const favs = getFavorites()
@@ -18,6 +19,27 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
       .filter(([userId]) => userId !== user?.email && !inRoom.has(userId))
       .map(([userId, data]) => ({ userId, ...data }))
   }, [room.players, user?.email])
+
+  // Si un invitado pendiente llega a entrar y luego sale de la sala,
+  // se libera su estado "Pendiente" para poder volver a invitarlo
+  useEffect(() => {
+    const inRoom = new Set(room.players.map(p => p.userId).filter(Boolean))
+    setInviting(prev => {
+      let changed = false
+      const next = { ...prev }
+      for (const uid of Object.keys(prev)) {
+        if (!prev[uid]) continue
+        if (inRoom.has(uid)) {
+          joinedOnceRef.current.add(uid)
+        } else if (joinedOnceRef.current.has(uid)) {
+          delete next[uid]
+          joinedOnceRef.current.delete(uid)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [room.players])
 
   function inviteFavorite(userId) {
     if (inviting[userId]) return
