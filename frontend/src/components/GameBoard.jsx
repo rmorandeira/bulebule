@@ -161,6 +161,12 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     (rollCount === 0 || pendingDiscards.length > 0)
   const isAnimating = rolling || rollingIndices.length > 0
 
+  // Deadline congelado al inicio de cada turno — no se actualiza con broadcasts intermedios
+  const [turnDeadline, setTurnDeadline] = useState(room.turnDeadline)
+  useEffect(() => {
+    setTurnDeadline(room.turnDeadline)
+  }, [room.currentPlayerIndex, room.roundNumber])
+
   // Reset al cambiar turno o ronda
   useEffect(() => {
     setPendingDiscards([])
@@ -791,7 +797,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   <div className="actions__row">
                     <CountdownButton
                       className="btn--full"
-                      deadline={room.turnDeadline}
+                      deadline={turnDeadline}
                       totalMs={30_000}
                       onClick={handleStand}
                       disabled={isAnimating}
@@ -810,7 +816,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       </button>
                       <CountdownButton
                         className="btn--primary"
-                        deadline={room.turnDeadline}
+                        deadline={turnDeadline}
                         totalMs={30_000}
                         onClick={handleRoll}
                         disabled={!canRoll || isAnimating}
