@@ -1587,7 +1587,6 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true });
     broadcast(room.code);
-    startTurnTimer(room);
   });
 
   socket.on('report_faces', (data, rawCb) => {
