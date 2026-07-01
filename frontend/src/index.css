@@ -1880,6 +1880,13 @@ body {
   color: #999;
   font-weight: 500;
 }
+.rl__logo {
+  height: 48px;
+  width: auto;
+  pointer-events: none;
+  user-select: none;
+  flex-shrink: 0;
+}
 .rl__hd-music {
   display: flex;
   align-items: center;

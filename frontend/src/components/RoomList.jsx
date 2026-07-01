@@ -557,6 +557,7 @@ export default function RoomList({
           {myStats && <span className="rl__hd-pts">{myStats.score.toLocaleString()} B</span>}
           {myRank && <span className="rl__hd-rank">Ranking {myRank}/{rankTotal}</span>}
         </div>
+        <img className="rl__logo" src="/assets/logo-bulebule.png" alt="Bule Bule" draggable={false} />
         <button className="rl__hd-music" onClick={onToggleMusic} aria-label={musicOn ? 'Silenciar música' : 'Activar música'}>
           {musicOn ? (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
