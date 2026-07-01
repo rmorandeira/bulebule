@@ -26,7 +26,7 @@ let messaging = null;
 try {
   const admin = require('firebase-admin');
   const svcAcct = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (svcAcct && !admin.apps.length) {
+  if (svcAcct && !admin.apps?.length) {
     admin.initializeApp({ credential: admin.credential.cert(JSON.parse(svcAcct)) });
     messaging = admin.messaging();
     console.log('Firebase Admin initialized (FCM ready)');
