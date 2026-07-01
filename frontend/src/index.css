@@ -508,7 +508,7 @@ body {
   position: absolute;
   left: 16px;
   right: 16px;
-  bottom: 88px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -529,7 +529,7 @@ body {
 
 .next-player-footer--waiting {
   justify-content: center;
-  bottom: 112px;
+  bottom: calc(108px + env(safe-area-inset-bottom));
 }
 
 .next-player-waiting {
@@ -1343,18 +1343,20 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px 14px 0;
+  padding: 12px 0 0;
+  margin: 0 16px;
   flex-shrink: 0;
 }
 
 .dice-box__hand--centered {
+  width: 100%;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 2px;
 }
 .dice-box__hand-desc {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
@@ -1425,6 +1427,11 @@ body {
   color: #22c55e;
   white-space: nowrap;
 }
+.dice-box__hand--centered .dice-box__hand-pts {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
 
 /* ── Game hand (dice slots below dice-box) ───────────────── */
 .game-hand {
@@ -1483,6 +1490,7 @@ body {
   color: var(--text-subtle);
   text-align: center;
   font-variant-numeric: tabular-nums;
+  margin-top: 8px;
 }
 
 @keyframes timer-pulse {

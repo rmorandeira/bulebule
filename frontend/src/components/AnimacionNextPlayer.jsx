@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Die from './Die'
-import { IS_NATIVE, showBanner, removeBanner } from '../utils/admob'
+import { IS_NATIVE } from '../utils/admob'
 import CountdownButton from './CountdownButton'
 
 const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
@@ -42,10 +42,11 @@ const style = `
 
 function AdTop() {
   useEffect(() => {
-    if (IS_NATIVE) {
-      showBanner('TOP_CENTER')
-      return () => removeBanner()
-    }
+    // Nativo: el banner inferior de GameBoard ya se mantiene visible durante
+    // toda la partida — no lo destruimos/recreamos en cada cambio de turno
+    // (recargar el banner tan a menudo agota el inventario de AdMob y el
+    // anuncio deja de aparecer al cabo de unas rondas).
+    if (IS_NATIVE) return
     // Web: AdSense
     try { ;(window.adsbygoogle = window.adsbygoogle || []).push({}) } catch (e) {}
   }, [])

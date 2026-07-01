@@ -86,12 +86,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     }
   }, [])
 
-  // Re-mostrar banner inferior al cerrar la animación entre turnos
-  // (AnimacionNextPlayer muestra el TOP y llama removeBanner al desmontar)
-  useEffect(() => {
-    if (IS_NATIVE && !nextPlayerVisible) showBanner('BOTTOM_CENTER')
-  }, [nextPlayerVisible])
-
   const [palilloRotoShowing, setPalilloRotoShowing] = useState(false)
   const prevPhaseRef = useRef(room.phase)
   useEffect(() => {
@@ -719,7 +713,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                   {displayPlayer?.hand?.rank != null && (
                     <div className="dice-box__hand dice-box__hand--centered">
                       <span className="dice-box__hand-desc">{displayPlayer.hand.desc}</span>
-                      <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} B</span>
+                      <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} Bules</span>
                     </div>
                   )}
                 </div>
