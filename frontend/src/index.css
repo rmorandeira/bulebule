@@ -1349,28 +1349,55 @@ body {
   color: var(--text);
 }
 
-.dice-box__beat {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ef4444;
-}
-.dice-box__beat-who {
-  font-weight: 400;
-  color: var(--text-subtle);
-}
-
 .dice-box__footer {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   padding: 0 14px 12px;
   flex-shrink: 0;
+  gap: 8px;
 }
 
 .dice-box__tirada {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
+}
+
+.dice-box__beat-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dice-box__beat-action {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.dice-box__beat-rolls {
+  font-size: 12px;
+  color: var(--text-subtle);
+  line-height: 1.2;
+}
+
+.dice-box__beat-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.dice-box__beat-hand {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ef4444;
+  line-height: 1.2;
+}
+.dice-box__beat-who {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-subtle);
+  line-height: 1.2;
 }
 
 .dice-box__hand {

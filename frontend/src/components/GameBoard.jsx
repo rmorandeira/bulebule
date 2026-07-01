@@ -763,11 +763,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 <div className="dice-box__footer">
                   {minHand ? (
                     <>
-                      <span className="dice-box__tirada">Jugada mínima a superar</span>
-                      <span className="dice-box__beat">
-                        {minHand.hand.desc}
-                        <span className="dice-box__beat-who"> · {minHand.name}</span>
-                      </span>
+                      <div className="dice-box__beat-left">
+                        <span className="dice-box__beat-action">Superar</span>
+                        <span className="dice-box__beat-rolls">en {minHand.rollCount} {minHand.rollCount === 1 ? 'tirada' : 'tiradas'}</span>
+                      </div>
+                      <div className="dice-box__beat-right">
+                        <span className="dice-box__beat-hand">{minHand.hand.desc}</span>
+                        <span className="dice-box__beat-who">por {minHand.name}</span>
+                      </div>
                     </>
                   ) : (
                     <span className="dice-box__tirada">
