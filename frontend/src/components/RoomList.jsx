@@ -4,6 +4,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { Capacitor } from '@capacitor/core'
 import socket from '../socket'
 import { track } from '../analytics'
+import { dismissRoomNotification } from '../utils/push'
 import UserSection from './UserSection'
 import TournamentList from './TournamentList'
 import Marketplace from './Marketplace'
@@ -502,6 +503,7 @@ export default function RoomList({
       setJoiningCode(null)
       if (!res?.ok) return setError(res?.error || 'No se pudo unir a la sala')
       track('room_join')
+      dismissRoomNotification(code)
     })
   }
 

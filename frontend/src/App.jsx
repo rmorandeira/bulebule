@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Capacitor } from '@capacitor/core'
 import socket from './socket'
 import { initAdMob } from './utils/admob'
+import { dismissRoomNotification } from './utils/push'
 import { track } from './analytics'
 import RoomList from './components/RoomList'
 import CreateRoom from './components/CreateRoom'
@@ -350,6 +351,7 @@ export default function App() {
     setPendingInvite(null)
     socket.emit('join_room', { code: roomCode, playerName: name, diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       if (!res?.ok) alert(res?.error || 'No se pudo unir a la sala')
+      dismissRoomNotification(roomCode)
     })
   }
 
