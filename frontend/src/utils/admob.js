@@ -14,10 +14,16 @@ const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111'
 
 const isPlaceholder = (id) => id.includes('XXXXXXXXXXXXXXXX')
 
+// Fuerza test ads — útil para pruebas internas antes de la aprobación de AdMob.
+// Cambiar a false antes de publicar en producción.
+const FORCE_TESTING = import.meta.env.VITE_ADMOB_TESTING === 'true'
+
+const isTesting = FORCE_TESTING || isPlaceholder(ADMOB_APP_ID)
+
 export const AD_IDS = {
-  app:       isPlaceholder(ADMOB_APP_ID)  ? TEST_APP_ID    : ADMOB_APP_ID,
-  bannerTop: isPlaceholder(BANNER_TOP_ID) ? TEST_BANNER_ID : BANNER_TOP_ID,
-  bannerBot: isPlaceholder(BANNER_BOT_ID) ? TEST_BANNER_ID : BANNER_BOT_ID,
+  app:       isTesting ? TEST_APP_ID    : ADMOB_APP_ID,
+  bannerTop: isTesting ? TEST_BANNER_ID : BANNER_TOP_ID,
+  bannerBot: isTesting ? TEST_BANNER_ID : BANNER_BOT_ID,
 }
 
 export const IS_NATIVE = Capacitor.isNativePlatform()
@@ -28,7 +34,7 @@ export async function initAdMob() {
   if (!IS_NATIVE || admobReady) return
   try {
     const { AdMob } = await import('@capacitor-community/admob')
-    await AdMob.initialize({ testingDevices: [], initializeForTesting: isPlaceholder(ADMOB_APP_ID) })
+    await AdMob.initialize({ testingDevices: [], initializeForTesting: isTesting })
     admobReady = true
   } catch (e) {
     console.warn('AdMob init failed:', e)
@@ -45,7 +51,7 @@ export async function showBanner(position = 'TOP_CENTER') {
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: position === 'BOTTOM_CENTER' ? BannerAdPosition.BOTTOM_CENTER : BannerAdPosition.TOP_CENTER,
       margin: 0,
-      isTesting: isPlaceholder(ADMOB_APP_ID),
+      isTesting,
     })
   } catch (e) {
     console.warn('AdMob showBanner failed:', e)

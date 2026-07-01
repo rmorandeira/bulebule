@@ -33,31 +33,9 @@ function loadGuestName() {
 }
 
 
-async function setupNativePush(userId, setPendingJoinCode) {
-  try {
-    const { PushNotifications } = await import('@capacitor/push-notifications')
-    const perm = await PushNotifications.checkPermissions()
-    if (perm.receive === 'prompt') {
-      const req = await PushNotifications.requestPermissions()
-      if (req.receive !== 'granted') return
-    } else if (perm.receive !== 'granted') return
-
-    await PushNotifications.register()
-
-    PushNotifications.addListener('registration', ({ value: token }) => {
-      socket.emit('register_fcm_token', { userId, token })
-    })
-    PushNotifications.addListener('registrationError', (err) => {
-      console.warn('FCM registration error:', err)
-    })
-    PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
-      const roomCode = notification.data?.roomCode
-      if (roomCode) setPendingJoinCode(roomCode.toUpperCase())
-    })
-  } catch (e) {
-    console.warn('Native push setup failed:', e)
-  }
-}
+// FCM token guardado en memoria hasta que el usuario esté logado
+let _pendingFcmToken = null
+let _pushListenersReady = false
 
 async function setupPush(userId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
@@ -74,6 +52,45 @@ async function setupPush(userId) {
 
 export default function App() {
   useEffect(() => { initAdMob() }, [])
+
+  // Push nativo: registrar listeners en cuanto arranca la app (no esperar al login)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || _pushListenersReady) return
+    _pushListenersReady = true
+    ;(async () => {
+      try {
+        const { PushNotifications } = await import('@capacitor/push-notifications')
+        const perm = await PushNotifications.checkPermissions()
+        if (perm.receive === 'prompt') {
+          const req = await PushNotifications.requestPermissions()
+          if (req.receive !== 'granted') return
+        } else if (perm.receive !== 'granted') return
+
+        PushNotifications.addListener('registration', ({ value: token }) => {
+          _pendingFcmToken = token
+          const uid = loadUser()?.email
+          if (uid) socket.emit('register_fcm_token', { userId: uid, token })
+        })
+        PushNotifications.addListener('registrationError', (err) => {
+          console.warn('FCM registration error:', err)
+        })
+        // App en background o cerrada: usuario toca la notificación
+        PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+          const roomCode = notification.data?.roomCode
+          if (roomCode) setPendingJoinCode(roomCode.toUpperCase())
+        })
+        // App en primer plano: navegar directamente al hall
+        PushNotifications.addListener('pushNotificationReceived', ({ data }) => {
+          const roomCode = data?.roomCode
+          if (roomCode) setPendingJoinCode(roomCode.toUpperCase())
+        })
+
+        await PushNotifications.register()
+      } catch (e) {
+        console.warn('Native push setup failed:', e)
+      }
+    })()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [screen, setScreen] = useState(() => {
     const p = new URLSearchParams(window.location.search).get('join')
@@ -115,7 +132,6 @@ export default function App() {
   const [pendingInvite, setPendingInvite] = useState(null)
   const swRegistered       = useRef(false)
   const sessionTrackedRef  = useRef(false)
-  const nativePushSetup    = useRef(false)
   const roomRef            = useRef(null)
   const playerNameRef      = useRef(playerName)
   const musicRef           = useRef(null)
@@ -245,10 +261,12 @@ export default function App() {
   useEffect(() => {
     if (user && myId) {
       socket.emit('register_user', { userId: user.email, name: user.name, email: user.email, picture: user.picture })
-      if (Capacitor.isNativePlatform() && !nativePushSetup.current) {
-        nativePushSetup.current = true
-        setupNativePush(user.email, setPendingJoinCode)
-      } else if (!Capacitor.isNativePlatform() && Notification.permission === 'granted') {
+      if (Capacitor.isNativePlatform()) {
+        // Si ya tenemos token FCM (obtenido antes de login), lo enviamos ahora
+        if (_pendingFcmToken) {
+          socket.emit('register_fcm_token', { userId: user.email, token: _pendingFcmToken })
+        }
+      } else if (Notification.permission === 'granted') {
         setupPush(user.email)
       }
     }
