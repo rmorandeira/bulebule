@@ -44,6 +44,7 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
   const [selectedItem, setSelectedItem]   = useState(null)
   const [itemClosing, setItemClosing]     = useState(false)
   const [activeSkin, setActiveSkin]       = useState(() => localStorage.getItem('bule_dice_skin') ?? null)
+  const [activeTab, setActiveTab]         = useState('stats')
   const closeRef = useRef(null)
   const itemCloseRef = useRef(null)
 
@@ -185,74 +186,104 @@ export default function UserDetailSheet({ userId, initialName, initialPicture, o
 
         {loading && <p className="uds__loading">Cargando...</p>}
 
-        {!loading && stats && (
-          <div className="uds__stats">
-            <div className="uds__stat">
-              <span className="uds__stat-val">{stats.score.toLocaleString()}</span>
-              <span className="uds__stat-lbl">Bules</span>
+        {!loading && (
+          <>
+            {/* Botón de retar */}
+            {!hideChallenge && (canChallenge ? (
+              <button className="bs__submit uds__challenge-btn" onClick={handleChallenge} disabled={challenging}>
+                {challenging ? 'Creando reto...' : `⚔️ Retar a ${name}`}
+              </button>
+            ) : !user ? (
+              <p className="uds__hint">Inicia sesión para retar a este jugador</p>
+            ) : isSelf ? (
+              <p className="uds__hint">Este es tu perfil</p>
+            ) : null)}
+
+            {/* Segmented control */}
+            <div className="uds__seg">
+              <button
+                className={`uds__seg-btn${activeTab === 'stats' ? ' uds__seg-btn--active' : ''}`}
+                onClick={() => setActiveTab('stats')}
+              >
+                Stats
+              </button>
+              <button
+                className={`uds__seg-btn${activeTab === 'items' ? ' uds__seg-btn--active' : ''}`}
+                onClick={() => setActiveTab('items')}
+              >
+                Items
+              </button>
             </div>
-            <div className="uds__stat">
-              <span className="uds__stat-val">{stats.gamesPlayed}</span>
-              <span className="uds__stat-lbl">Partidas</span>
-            </div>
-            <div className="uds__stat">
-              <span className="uds__stat-val">
-                {stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%
-              </span>
-              <span className="uds__stat-lbl">Victorias</span>
-            </div>
-            {avgRolls && (
-              <div className="uds__stat">
-                <span className="uds__stat-val">{avgRolls}</span>
-                <span className="uds__stat-lbl">Tiradas/ronda</span>
-              </div>
+
+            {/* Tab: Stats */}
+            {activeTab === 'stats' && (
+              <>
+                {stats && (
+                  <div className="uds__stats">
+                    <div className="uds__stat">
+                      <span className="uds__stat-val">{stats.score.toLocaleString()}</span>
+                      <span className="uds__stat-lbl">Bules</span>
+                    </div>
+                    <div className="uds__stat">
+                      <span className="uds__stat-val">{stats.gamesPlayed}</span>
+                      <span className="uds__stat-lbl">Partidas</span>
+                    </div>
+                    <div className="uds__stat">
+                      <span className="uds__stat-val">
+                        {stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%
+                      </span>
+                      <span className="uds__stat-lbl">Victorias</span>
+                    </div>
+                    {avgRolls && (
+                      <div className="uds__stat">
+                        <span className="uds__stat-val">{avgRolls}</span>
+                        <span className="uds__stat-lbl">Tiradas/ronda</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {topHands.length > 0 && (
+                  <>
+                    <p className="uds__section-title">JUGADAS</p>
+                    <div className="uds__hands">
+                      {topHands.map(h => (
+                        <div key={h.hand_desc} className="uds__hand-row">
+                          <span className="uds__hand-rank" style={{ opacity: 0.4 + (h.hand_rank / 7) * 0.6 }}>
+                            {HAND_RANK_LABEL[h.hand_rank] ?? h.hand_rank}
+                          </span>
+                          <span className="uds__hand-desc">{h.hand_desc}</span>
+                          <span className="uds__hand-count">×{h.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {!stats && !topHands.length && (
+                  <p className="uds__hint">Sin estadísticas todavía</p>
+                )}
+              </>
             )}
-          </div>
-        )}
 
-        {!loading && topHands.length > 0 && (
-          <>
-            <p className="uds__section-title">JUGADAS</p>
-            <div className="uds__hands">
-              {topHands.map(h => (
-                <div key={h.hand_desc} className="uds__hand-row">
-                  <span className="uds__hand-rank" style={{ opacity: 0.4 + (h.hand_rank / 7) * 0.6 }}>
-                    {HAND_RANK_LABEL[h.hand_rank] ?? h.hand_rank}
-                  </span>
-                  <span className="uds__hand-desc">{h.hand_desc}</span>
-                  <span className="uds__hand-count">×{h.count}</span>
+            {/* Tab: Items */}
+            {activeTab === 'items' && (
+              items.length > 0 ? (
+                <div className="uds__items">
+                  {items.map(item => (
+                    <div key={item.id} className="uds__item" onClick={() => openItem(item)} style={{ cursor: 'pointer' }}>
+                      <img src={imgSrc(item.image_url)} alt={item.name} className="uds__item-img"
+                        onError={e => { e.currentTarget.style.display = 'none' }} />
+                      <p className="uds__item-name">{item.name}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {!loading && items.length > 0 && (
-          <>
-            <p className="uds__section-title">ITEMS</p>
-            <div className="uds__items">
-              {items.map(item => (
-                <div key={item.id} className="uds__item" onClick={() => openItem(item)} style={{ cursor: 'pointer' }}>
-                  <img src={imgSrc(item.image_url)} alt={item.name} className="uds__item-img"
-                    onError={e => { e.currentTarget.style.display = 'none' }} />
-                  <p className="uds__item-name">{item.name}</p>
-                </div>
-              ))}
-            </div>
+              ) : (
+                <p className="uds__hint">Sin items todavía</p>
+              )
+            )}
           </>
         )}
 
         {error && <p className="bs__error">{error}</p>}
-
-        {!hideChallenge && (canChallenge ? (
-          <button className="bs__submit" onClick={handleChallenge} disabled={challenging}>
-            {challenging ? 'Creando reto...' : `⚔️ Retar a ${name}`}
-          </button>
-        ) : !user ? (
-          <p className="uds__hint">Inicia sesión para retar a este jugador</p>
-        ) : isSelf ? (
-          <p className="uds__hint">Este es tu perfil</p>
-        ) : null)}
       </div>
 
       {selectedItem && (

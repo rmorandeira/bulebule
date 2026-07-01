@@ -5,6 +5,7 @@ import Die from './Die'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 import DiceRollerScene from './DiceRollerScene'
+import CountdownButton from './CountdownButton'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
@@ -522,9 +523,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             </div>
           </div>
           {!palilloRotoShowing && (iCanAdvance
-            ? <button className="results-action-btn btn btn--primary" onClick={handleNextRound}>
-                {!loserIsBot && continueSecondsLeft !== null ? `Siguiente ronda (${continueSecondsLeft}s)` : 'Siguiente ronda'}
-              </button>
+            ? <CountdownButton
+                className="btn--primary results-action-btn"
+                deadline={room.continueDeadline}
+                totalMs={30_000}
+                onClick={handleNextRound}
+              >
+                Siguiente ronda
+              </CountdownButton>
             : <p className="results-action-label">
                 {continueSecondsLeft !== null ? `Esperando al jugador (${continueSecondsLeft}s)` : 'Esperando al jugador...'}
               </p>
@@ -726,7 +732,11 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 <div className="dice-box__footer">
                   {minHand ? (
                     <>
-                      <span className="dice-box__tirada">Jugada mínima a superar</span>
+                      <span className="dice-box__tirada">
+                        {isMyTurn
+                          ? `Supera en ${minHand.rollCount} ${minHand.rollCount === 1 ? 'tirada' : 'tiradas'}`
+                          : 'Jugada mínima a superar'}
+                      </span>
                       <span className="dice-box__beat">
                         {minHand.hand.desc}
                         <span className="dice-box__beat-who"> · {minHand.name}</span>
@@ -747,22 +757,34 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               <>
                 {mustPass ? (
                   <div className="actions__row">
-                    <button className="btn btn--primary btn--full" onClick={handleStand} disabled={isAnimating}>Pasar al siguiente jugador</button>
+                    <CountdownButton
+                      className="btn--full"
+                      deadline={room.turnDeadline}
+                      totalMs={30_000}
+                      onClick={handleStand}
+                      disabled={isAnimating}
+                    >
+                      Pasar al siguiente jugador
+                    </CountdownButton>
                   </div>
                 ) : (
                   <>
-                    {rollCount > 0 && pendingDiscards.length === 0 && (
-                      <p className={`actions__hint ${timeLeft !== null && timeLeft <= 10 ? 'actions__hint--urgent' : ''}`}>
-                        Toca los dados a descartar
-                      </p>
-                    )}
+                    <p className={`actions__hint ${timeLeft !== null && timeLeft <= 10 ? 'actions__hint--urgent' : ''}`}>
+                      Toca los dados a descartar
+                    </p>
                     <div className="actions__row">
                       <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || isAnimating}>
                         Plantarse
                       </button>
-                      <button className="btn btn--primary" onClick={handleRoll} disabled={!canRoll || isAnimating}>
-                        {timeLeft !== null ? `Tirar dados (${timeLeft}s)` : 'Tirar dados'}
-                      </button>
+                      <CountdownButton
+                        className="btn--primary"
+                        deadline={room.turnDeadline}
+                        totalMs={30_000}
+                        onClick={handleRoll}
+                        disabled={!canRoll || isAnimating}
+                      >
+                        Tirar dados
+                      </CountdownButton>
                     </div>
                   </>
                 )}

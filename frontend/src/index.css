@@ -238,6 +238,49 @@ body {
 
 .btn--full { width: 100%; }
 
+/* ── CountdownButton ─────────────────────────────────────── */
+@keyframes btn-cd-fill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+.btn-cd {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 15px 24px;
+  border-radius: var(--radius-btn);
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--primary);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-cd:disabled { opacity: 0.45; cursor: default; }
+.btn-cd.btn--full { width: 100%; }
+
+.btn-cd__fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: var(--primary);
+  animation-name: btn-cd-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  pointer-events: none;
+  border-radius: var(--radius-btn) 0 0 var(--radius-btn);
+}
+
+.btn-cd__label {
+  position: relative;
+  z-index: 1;
+  mix-blend-mode: difference;
+  color: #ffffff;
+}
+
 /* ── Palillos (vidas) ────────────────────────────────────── */
 .palillo {
   display: inline-flex;
@@ -1421,10 +1464,11 @@ body {
 
 .actions__row {
   display: flex;
-  gap: 10px;
+  gap: 24px;
 }
 
-.actions__row .btn {
+.actions__row .btn,
+.actions__row .btn-cd {
   flex: 1;
 }
 
@@ -3847,6 +3891,36 @@ body {
   width: 100%;
   margin: 0;
 }
+.uds__challenge-btn {
+  margin-bottom: 4px;
+}
+
+.uds__seg {
+  display: flex;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 16px;
+}
+.uds__seg-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-subtle);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.uds__seg-btn--active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}
+
 .uds__loading {
   font-size: 14px;
   color: var(--text-subtle);

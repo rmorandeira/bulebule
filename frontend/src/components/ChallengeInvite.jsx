@@ -1,8 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import CountdownButton from './CountdownButton'
 
-const AUTO_DISMISS_MS = 12000
+const AUTO_DISMISS_MS = 12_000
 
 export default function ChallengeInvite({ invite, onAccept, onDecline }) {
+  const deadlineRef = useRef(Date.now() + AUTO_DISMISS_MS)
+
   useEffect(() => {
     const t = setTimeout(onDecline, AUTO_DISMISS_MS)
     return () => clearTimeout(t)
@@ -17,7 +20,14 @@ export default function ChallengeInvite({ invite, onAccept, onDecline }) {
       </div>
       <div className="chi__actions">
         <button className="chi__btn chi__btn--decline" onClick={onDecline}>✕</button>
-        <button className="chi__btn chi__btn--accept"  onClick={onAccept}>Aceptar</button>
+        <CountdownButton
+          className="chi__btn chi__btn--accept btn--primary"
+          deadline={deadlineRef.current}
+          totalMs={AUTO_DISMISS_MS}
+          onClick={onAccept}
+        >
+          Aceptar
+        </CountdownButton>
       </div>
     </div>
   )

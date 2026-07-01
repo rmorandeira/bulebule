@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Die from './Die'
 import { IS_NATIVE, showBanner, removeBanner } from '../utils/admob'
+import CountdownButton from './CountdownButton'
 
 const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
 
@@ -137,9 +138,14 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
         )}
         {!exitPhase && isMyTurn && (
           <div className="next-player-footer">
-            <button className="btn btn--primary next-player-continue" onClick={onContinue}>
-              {secondsLeft !== null ? `Continuar (${secondsLeft}s)` : 'Continuar'}
-            </button>
+            <CountdownButton
+              className="btn--primary next-player-continue"
+              deadline={room.continueDeadline}
+              totalMs={30_000}
+              onClick={onContinue}
+            >
+              Continuar
+            </CountdownButton>
           </div>
         )}
       </div>
