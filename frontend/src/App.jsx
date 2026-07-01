@@ -87,11 +87,9 @@ export default function App() {
           const roomCode = notification.data?.roomCode
           if (roomCode) setPendingJoinCode(roomCode.toUpperCase())
         })
-        // App en primer plano: navegar directamente al hall
-        PushNotifications.addListener('pushNotificationReceived', ({ data }) => {
-          const roomCode = data?.roomCode
-          if (roomCode) setPendingJoinCode(roomCode.toUpperCase())
-        })
+        // App en primer plano: NO navegar automáticamente — el evento 'room_invite'
+        // del socket ya muestra el aviso in-app, y la sala aparece en el listado
+        // con el dot de reto pendiente hasta que el jugador decida entrar
 
         await PushNotifications.register()
       } catch (e) {

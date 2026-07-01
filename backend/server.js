@@ -819,6 +819,8 @@ function sanitize(room) {
     vsBot: room.vsBot ?? false,
     isPrivate: !!room.isPrivate,
     isChallenge: !!room.isChallenge,
+    challengedUserId: room.challengedUserId ?? null,
+    challengedName: room.challengedName ?? null,
     hostId: room.hostId,
     phase: room.phase,
     roundNumber: room.roundNumber,
@@ -885,8 +887,13 @@ function broadcast(code) {
 }
 
 function broadcastRoomList() {
-  const list = Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId).map(sanitizeForList);
-  io.emit('rooms_list', list);
+  const allRooms = Object.values(rooms).filter(r => !r.vsBot && !r.tournamentId);
+  // Las salas de reto solo son visibles para el usuario retado — el resto no debe verlas en el listado
+  for (const sock of io.sockets.sockets.values()) {
+    const uid = sock.data.userId;
+    const visible = allRooms.filter(r => !r.isChallenge || r.challengedUserId === uid);
+    sock.emit('rooms_list', visible.map(sanitizeForList));
+  }
 }
 
 // ── Stale room cleanup (runs every 5 minutes) ─────────────────────────────────
@@ -1887,6 +1894,7 @@ io.on('connection', (socket) => {
       isPrivate: true,
       isChallenge: true,
       challengedUserId: toUserId,
+      challengedName: target.name ?? null,
       maxRounds: 0,
       hostId: socket.id,
       phase: 'lobby',
@@ -1929,6 +1937,7 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true, code, roomName });
     broadcast(code);
+    broadcastRoomList();
   });
 
   socket.on('disconnect', () => {

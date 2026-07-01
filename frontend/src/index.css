@@ -508,7 +508,7 @@ body {
   position: absolute;
   left: 16px;
   right: 16px;
-  bottom: 64px;
+  bottom: 88px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2245,6 +2245,14 @@ body {
   border-radius: 18px;
   padding: 14px 18px;
   min-height: 66px;
+}
+
+.rl__challenge-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2f8fef;
+  flex-shrink: 0;
 }
 
 /* ── Navbar ─────────────────────────────────────────────── */

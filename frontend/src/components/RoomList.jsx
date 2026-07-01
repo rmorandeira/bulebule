@@ -506,7 +506,7 @@ export default function RoomList({
   }
 
   function handleJoinClick(room) {
-    if (room.isPrivate) { setCodeModal(room); setCodeInput(''); setCodeError('') }
+    if (room.isPrivate && !room.isChallenge) { setCodeModal(room); setCodeInput(''); setCodeError('') }
     else join(room.code)
   }
 
@@ -697,6 +697,7 @@ export default function RoomList({
                 const canJoin = room.phase === 'lobby' && !isFull(room)
                 return (
                   <div key={room.code} className="rl__room">
+                    {room.isChallenge && <span className="rl__challenge-dot" aria-label="Reto pendiente" />}
                     <div className="rl__room-info">
                       <span className="rl__room-name">
                         {room.name}
@@ -725,7 +726,7 @@ export default function RoomList({
                     <button className="rl__join-btn"
                       onClick={() => handleJoinClick(room)}
                       disabled={!canJoin || joiningCode !== null || !connected}>
-                      {joiningCode === room.code ? '...' : 'Unirse'}
+                      {joiningCode === room.code ? '...' : room.isChallenge ? 'Entrar' : 'Unirse'}
                     </button>
                   </div>
                 )
