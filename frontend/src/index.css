@@ -529,6 +529,7 @@ body {
 
 .next-player-footer--waiting {
   justify-content: center;
+  bottom: 112px;
 }
 
 .next-player-waiting {

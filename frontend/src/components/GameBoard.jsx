@@ -879,13 +879,26 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
       {leaveIntent && (
         <div className="modal-overlay">
           <div className="modal" role="alertdialog" aria-modal="true">
-            <h2 className="modal__title">Abandonar la partida</h2>
-            <p className="modal__text">¿Estás seguro de que quieres abandonar la partida?</p>
-            <p className="modal__text modal__text--warning">La puntuación acumulada en esta partida se perderá.</p>
-            <div className="modal__actions">
-              <button className="btn btn--secondary" onClick={() => setLeaveIntent(null)}>Seguir jugando</button>
-              <button className="btn btn--primary" onClick={confirmLeave}>Abandonar</button>
-            </div>
+            {room.phase === 'finished' ? (
+              <>
+                <h2 className="modal__title">Salir de la partida</h2>
+                <p className="modal__text">¿Quieres salir? La partida ya ha terminado.</p>
+                <div className="modal__actions">
+                  <button className="btn btn--secondary" onClick={() => setLeaveIntent(null)}>Seguir aquí</button>
+                  <button className="btn btn--primary" onClick={confirmLeave}>Salir</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="modal__title">Abandonar la partida</h2>
+                <p className="modal__text">¿Estás seguro de que quieres abandonar la partida?</p>
+                <p className="modal__text modal__text--warning">La puntuación acumulada en esta partida se perderá.</p>
+                <div className="modal__actions">
+                  <button className="btn btn--secondary" onClick={() => setLeaveIntent(null)}>Seguir jugando</button>
+                  <button className="btn btn--primary" onClick={confirmLeave}>Abandonar</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
