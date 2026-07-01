@@ -43,11 +43,14 @@ export function initAdMob() {
         const { AdMob, AdmobConsentStatus } = await import('@capacitor-community/admob')
         await AdMob.initialize({ testingDevices: [], initializeForTesting: isTesting })
         // UMP: sin consentimiento (obligatorio en EEE/UK/Suiza), Google puede
-        // negarse a servir anuncios — de ahí que algunos dispositivos nunca
-        // vean el banner aunque el SDK se haya inicializado correctamente.
+        // negarse a servir anuncios personalizados. Pedimos la info (rápido,
+        // sin interacción) pero NO esperamos a que el usuario complete el
+        // formulario antes de dejar pasar el resto de la app — si alguien no
+        // lo cierra, el banner se quedaba bloqueado esperando para siempre
+        // y solo el dispositivo donde sí se completó llegaba a mostrar nada.
         const consentInfo = await AdMob.requestConsentInfo()
         if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
-          await AdMob.showConsentForm()
+          AdMob.showConsentForm().catch(e => console.warn('AdMob consent form failed:', e))
         }
       } catch (e) {
         console.warn('AdMob init failed:', e)
