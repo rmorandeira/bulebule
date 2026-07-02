@@ -18,7 +18,9 @@ const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
 const _audioDiscard    = new Audio('/assets/cogerdado.mp3')
 const _audioPalillo    = new Audio('/assets/romper_palillo.mp3')
+const _audioTap        = new Audio('/assets/button_press.mp3')
 function playDiscardSound() { _audioDiscard.currentTime = 0; _audioDiscard.play().catch(() => {}) }
+function playTapSound() { _audioTap.currentTime = 0; _audioTap.play().catch(() => {}) }
 function playPalilloSound() { _audioPalillo.currentTime = 0; _audioPalillo.play().catch(() => {}) }
 
 function PalilloState({ player }) {
@@ -74,7 +76,7 @@ function CloseIcon() {
 // Barra que se muestra mientras el jugador espera su turno: dos botones que
 // despliegan, respectivamente, reacciones rápidas y un campo de texto libre.
 // POC de UI/animación — el envío real de los mensajes se conectará más adelante.
-function WaitingBar({ handDesc, handPtsValue }) {
+function WaitingBar({ label }) {
   const [openPanel, setOpenPanel] = useState(null)   // null | 'quick' | 'custom' — objetivo
   const [renderPanel, setRenderPanel] = useState(null) // panel montado (se retrasa en el cierre)
   const [closing, setClosing] = useState(false)
@@ -107,6 +109,7 @@ function WaitingBar({ handDesc, handPtsValue }) {
   }
 
   function sendQuick(emoji) {
+    playTapSound()
     socket.emit('send_message', { text: emoji })
     closePanel()
   }
@@ -125,10 +128,7 @@ function WaitingBar({ handDesc, handPtsValue }) {
           <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('quick')} aria-label="Mensajes rápidos">
             <SmileIcon />
           </button>
-          <p className="waiting-label">
-            {`Tu mano: ${handDesc}`}
-            {handPtsValue != null && <span className="dice-box__hand-pts">+{handPtsValue} B</span>}
-          </p>
+          <p className="waiting-label">{label}</p>
           <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('custom')} aria-label="Mensaje personalizado">
             <ChatIcon />
           </button>
@@ -1041,14 +1041,22 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             )}
             {me?.done && (
               <WaitingBar
-                handDesc={me?.hand?.desc}
-                handPtsValue={me?.hand?.rank != null ? handPts(me.hand.rank) : null}
+                label={(
+                  <>
+                    {`Tu mano: ${me?.hand?.desc}`}
+                    {me?.hand?.rank != null && <span className="dice-box__hand-pts">+{handPts(me.hand.rank)} B</span>}
+                  </>
+                )}
               />
             )}
             {!isMyTurn && !me?.done && waitTimeLeft !== null && (
-              <p className={`actions__wait-label${waitTimeLeft <= 10 ? ' actions__hint--urgent' : ''}`}>
-                Esperando la tirada del otro jugador ({waitTimeLeft}s)
-              </p>
+              <WaitingBar
+                label={(
+                  <span className={waitTimeLeft <= 10 ? 'actions__hint--urgent' : ''}>
+                    Esperando la tirada del otro jugador ({waitTimeLeft}s)
+                  </span>
+                )}
+              />
             )}
           </div>
           </div>
