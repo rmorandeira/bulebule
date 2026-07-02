@@ -41,6 +41,7 @@ const needsMotionPermission = () =>
 // POC de mensajería: pila de burbujas recibidas
 const MAX_BUBBLES = 3
 const BUBBLE_FADE_MS = 250
+const BUBBLE_LIFETIME_MS = 15000
 
 export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic }) {
   const [pendingDiscards, setPendingDiscards] = useState([])
@@ -82,7 +83,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
       }
       return next
     })
-  }, [])
+    setTimeout(() => dismissBubble(id), BUBBLE_LIFETIME_MS)
+  }, [dismissBubble])
 
   // Recibe las reacciones/mensajes que envía el jugador que espera su turno
   useEffect(() => {

@@ -604,6 +604,30 @@ function makeBotPlayer(n = 0) {
   return { ...makePlayer(`${BOT_ID}_${n}`, n === 0 ? BOT_NAME : `${BOT_NAME} ${n + 1}`), isBot: true };
 }
 
+// POC de mensajería: los bots que no están jugando reaccionan de vez en cuando
+const BOT_CHAT_CHANCE = 0.25;
+const BOT_EMOJIS = ['👍', '😂', '🔥', '😮', '👏'];
+const BOT_PHRASES = ['¡Suerte!', 'Vaya tirada', 'jaja', '¡Vamos!', 'Qué peligro', 'Ánimo'];
+
+function maybeBotChatter(room) {
+  const current = room.players[room.currentPlayerIndex];
+  for (const p of room.players) {
+    if (!p.isBot || p.done || p.id === current?.id) continue;
+    if (Math.random() >= BOT_CHAT_CHANCE) continue;
+    const text = Math.random() < 0.5
+      ? BOT_EMOJIS[Math.floor(Math.random() * BOT_EMOJIS.length)]
+      : BOT_PHRASES[Math.floor(Math.random() * BOT_PHRASES.length)];
+    const code = room.code;
+    const botId = p.id;
+    setTimeout(() => {
+      const r = rooms[code];
+      const bot = r?.players.find(pl => pl.id === botId);
+      if (!bot) return;
+      io.to(code).emit('player_message', { fromId: bot.id, fromName: bot.name, text });
+    }, 400 + Math.random() * 1600);
+  }
+}
+
 // Returns indices of dice the bot wants to keep
 function botPickKept(dice) {
   const counts = {};
@@ -1650,6 +1674,7 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true });
     broadcast(room.code);
+    maybeBotChatter(room);
   });
 
   socket.on('report_faces', (data, rawCb) => {
