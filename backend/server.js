@@ -604,19 +604,34 @@ function makeBotPlayer(n = 0) {
   return { ...makePlayer(`${BOT_ID}_${n}`, n === 0 ? BOT_NAME : `${BOT_NAME} ${n + 1}`), isBot: true };
 }
 
-// POC de mensajería: los bots que no están jugando reaccionan de vez en cuando
+// POC de mensajería: los bots que no están jugando reaccionan de vez en cuando,
+// en plan koruño, según si el otro jugador acaba de tirar o de descartar
 const BOT_CHAT_CHANCE = 0.25;
 const BOT_EMOJIS = ['👍', '😂', '🔥', '😮', '👏'];
-const BOT_PHRASES = ['¡Suerte!', 'Vaya tirada', 'jaja', '¡Vamos!', 'Qué peligro', 'Ánimo'];
+const BOT_ROLL_PHRASES = [
+  '¡Buah neno, flipas con esa tirada!',
+  'Mazo kies esos dados, chorbo',
+  'De risas esa tirada, eh',
+  '¡Vaya tirada, neno!',
+  'Achanta, que menuda tirada te ha salido',
+];
+const BOT_DISCARD_PHRASES = [
+  '¿Descartas eso? Flipas, chorbo',
+  'Buah, ese descarte es mazo kies',
+  '¡De risas ese cambio, neno!',
+  'A pillar dados nuevos, a ver qué sale',
+  'Vaya jugada te traes con el descarte',
+];
 
-function maybeBotChatter(room) {
+function maybeBotChatter(room, player) {
   const current = room.players[room.currentPlayerIndex];
+  const phrasePool = (player?.rollCount ?? 0) > 1 ? BOT_DISCARD_PHRASES : BOT_ROLL_PHRASES;
   for (const p of room.players) {
     if (!p.isBot || p.done || p.id === current?.id) continue;
     if (Math.random() >= BOT_CHAT_CHANCE) continue;
     const text = Math.random() < 0.5
       ? BOT_EMOJIS[Math.floor(Math.random() * BOT_EMOJIS.length)]
-      : BOT_PHRASES[Math.floor(Math.random() * BOT_PHRASES.length)];
+      : phrasePool[Math.floor(Math.random() * phrasePool.length)];
     const code = room.code;
     const botId = p.id;
     setTimeout(() => {
@@ -1674,7 +1689,7 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true });
     broadcast(room.code);
-    maybeBotChatter(room);
+    maybeBotChatter(room, player);
   });
 
   socket.on('report_faces', (data, rawCb) => {
