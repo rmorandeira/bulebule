@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Die from './Die'
 import { IS_NATIVE } from '../utils/admob'
 import CountdownButton from './CountdownButton'
+import WaitingBar from './WaitingBar'
 
 const VALUE_RANK = { AS: 6, K: 5, Q: 4, J: 3, '8': 2, '7': 1 }
 
@@ -130,11 +131,15 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
         </div>
         {!exitPhase && !isMyTurn && (
           <div className="next-player-footer next-player-footer--waiting">
-            <span className={`next-player-waiting${secondsLeft !== null && secondsLeft <= 10 ? ' next-player-counter--urgent' : ''}`}>
-              {secondsLeft !== null
-                ? `Esperando al otro jugador (${secondsLeft}s)`
-                : 'Esperando al otro jugador'}
-            </span>
+            <WaitingBar
+              label={(
+                <span className={secondsLeft !== null && secondsLeft <= 10 ? 'next-player-counter--urgent' : ''}>
+                  {secondsLeft !== null
+                    ? `Esperando al otro jugador (${secondsLeft}s)`
+                    : 'Esperando al otro jugador'}
+                </span>
+              )}
+            />
           </div>
         )}
         {!exitPhase && isMyTurn && (

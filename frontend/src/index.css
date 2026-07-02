@@ -1382,7 +1382,10 @@ body {
   position: absolute;
   top: 0;
   max-width: 70%;
-  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 12px 8px;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1397,6 +1400,13 @@ body {
   cursor: pointer;
   pointer-events: auto;
   transition: opacity 0.25s ease;
+}
+
+.msg-bubble-name {
+  font-style: italic;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-subtle);
 }
 
 .msg-bubble--right { right: 0; animation: msg-bubble-in-right 0.25s ease; }
@@ -1627,8 +1637,8 @@ body {
 .waiting-bar__row .waiting-label { padding: 0; flex: 1; }
 
 .waiting-bar__icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 52px;
+  height: 52px;
   padding: 0;
   flex-shrink: 0;
   border-radius: 50%;
@@ -1669,13 +1679,13 @@ body {
 .waiting-bar__quick-list::-webkit-scrollbar { display: none; }
 
 .waiting-bar__quick-btn {
-  width: 36px;
-  height: 36px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
   border-radius: 50%;
   border: none;
   background: var(--surface);
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -1687,8 +1697,8 @@ body {
 .waiting-bar__input {
   flex: 1;
   min-width: 0;
-  height: 36px;
-  border-radius: 18px;
+  height: 52px;
+  border-radius: 26px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
