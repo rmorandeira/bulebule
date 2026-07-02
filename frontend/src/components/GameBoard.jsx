@@ -691,7 +691,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     {p.done && p.hand && (
                       <span className="scoreboard__hand-label">
                         {p.hand.desc}
-                        {p.hand.rank != null && <span className="results__hand-pts">+{handPts(p.hand.rank)} B</span>}
                       </span>
                     )}
                   </div>
