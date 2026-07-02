@@ -41,7 +41,7 @@ const needsMotionPermission = () =>
 // POC de mensajería: pila de burbujas recibidas
 const MAX_BUBBLES = 3
 const BUBBLE_FADE_MS = 250
-const BUBBLE_LIFETIME_MS = 15000
+const BUBBLE_LIFETIME_MS = 5000
 
 export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic }) {
   const [pendingDiscards, setPendingDiscards] = useState([])
@@ -919,11 +919,13 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 )}
               />
             )}
-            {!isMyTurn && !me?.done && waitTimeLeft !== null && (
+            {!isMyTurn && !me?.done && (
               <WaitingBar
                 label={(
-                  <span className={waitTimeLeft <= 10 ? 'actions__hint--urgent' : ''}>
-                    Esperando la tirada del otro jugador ({waitTimeLeft}s)
+                  <span className={waitTimeLeft !== null && waitTimeLeft <= 10 ? 'actions__hint--urgent' : ''}>
+                    {waitTimeLeft !== null
+                      ? `Esperando la tirada del otro jugador (${waitTimeLeft}s)`
+                      : 'Esperando la tirada del otro jugador'}
                   </span>
                 )}
               />
