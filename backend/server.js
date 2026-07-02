@@ -1733,7 +1733,7 @@ io.on('connection', (socket) => {
     const clean = typeof text === 'string' ? text.trim().slice(0, 40) : '';
     if (!clean) return cb?.({ ok: false });
     cb?.({ ok: true });
-    socket.to(code).emit('player_message', { fromId: socket.id, fromName: sender.name, text: clean });
+    io.to(code).emit('player_message', { fromId: socket.id, fromName: sender.name, text: clean });
   });
 
   socket.on('bot_ready', (cb) => {
