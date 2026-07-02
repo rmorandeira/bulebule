@@ -952,7 +952,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       }
                     }}
                   />
-                  {isMyTurn && messageBubbles.length > 0 && (
+                  {messageBubbles.length > 0 && (
                     <div className="msg-bubble-stack">
                       {messageBubbles.map((b, i) => (
                         <div
