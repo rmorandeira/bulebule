@@ -1698,19 +1698,6 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
-  // POC de mensajería: reacciones/mensajes cortos entre jugadores de la misma sala
-  socket.on('send_message', ({ text } = {}, cb) => {
-    const code = socket.data.roomCode;
-    const room = rooms[code];
-    if (!room) return cb?.({ ok: false });
-    const sender = room.players.find(p => p.id === socket.id);
-    if (!sender) return cb?.({ ok: false });
-    const clean = typeof text === 'string' ? text.trim().slice(0, 40) : '';
-    if (!clean) return cb?.({ ok: false });
-    cb?.({ ok: true });
-    socket.to(code).emit('player_message', { fromId: socket.id, fromName: sender.name, text: clean });
-  });
-
   socket.on('bot_ready', (cb) => {
     const code = socket.data.roomCode;
     const room = rooms[code];

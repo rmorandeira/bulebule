@@ -37,144 +37,6 @@ const needsMotionPermission = () =>
   typeof DeviceMotionEvent !== 'undefined' &&
   typeof DeviceMotionEvent.requestPermission === 'function'
 
-// POC de mensajería: reacciones rápidas mostradas mientras se espera al otro jugador
-const QUICK_REACTIONS = ['👍', '😂', '🔥', '😮', '👏']
-const WAITING_PANEL_CLOSE_MS = 200
-const MAX_BUBBLES = 3
-const BUBBLE_FADE_MS = 250
-
-function SmileIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9"/>
-      <path d="M8 13.5s1.5 2 4 2 4-2 4-2"/>
-      <line x1="9" y1="9.5" x2="9.01" y2="9.5"/>
-      <line x1="15" y1="9.5" x2="15.01" y2="9.5"/>
-    </svg>
-  )
-}
-
-function ChatIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-4.8 7.6 8.5 8.5 0 0 1-9.2-1.3L3 21l1.9-4a8.5 8.5 0 0 1 1.3-9.2 8.38 8.38 0 0 1 7.6-4.8h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-    </svg>
-  )
-}
-
-function CloseIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="18" y1="6" x2="6" y2="18"/>
-      <line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  )
-}
-
-// Barra que se muestra mientras el jugador espera su turno: dos botones que
-// despliegan, respectivamente, reacciones rápidas y un campo de texto libre.
-// POC de UI/animación — el envío real de los mensajes se conectará más adelante.
-function WaitingBar({ handDesc, handPtsValue }) {
-  const [openPanel, setOpenPanel] = useState(null)   // null | 'quick' | 'custom' — objetivo
-  const [renderPanel, setRenderPanel] = useState(null) // panel montado (se retrasa en el cierre)
-  const [closing, setClosing] = useState(false)
-  const [customText, setCustomText] = useState('')
-  const closeTimerRef = useRef(null)
-  const inputRef = useRef(null)
-
-  useEffect(() => () => clearTimeout(closeTimerRef.current), [])
-
-  useEffect(() => {
-    if (openPanel === 'custom') inputRef.current?.focus()
-  }, [openPanel])
-
-  function openPanelFn(panel) {
-    clearTimeout(closeTimerRef.current)
-    setClosing(false)
-    setRenderPanel(panel)
-    setOpenPanel(panel)
-  }
-
-  function closePanel() {
-    setClosing(true)
-    setOpenPanel(null)
-    clearTimeout(closeTimerRef.current)
-    closeTimerRef.current = setTimeout(() => {
-      setRenderPanel(null)
-      setClosing(false)
-      setCustomText('')
-    }, WAITING_PANEL_CLOSE_MS)
-  }
-
-  function sendQuick(emoji) {
-    socket.emit('send_message', { text: emoji })
-    closePanel()
-  }
-
-  function sendCustom() {
-    const text = customText.trim()
-    if (!text) return
-    socket.emit('send_message', { text })
-    closePanel()
-  }
-
-  if (!renderPanel) {
-    return (
-      <div className="waiting-bar">
-        <div className="waiting-bar__row">
-          <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('quick')} aria-label="Mensajes rápidos">
-            <SmileIcon />
-          </button>
-          <p className="waiting-label">
-            {`Tu mano: ${handDesc}`}
-            {handPtsValue != null && <span className="dice-box__hand-pts">+{handPtsValue} B</span>}
-          </p>
-          <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('custom')} aria-label="Mensaje personalizado">
-            <ChatIcon />
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="waiting-bar">
-      <div className={`waiting-bar__row waiting-bar__panel ${closing ? 'waiting-bar__panel--closing' : `waiting-bar__panel--open-${renderPanel}`}`}>
-        {renderPanel === 'quick' ? (
-          <>
-            <button type="button" className="waiting-bar__icon-btn" onClick={closePanel} aria-label="Cerrar">
-              <CloseIcon />
-            </button>
-            <div className="waiting-bar__quick-list">
-              {QUICK_REACTIONS.map(emoji => (
-                <button key={emoji} type="button" className="waiting-bar__quick-btn" onClick={() => sendQuick(emoji)}>
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <input
-              ref={inputRef}
-              type="text"
-              className="waiting-bar__input"
-              maxLength={40}
-              placeholder="Escribe un mensaje..."
-              value={customText}
-              onChange={e => setCustomText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') sendCustom() }}
-            />
-            <button type="button" className="waiting-bar__icon-btn" onClick={closePanel} aria-label="Cerrar">
-              <CloseIcon />
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
 export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic }) {
   const [pendingDiscards, setPendingDiscards] = useState([])
   const [shakeEnabled, setShakeEnabled] = useState(false)
@@ -194,37 +56,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [resultsDisplayScores, setResultsDisplayScores] = useState({})  // { [playerId]: número mostrado (animado) }
   const [resultsScoreDeltas, setResultsScoreDeltas] = useState({})
   const scoreAnimFrameRef = useRef(null)
-  const [messageBubbles, setMessageBubbles] = useState([]) // [{ id, text, side, fading }], index 0 = más reciente
-  const msgSeqRef = useRef(0)
-
-  const dismissBubble = useCallback((id) => {
-    setMessageBubbles(prev => prev.map(b => b.id === id ? { ...b, fading: true } : b))
-    setTimeout(() => setMessageBubbles(prev => prev.filter(b => b.id !== id)), BUBBLE_FADE_MS)
-  }, [])
-
-  const pushBubble = useCallback((text) => {
-    const id = `${Date.now()}-${Math.random()}`
-    const side = msgSeqRef.current % 2 === 0 ? 'right' : 'left'
-    msgSeqRef.current += 1
-    setMessageBubbles(prev => {
-      const next = [{ id, text, side, fading: false }, ...prev]
-      if (next.length > MAX_BUBBLES) {
-        const overflowId = next[next.length - 1].id
-        next[next.length - 1] = { ...next[next.length - 1], fading: true }
-        setTimeout(() => setMessageBubbles(curr => curr.filter(b => b.id !== overflowId)), BUBBLE_FADE_MS)
-      }
-      return next
-    })
-  }, [])
-
-  // Recibe las reacciones/mensajes que envía el jugador que espera su turno
-  useEffect(() => {
-    function handlePlayerMessage({ text } = {}) {
-      if (typeof text === 'string' && text) pushBubble(text)
-    }
-    socket.on('player_message', handlePlayerMessage)
-    return () => socket.off('player_message', handlePlayerMessage)
-  }, [pushBubble])
 
   // animacion_next_player: el servidor pausa el turno (awaitingContinue) hasta
   // que alguien pulsa Continuar o expira su contador de 30s
@@ -952,25 +783,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       }
                     }}
                   />
-                  {messageBubbles.length > 0 && (
-                    <div className="msg-bubble-stack">
-                      {messageBubbles.map((b, i) => (
-                        <div
-                          key={b.id}
-                          className="msg-bubble-slot"
-                          style={{ transform: `translateY(${i * 42}px)` }}
-                        >
-                          <button
-                            type="button"
-                            className={`msg-bubble msg-bubble--${b.side}${b.fading ? ' msg-bubble--fading' : ''}`}
-                            onClick={() => dismissBubble(b.id)}
-                          >
-                            {b.text}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 <div className="dice-box__footer">
                   {minHand ? (
@@ -1040,10 +852,10 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
               </>
             )}
             {me?.done && (
-              <WaitingBar
-                handDesc={me?.hand?.desc}
-                handPtsValue={me?.hand?.rank != null ? handPts(me.hand.rank) : null}
-              />
+              <p className="waiting-label">
+                {`Tu mano: ${me?.hand?.desc}`}
+                {me?.hand?.rank != null && <span className="dice-box__hand-pts">+{handPts(me.hand.rank)} B</span>}
+              </p>
             )}
             {!isMyTurn && !me?.done && waitTimeLeft !== null && (
               <p className={`actions__wait-label${waitTimeLeft <= 10 ? ' actions__hint--urgent' : ''}`}>
