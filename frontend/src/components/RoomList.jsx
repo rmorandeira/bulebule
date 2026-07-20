@@ -260,39 +260,44 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
           </button>
         </div>
 
-        {/* Multijugador fields — always rendered, collapsed in solo mode */}
-        <div className={`bs__collapse${mode === 'multi' ? ' bs__collapse--open' : ''}`}>
-          <div className="bs__collapse-inner">
-            <p className="bs__label">NOMBRE DE LA SALA</p>
-            <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi"
-              value={roomName} maxLength={20}
-              onChange={e => { setRoomName(e.target.value); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && create()} />
-            <div className="bs__private-row">
-              <span className="bs__label" style={{ margin: 0 }}>SALA PRIVADA</span>
-              <button type="button" role="switch" aria-checked={isPrivate}
-                className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
-                onClick={() => setIsPrivate(v => !v)} />
-            </div>
-            <p className="bs__label">JUGADORES MÁXIMOS</p>
-            <div className="bs__pills">
-              {maxPlayersOptions.map(n => (
-                <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
-                  onClick={() => setMaxPlayers(n)}>{n}</button>
-              ))}
+        {/* Ambos paneles ocupan la misma celda de grid: la altura de la ficha
+            queda fija al contenido más alto (Multijugador) y no salta al
+            cambiar de modo — solo se alterna la visibilidad. */}
+        <div className="bs__mode-panels">
+          {/* Multijugador fields — siempre montado, oculto en modo solo */}
+          <div className={`bs__collapse${mode === 'multi' ? ' bs__collapse--open' : ''}`}>
+            <div className="bs__collapse-inner">
+              <p className="bs__label">NOMBRE DE LA SALA</p>
+              <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi"
+                value={roomName} maxLength={20}
+                onChange={e => { setRoomName(e.target.value); setError('') }}
+                onKeyDown={e => e.key === 'Enter' && create()} />
+              <div className="bs__private-row">
+                <span className="bs__label" style={{ margin: 0 }}>SALA PRIVADA</span>
+                <button type="button" role="switch" aria-checked={isPrivate}
+                  className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
+                  onClick={() => setIsPrivate(v => !v)} />
+              </div>
+              <p className="bs__label">JUGADORES MÁXIMOS</p>
+              <div className="bs__pills">
+                {maxPlayersOptions.map(n => (
+                  <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
+                    onClick={() => setMaxPlayers(n)}>{n}</button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Solo play fields — always rendered, collapsed in multi mode */}
-        <div className={`bs__collapse${mode === 'solo' ? ' bs__collapse--open' : ''}`}>
-          <div className="bs__collapse-inner">
-            <p className="bs__label">JUGADORES</p>
-            <div className="bs__pills">
-              {maxPlayersOptions.map(n => (
-                <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
-                  onClick={() => setSoloPlayers(n)}>{n}</button>
-              ))}
+          {/* Solo play fields — siempre montado, oculto en modo multi */}
+          <div className={`bs__collapse${mode === 'solo' ? ' bs__collapse--open' : ''}`}>
+            <div className="bs__collapse-inner">
+              <p className="bs__label">JUGADORES</p>
+              <div className="bs__pills">
+                {maxPlayersOptions.map(n => (
+                  <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
+                    onClick={() => setSoloPlayers(n)}>{n}</button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

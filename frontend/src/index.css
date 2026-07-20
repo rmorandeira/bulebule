@@ -2626,14 +2626,23 @@ body {
   margin-bottom: 0;
 }
 
-/* Collapsible section — animated with grid-template-rows trick */
-.bs__collapse {
+/* Mode panels: ambos ocupan la misma celda de grid, así la altura de la
+   ficha queda fija a la del contenido más alto (Multijugador) y no se
+   ajusta al cambiar de modo — solo cambia la visibilidad. */
+.bs__mode-panels {
   display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.25s ease;
+}
+.bs__collapse {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 .bs__collapse--open {
-  grid-template-rows: 1fr;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 .bs__collapse-inner {
   overflow: hidden;
@@ -2668,11 +2677,14 @@ body {
   margin: 0;
 }
 
-/* Mode selector (Multijugador / Solo Play) */
+/* Mode selector (Multijugador / Solo Play) — segmented control */
 .bs__mode-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+  background: var(--border);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 2px;
   margin-bottom: 22px;
 }
 
@@ -2680,21 +2692,22 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 12px;
-  border-radius: 16px;
-  border: 1.5px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
+  padding: 12px;
+  border-radius: 11px;
+  border: none;
+  background: none;
+  color: var(--text-subtle);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 .bs__mode-btn--active {
-  background: var(--primary);
-  color: var(--primary-text);
-  border-color: transparent;
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 .bs__mode-btn:active { opacity: 0.8; }
 
