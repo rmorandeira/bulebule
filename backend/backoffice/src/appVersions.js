@@ -3,6 +3,7 @@
 // una nueva versión, junto al bump de versionCode en build.gradle y en
 // frontend/src/version.js.
 export const APP_VERSIONS = [
+  { versionCode: 54, versionName: '1.3.29' },
   { versionCode: 53, versionName: '1.3.28' },
   { versionCode: 45, versionName: '1.3.20' },
   { versionCode: 44, versionName: '1.3.19' },
