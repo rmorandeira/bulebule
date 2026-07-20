@@ -41,4 +41,8 @@ export const api = {
     update: (id, data)     => apiFetch(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id)           => apiFetch(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   },
+  settings: {
+    get:    ()             => apiFetch('/api/admin/settings'),
+    update: (data)         => apiFetch('/api/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  },
 };

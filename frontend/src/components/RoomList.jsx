@@ -168,12 +168,13 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
 
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
-function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
+function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit }) {
   const { sheetRef, handleProps } = useSheetDrag(onClose)
+  const maxPlayersOptions = MAX_PLAYERS_OPTIONS.filter(n => n <= maxPlayersLimit)
   const [mode, setMode]             = useState('multi') // 'multi' | 'solo'
   const [guestName, setGuestName]   = useState(playerName || '')
   const [roomName, setRoomName]     = useState('')
-  const [maxPlayers, setMaxPlayers] = useState(6)
+  const [maxPlayers, setMaxPlayers] = useState(Math.min(6, maxPlayersLimit))
   const [soloPlayers, setSoloPlayers] = useState(2)
   const [isPrivate, setIsPrivate]   = useState(false)
   const [error, setError]           = useState('')
@@ -276,7 +277,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose }) {
             </div>
             <p className="bs__label">JUGADORES MÁXIMOS</p>
             <div className="bs__pills">
-              {MAX_PLAYERS_OPTIONS.map(n => (
+              {maxPlayersOptions.map(n => (
                 <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
                   onClick={() => setMaxPlayers(n)}>{n}</button>
               ))}
@@ -336,6 +337,7 @@ export default function RoomList({
   const [roomFilterClosing, setRoomFilterClosing] = useState(false)
   const [activeTournament, setActiveTournament] = useState(null)
   const [viewingUser, setViewingUser]           = useState(null) // { userId, name, picture }
+  const [maxPlayersLimit, setMaxPlayersLimit]   = useState(Math.max(...MAX_PLAYERS_OPTIONS))
 
   const pagerRef         = useRef(null)
   const scrollTimerRef   = useRef(null)
@@ -373,11 +375,19 @@ export default function RoomList({
     })
   }
 
+  function fetchSettings() {
+    socket.emit('get_settings', (res) => {
+      if (!res?.ok) return
+      setMaxPlayersLimit(res.settings?.maxPlayersLimit ?? Math.max(...MAX_PLAYERS_OPTIONS))
+    })
+  }
+
   useEffect(() => {
     function onConnect() {
       setConnected(true)
       socket.emit('list_rooms', (res) => setRooms(res?.rooms || []))
       fetchStats()
+      fetchSettings()
     }
     function onDisconnect() { setConnected(false) }
     function onRoomsList(list) { setRooms(list) }
@@ -387,6 +397,7 @@ export default function RoomList({
     if (socket.connected) {
       socket.emit('list_rooms', (res) => setRooms(res?.rooms || []))
       fetchStats()
+      fetchSettings()
     }
     return () => {
       socket.off('connect', onConnect)
@@ -675,6 +686,12 @@ export default function RoomList({
                     shape="pill" size="medium" text="signin_with" locale="es"
                   />
                 )}
+                <p className="rl__login-privacy">
+                  Al iniciar sesión aceptas nuestra{' '}
+                  <a href="/privacidad.html" target="_blank" rel="noopener noreferrer">
+                    Política de Privacidad
+                  </a>
+                </p>
               </div>
             )}
             <div className="rl__toolbar">
@@ -878,7 +895,7 @@ export default function RoomList({
       {/* Create / Solo play sheet */}
       {createSheet && (
         <CreateSheet user={user} playerName={playerName} onNameChange={onNameChange}
-          closing={createClosing} onClose={closeCreate} />
+          closing={createClosing} onClose={closeCreate} maxPlayersLimit={maxPlayersLimit} />
       )}
 
       {/* User detail sheet */}

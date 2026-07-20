@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 function getVersion() {
   try {
-    return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
+    return execSync("git describe --tags --abbrev=0 --match 'v*'", { encoding: 'utf-8' }).trim()
   } catch {}
   try {
     const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))

@@ -68,19 +68,10 @@ function AdTop() {
 
 export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinue, onDone }) {
   const [exitPhase, setExitPhase] = useState(null) // null | 'out' | 'fade'
-  const [secondsLeft, setSecondsLeft] = useState(null)
 
   useEffect(() => {
     if (closing && !exitPhase) setExitPhase('out')
   }, [closing, exitPhase])
-
-  useEffect(() => {
-    if (!room.continueDeadline) { setSecondsLeft(null); return }
-    const update = () => setSecondsLeft(Math.max(0, Math.ceil((room.continueDeadline - Date.now()) / 1000)))
-    update()
-    const id = setInterval(update, 500)
-    return () => clearInterval(id)
-  }, [room.continueDeadline])
 
   const currentPlayer = room.players[room.currentPlayerIndex]
 
@@ -133,11 +124,14 @@ export default function AnimacionNextPlayer({ room, isMyTurn, closing, onContinu
           <div className="next-player-footer next-player-footer--waiting">
             <WaitingBar
               label={(
-                <span className={secondsLeft !== null && secondsLeft <= 10 ? 'next-player-counter--urgent' : ''}>
-                  {secondsLeft !== null
-                    ? `Esperando al otro jugador (${secondsLeft}s)`
-                    : 'Esperando al otro jugador'}
-                </span>
+                <CountdownButton
+                  className="btn--full"
+                  deadline={room.continueDeadline}
+                  totalMs={30_000}
+                  disabled
+                >
+                  Esperando al jugador
+                </CountdownButton>
               )}
             />
           </div>

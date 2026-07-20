@@ -90,7 +90,7 @@ export default function WaitingBar({ label }) {
           <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('quick')} aria-label="Mensajes rápidos">
             <SmileIcon />
           </button>
-          <p className="waiting-label">{label}</p>
+          <div className="waiting-label">{label}</div>
           <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('custom')} aria-label="Mensaje personalizado">
             <ChatIcon />
           </button>

@@ -544,6 +544,7 @@ function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
   })
 
   const rng = mulberry32(seed)
+  ctx.rng = rng
 
   rollingIndices.forEach((i, slot) => {
     // Remove old body
@@ -632,9 +633,10 @@ function step(ctx, now, propsRef) {
       const stacked = rolling.filter(d => d.body.translation().y > REST_Y + DIE * 0.65)
       if (stacked.length > 0) {
         // Nudge stacked dice sideways so they slide off and reach the floor
+        const rng = ctx.rng ?? Math.random
         stacked.forEach(d => {
           d.body.applyImpulse(
-            { x: (Math.random() - 0.5) * 0.4, y: 0, z: (Math.random() - 0.5) * 0.4 },
+            { x: (rng() - 0.5) * 0.4, y: 0, z: (rng() - 0.5) * 0.4 },
             true
           )
         })

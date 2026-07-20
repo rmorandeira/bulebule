@@ -68,6 +68,11 @@ export default function UserSettings({ user, onBack, onUpdate, onLogout, onDelet
           onClick={() => { const next = !notifications; setNotifications(next); onUpdate({ notifications: next }) }} />
       </div>
 
+      {/* Legal */}
+      <a className="us__privacy-link" href="/privacidad.html" target="_blank" rel="noopener noreferrer">
+        Política de Privacidad
+      </a>
+
       {/* Account actions */}
       <button className="bs__submit bs__submit--secondary" onClick={handleLogout}>
         Cerrar sesión

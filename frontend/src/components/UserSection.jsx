@@ -546,7 +546,7 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
 
       <div className="usec__settings-section">
         <div className="bs__private-row">
-          <span className="usec__settings-label" style={{ margin: 0 }}>NOTIFICACIONES</span>
+          <span className="usec__settings-label" style={{ margin: 0 }}>NOTIFICACIONES ACTIVAS</span>
           <button
             type="button"
             role="switch"
@@ -558,6 +558,10 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
       </div>
 
       <div className="usec__settings-section">
+        <a className="us__privacy-link" href="/privacidad.html" target="_blank" rel="noopener noreferrer">
+          Política de Privacidad
+        </a>
+
         <button className="bs__submit bs__submit--secondary" onClick={handleLogout}>
           Cerrar sesión
         </button>

@@ -1158,6 +1158,31 @@ const ADMIN_TOKEN = (() => {
   return token;
 })();
 
+// ── Ajustes del juego (parámetros + feature flags, persistidos en `config`) ──
+const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {} };
+function loadSettings() {
+  const row = db.prepare('SELECT value FROM config WHERE key=?').get('game_settings');
+  if (!row) return { ...DEFAULT_SETTINGS, featureFlags: {} };
+  try {
+    const parsed = JSON.parse(row.value);
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      featureFlags: { ...(parsed.featureFlags ?? {}) },
+    };
+  } catch {
+    return { ...DEFAULT_SETTINGS, featureFlags: {} };
+  }
+}
+let gameSettings = loadSettings();
+function saveSettings(next) {
+  gameSettings = next;
+  db.prepare(`
+    INSERT INTO config (key, value) VALUES ('game_settings', ?)
+    ON CONFLICT(key) DO UPDATE SET value=excluded.value
+  `).run(JSON.stringify(gameSettings));
+}
+
 // ── Backoffice admin API ──────────────────────────────────────────────────────
 function requireAdmin(req, res, next) {
   const expected = process.env.BACKOFFICE_SECRET || ADMIN_TOKEN;
@@ -1240,6 +1265,26 @@ app.put('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
   if (r.changes === 0) return res.status(404).json({ error: 'Torneo no encontrado' });
   reloadTournamentDefs();
   res.json({ ok: true });
+});
+
+// Ajustes del juego
+app.get('/api/admin/settings', requireAdmin, (req, res) => {
+  res.json({ settings: gameSettings });
+});
+
+app.put('/api/admin/settings', requireAdmin, (req, res) => {
+  const { maxPlayersLimit, featureFlags } = req.body;
+  const limit = parseInt(maxPlayersLimit);
+  if (!Number.isFinite(limit) || limit < 2 || limit > 10)
+    return res.status(400).json({ error: 'maxPlayersLimit debe estar entre 2 y 10' });
+  const flags = {};
+  if (featureFlags && typeof featureFlags === 'object') {
+    for (const [k, v] of Object.entries(featureFlags)) {
+      if (typeof k === 'string' && k.trim()) flags[k.trim()] = !!v;
+    }
+  }
+  saveSettings({ maxPlayersLimit: limit, featureFlags: flags });
+  res.json({ ok: true, settings: gameSettings });
 });
 
 app.delete('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
@@ -1330,6 +1375,10 @@ io.on('connection', (socket) => {
       rollStats  = stmts.getRollStats.all(uid);
     }
     cb?.({ ok: true, stats, rankings, myRank, total: rankings.length, handStats, rollStats });
+  });
+
+  socket.on('get_settings', (cb) => {
+    cb?.({ ok: true, settings: gameSettings });
   });
 
   socket.on('get_marketplace', (cb) => {
@@ -1511,7 +1560,7 @@ io.on('connection', (socket) => {
     const room = {
       code,
       name: roomName?.trim() ?? '',
-      maxPlayers: vsBot ? Math.min(Math.max(2, parseInt(maxPlayers) || 2), 5) : Math.min(Math.max(2, parseInt(maxPlayers) || 6), 10),
+      maxPlayers: vsBot ? Math.min(Math.max(2, parseInt(maxPlayers) || 2), 5) : Math.min(Math.max(2, parseInt(maxPlayers) || 6), gameSettings.maxPlayersLimit),
       vsBot,
       isPrivate: !!isPrivate,
       maxRounds: Math.max(0, parseInt(maxRounds) || 0),
@@ -1734,6 +1783,8 @@ io.on('connection', (socket) => {
     if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing' || !room.awaitingContinue) return cb?.({ ok: false });
+    const nextPlayer = room.players[room.currentPlayerIndex];
+    if (nextPlayer?.id !== socket.id) return cb?.({ ok: false });
     proceedTurn(room);
     cb?.({ ok: true });
     broadcast(room.code);
