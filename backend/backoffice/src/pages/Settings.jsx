@@ -2,12 +2,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../api.js';
 import Switch from '../components/Switch.jsx';
 import { useToast } from '../components/Toast.jsx';
+import { APP_VERSIONS } from '../appVersions.js';
 
 export default function Settings() {
   const toast = useToast();
   const [loading, setLoading]           = useState(true);
   const [saving, setSaving]             = useState(false);
   const [maxPlayersLimit, setMaxPlayersLimit] = useState(8);
+  const [minVersionCode, setMinVersionCode] = useState(0);
   const [flags, setFlags]               = useState({});
   const [newFlagKey, setNewFlagKey]     = useState('');
 
@@ -16,6 +18,7 @@ export default function Settings() {
     try {
       const { settings } = await api.settings.get();
       setMaxPlayersLimit(settings.maxPlayersLimit ?? 8);
+      setMinVersionCode(settings.minVersionCode ?? 0);
       setFlags(settings.featureFlags ?? {});
     } catch (e) {
       toast(e.message, 'error');
@@ -49,7 +52,7 @@ export default function Settings() {
   async function handleSave() {
     setSaving(true);
     try {
-      await api.settings.update({ maxPlayersLimit: Number(maxPlayersLimit), featureFlags: flags });
+      await api.settings.update({ maxPlayersLimit: Number(maxPlayersLimit), featureFlags: flags, minVersionCode: Number(minVersionCode) });
       toast('Ajustes guardados', 'success');
     } catch (e) {
       toast(e.message, 'error');
@@ -80,6 +83,31 @@ export default function Settings() {
               value={maxPlayersLimit}
               onChange={e => setMaxPlayersLimit(e.target.value)}
             />
+          </div>
+        </div>
+
+        <div className="panel-section">
+          <h3>Actualización forzosa</h3>
+          <div className="form-group">
+            <label>Versión mínima de la aplicación</label>
+            <select
+              value={minVersionCode}
+              onChange={e => setMinVersionCode(Number(e.target.value))}
+            >
+              <option value={0}>Sin restricción</option>
+              {APP_VERSIONS.map(v => (
+                <option key={v.versionCode} value={v.versionCode}>
+                  {v.versionName} (versionCode {v.versionCode})
+                </option>
+              ))}
+              {minVersionCode > 0 && !APP_VERSIONS.some(v => v.versionCode === minVersionCode) && (
+                <option value={minVersionCode}>versionCode {minVersionCode} (no listada)</option>
+              )}
+            </select>
+            <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 6 }}>
+              Los usuarios con una versión de la app anterior a la seleccionada verán una pantalla
+              bloqueante pidiéndoles actualizar desde Play Store. "Sin restricción" la desactiva.
+            </p>
           </div>
         </div>
 

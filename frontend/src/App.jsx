@@ -4,6 +4,7 @@ import socket from './socket'
 import { initAdMob } from './utils/admob'
 import { dismissRoomNotification } from './utils/push'
 import { track } from './analytics'
+import { APP_VERSION_CODE } from './version'
 import RoomList from './components/RoomList'
 import CreateRoom from './components/CreateRoom'
 import WaitingRoom from './components/WaitingRoom'
@@ -143,6 +144,7 @@ export default function App() {
   }
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
   const [abandonedBy, setAbandonedBy] = useState(null)
+  const [updateRequired, setUpdateRequired] = useState(false)
   const [pendingInvite, setPendingInvite] = useState(null)
   const swRegistered       = useRef(false)
   const sessionTrackedRef  = useRef(false)
@@ -245,8 +247,15 @@ export default function App() {
   useEffect(() => { playerNameRef.current = playerName }, [playerName])
 
   useEffect(() => {
+    function checkForceUpdate() {
+      if (!Capacitor.isNativePlatform()) return
+      socket.emit('get_settings', (res) => {
+        if (res?.ok && (res.settings?.minVersionCode ?? 0) > APP_VERSION_CODE) setUpdateRequired(true)
+      })
+    }
     socket.on('connect', () => {
       setMyId(socket.id)
+      checkForceUpdate()
       // Rejoin lobby after mobile app-switch reconnect
       const r = roomRef.current
       if (r?.phase === 'lobby') {
@@ -262,7 +271,7 @@ export default function App() {
     socket.on('room_invite', ({ roomCode, roomName, inviterName }) => {
       setPendingInvite({ roomCode, roomName, inviterName })
     })
-    if (socket.connected) setMyId(socket.id)
+    if (socket.connected) { setMyId(socket.id); checkForceUpdate() }
     return () => {
       socket.off('connect')
       socket.off('room_state')
@@ -440,6 +449,27 @@ export default function App() {
         onLogout={() => { handleLogout(); setScreen('list') }}
         onDeleteAccount={() => { handleDeleteAccount(); setScreen('list') }}
       />
+    )
+  }
+
+  if (updateRequired) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal" role="alertdialog" aria-modal="true">
+          <h2 className="modal__title">Nueva versión disponible</h2>
+          <p className="modal__text">Hay una actualización importante de Bule Bule. Actualiza la app para seguir jugando.</p>
+          <div className="modal__actions">
+            <a
+              className="btn btn--primary"
+              href="https://play.google.com/store/apps/details?id=com.bulebule.app"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Actualizar ahora
+            </a>
+          </div>
+        </div>
+      </div>
     )
   }
 

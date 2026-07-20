@@ -1159,7 +1159,7 @@ const ADMIN_TOKEN = (() => {
 })();
 
 // ── Ajustes del juego (parámetros + feature flags, persistidos en `config`) ──
-const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {} };
+const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {}, minVersionCode: 0 };
 function loadSettings() {
   const row = db.prepare('SELECT value FROM config WHERE key=?').get('game_settings');
   if (!row) return { ...DEFAULT_SETTINGS, featureFlags: {} };
@@ -1273,17 +1273,27 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
 });
 
 app.put('/api/admin/settings', requireAdmin, (req, res) => {
-  const { maxPlayersLimit, featureFlags } = req.body;
+  const { maxPlayersLimit, featureFlags, minVersionCode } = req.body;
   const limit = parseInt(maxPlayersLimit);
   if (!Number.isFinite(limit) || limit < 2 || limit > 10)
     return res.status(400).json({ error: 'maxPlayersLimit debe estar entre 2 y 10' });
+  // minVersionCode es opcional: un backoffice desplegado antes de que existiera este campo
+  // no lo envía, y no debe bloquear el resto de los ajustes.
+  let minVer = gameSettings.minVersionCode ?? 0;
+  if (minVersionCode !== undefined) {
+    const parsed = parseInt(minVersionCode);
+    if (!Number.isFinite(parsed) || parsed < 0)
+      return res.status(400).json({ error: 'minVersionCode debe ser un número igual o mayor que 0' });
+    minVer = parsed;
+  }
   const flags = {};
   if (featureFlags && typeof featureFlags === 'object') {
     for (const [k, v] of Object.entries(featureFlags)) {
       if (typeof k === 'string' && k.trim()) flags[k.trim()] = !!v;
     }
   }
-  saveSettings({ maxPlayersLimit: limit, featureFlags: flags });
+  saveSettings({ maxPlayersLimit: limit, featureFlags: flags, minVersionCode: minVer });
+
   res.json({ ok: true, settings: gameSettings });
 });
 
