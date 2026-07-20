@@ -2660,31 +2660,6 @@ body {
   gap: 8px;
 }
 
-/* Mode selector (Multijugador / Solo Play) */
-.bs__mode-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 22px;
-}
-.bs__mode-btn {
-  flex: 1;
-  padding: 10px 0;
-  border-radius: 100px;
-  border: 1.5px solid #e0e0e0;
-  background: transparent;
-  color: #aaa;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.bs__mode-btn--active {
-  border-color: #111;
-  background: #111;
-  color: #fff;
-}
-
 .bs__label {
   font-size: 11px;
   font-weight: 700;
@@ -2693,17 +2668,18 @@ body {
   margin: 0;
 }
 
+/* Mode selector (Multijugador / Solo Play) */
 .bs__mode-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  margin-bottom: 22px;
 }
 
 .bs__mode-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   padding: 14px 12px;
   border-radius: 16px;
   border: 1.5px solid var(--border);
@@ -2716,8 +2692,8 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .bs__mode-btn--active {
-  background: #111;
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-text);
   border-color: transparent;
 }
 .bs__mode-btn:active { opacity: 0.8; }
