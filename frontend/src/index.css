@@ -2413,6 +2413,14 @@ body {
   flex-shrink: 0;
 }
 
+.rl__online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
 /* Empty state */
 .rl__empty {
   font-size: 14px;

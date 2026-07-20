@@ -107,7 +107,7 @@ const RANK_SORT_OPTIONS = [
   { id: 'name',  label: 'Nombre' },
 ]
 const TIER_OPTIONS = ['Todos', 'Diamante', 'Oro', 'Plata', 'Bronce']
-const DEFAULT_RANK_FILTER = { sort: 'score', favoritesOnly: false, tier: 'Todos' }
+const DEFAULT_RANK_FILTER = { sort: 'score', favoritesOnly: false, tier: 'Todos', onlineOnly: false }
 
 function FilterSheet({ filter, onApply, closing, onClose }) {
   const [local, setLocal] = useState(filter)
@@ -146,6 +146,13 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
           <button type="button" role="switch" aria-checked={local.favoritesOnly}
             className={`bs__toggle${local.favoritesOnly ? ' bs__toggle--on' : ''}`}
             onClick={() => setLocal(v => ({ ...v, favoritesOnly: !v.favoritesOnly }))} />
+        </div>
+
+        <div className="bs__private-row">
+          <span className="bs__label" style={{ margin: 0 }}>SOLO JUGADORES ONLINE</span>
+          <button type="button" role="switch" aria-checked={local.onlineOnly}
+            className={`bs__toggle${local.onlineOnly ? ' bs__toggle--on' : ''}`}
+            onClick={() => setLocal(v => ({ ...v, onlineOnly: !v.onlineOnly }))} />
         </div>
 
         <button className="bs__submit" onClick={() => { onApply(local); onClose() }}>
@@ -526,10 +533,11 @@ export default function RoomList({
     .filter(r => !rankSearch.trim() || r.name.toLowerCase().includes(rankSearch.trim().toLowerCase()))
     .filter(r => !favs || !!favs[r.userId])
     .filter(r => rankFilter.tier === 'Todos' || r.tier === rankFilter.tier)
+    .filter(r => !rankFilter.onlineOnly || r.online)
   if (rankFilter.sort === 'name') {
     filteredRankings = [...filteredRankings].sort((a, b) => a.name.localeCompare(b.name))
   }
-  const isFilterActive = rankFilter.sort !== 'score' || rankFilter.favoritesOnly || rankFilter.tier !== 'Todos'
+  const isFilterActive = rankFilter.sort !== 'score' || rankFilter.favoritesOnly || rankFilter.tier !== 'Todos' || rankFilter.onlineOnly
 
   const roomFavs = roomFilter.favoritesOnly ? getFavorites() : null
   let filteredRooms = rooms
@@ -638,6 +646,7 @@ export default function RoomList({
                 <span className="rl__rank-pos">{r.rank}</span>
                 <span className="rl__rank-name">
                   {getFavorites()[r.userId] && <span className="rl__fav-star">★</span>}
+                  {r.online && <span className="rl__online-dot" title="En línea" />}
                   {r.name}<TierDot tier={r.tier} />
                   {r.isPlaying && <span className="rl__playing-pill">jugando</span>}
                   {r.userId === user?.email && <span className="rl__you-pill">tú</span>}

@@ -516,20 +516,21 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
 
 function buildRankings() {
   return stmts.rankings.all().map((row, i) => {
-    const online = registeredUsers[row.user_id];
+    const registered = registeredUsers[row.user_id];
     const isPlaying = Object.values(rooms).some(r =>
       !r.vsBot && r.phase !== 'lobby' && r.players.some(p => p.id === row.user_id)
     );
     return {
       userId:      row.user_id,
-      name:        online?.name    ?? row.name,
-      picture:     online?.picture ?? row.picture ?? null,
+      name:        registered?.name    ?? row.name,
+      picture:     registered?.picture ?? row.picture ?? null,
       score:       row.score,
       gamesPlayed: row.games_played,
       gamesWon:    row.games_won,
       tier:        getTier(row.score).name,
       rank:        i + 1,
       isPlaying,
+      online:      !!registered?.socketId,
     };
   });
 }
