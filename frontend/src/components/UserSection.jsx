@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import socket from '../socket'
 import { setTheme, getTheme } from '../theme'
 import { imgSrc } from '../utils/imgSrc'
+import { APP_VERSION_NAME } from '../version'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
@@ -561,6 +562,7 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
         <a className="us__privacy-link" href="/privacidad.html" target="_blank" rel="noopener noreferrer">
           Política de Privacidad
         </a>
+        <p className="us__version-text">Versión {APP_VERSION_NAME}</p>
 
         <button className="bs__submit bs__submit--secondary" onClick={handleLogout}>
           Cerrar sesión

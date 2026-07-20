@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { googleLogout } from '@react-oauth/google'
+import { APP_VERSION_NAME } from '../version'
 
 export default function UserSettings({ user, onBack, onUpdate, onLogout, onDeleteAccount }) {
   const [name, setName]               = useState(user?.name || '')
@@ -72,6 +73,7 @@ export default function UserSettings({ user, onBack, onUpdate, onLogout, onDelet
       <a className="us__privacy-link" href="/privacidad.html" target="_blank" rel="noopener noreferrer">
         Política de Privacidad
       </a>
+      <p className="us__version-text">Versión {APP_VERSION_NAME}</p>
 
       {/* Account actions */}
       <button className="bs__submit bs__submit--secondary" onClick={handleLogout}>
