@@ -184,6 +184,25 @@ db.exec(`
 `);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS app_versions (
+    version_code INTEGER PRIMARY KEY,
+    version_name TEXT NOT NULL,
+    created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+`);
+;(function seedAppVersions() {
+  if (db.prepare('SELECT COUNT(*) as c FROM app_versions').get().c > 0) return;
+  const seed = [
+    [55, '1.3.30'], [54, '1.3.29'], [53, '1.3.28'], [45, '1.3.20'], [44, '1.3.19'],
+    [43, '1.3.18'], [42, '1.3.17'], [41, '1.3.16'], [40, '1.3.15'], [39, '1.3.14'],
+    [38, '1.3.13'], [37, '1.3.12'], [36, '1.3.11'], [35, '1.3.10'], [34, '1.3.9'],
+    [33, '1.3.8'], [32, '1.3.7'],
+  ];
+  const insert = db.prepare('INSERT OR IGNORE INTO app_versions (version_code, version_name) VALUES (?, ?)');
+  for (const [code, name] of seed) insert.run(code, name);
+})();
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS pending_challenges (
     from_user_id TEXT NOT NULL,
     to_user_id   TEXT NOT NULL,
@@ -1295,6 +1314,31 @@ app.put('/api/admin/settings', requireAdmin, (req, res) => {
   saveSettings({ maxPlayersLimit: limit, featureFlags: flags, minVersionCode: minVer });
 
   res.json({ ok: true, settings: gameSettings });
+});
+
+// Versiones de la app publicadas (para el selector de "actualización forzosa")
+app.get('/api/admin/app-versions', requireAdmin, (req, res) => {
+  const versions = db.prepare('SELECT version_code as versionCode, version_name as versionName FROM app_versions ORDER BY version_code DESC').all();
+  res.json({ versions });
+});
+
+app.post('/api/admin/app-versions', requireAdmin, (req, res) => {
+  const { versionCode, versionName } = req.body;
+  const code = parseInt(versionCode);
+  if (!Number.isFinite(code) || code <= 0) return res.status(400).json({ error: 'versionCode debe ser un entero positivo' });
+  if (!versionName?.trim()) return res.status(400).json({ error: 'versionName es obligatorio' });
+  try {
+    db.prepare('INSERT INTO app_versions (version_code, version_name) VALUES (?, ?)').run(code, versionName.trim());
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return res.status(409).json({ error: 'Ya existe una versión con ese versionCode' });
+    throw e;
+  }
+});
+
+app.delete('/api/admin/app-versions/:versionCode', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM app_versions WHERE version_code=?').run(req.params.versionCode);
+  res.json({ ok: true });
 });
 
 app.delete('/api/admin/tournaments/:id', requireAdmin, (req, res) => {

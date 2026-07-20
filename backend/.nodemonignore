@@ -1,0 +1,6 @@
+backoffice-dist/
+backoffice/
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

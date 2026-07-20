@@ -45,4 +45,9 @@ export const api = {
     get:    ()             => apiFetch('/api/admin/settings'),
     update: (data)         => apiFetch('/api/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
   },
+  appVersions: {
+    list:   ()             => apiFetch('/api/admin/app-versions'),
+    create: (data)         => apiFetch('/api/admin/app-versions', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (versionCode)  => apiFetch(`/api/admin/app-versions/${versionCode}`, { method: 'DELETE' }),
+  },
 };

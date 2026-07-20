@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../api.js';
 import Switch from '../components/Switch.jsx';
 import { useToast } from '../components/Toast.jsx';
-import { APP_VERSIONS } from '../appVersions.js';
 
 export default function Settings() {
   const toast = useToast();
@@ -12,14 +11,22 @@ export default function Settings() {
   const [minVersionCode, setMinVersionCode] = useState(0);
   const [flags, setFlags]               = useState({});
   const [newFlagKey, setNewFlagKey]     = useState('');
+  const [versions, setVersions]         = useState([]);
+  const [newVersionCode, setNewVersionCode] = useState('');
+  const [newVersionName, setNewVersionName] = useState('');
+  const [addingVersion, setAddingVersion]   = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { settings } = await api.settings.get();
+      const [{ settings }, { versions: appVersions }] = await Promise.all([
+        api.settings.get(),
+        api.appVersions.list(),
+      ]);
       setMaxPlayersLimit(settings.maxPlayersLimit ?? 8);
       setMinVersionCode(settings.minVersionCode ?? 0);
       setFlags(settings.featureFlags ?? {});
+      setVersions(appVersions ?? []);
     } catch (e) {
       toast(e.message, 'error');
     } finally {
@@ -28,6 +35,35 @@ export default function Settings() {
   }, [toast]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function addVersion() {
+    const code = parseInt(newVersionCode);
+    const name = newVersionName.trim();
+    if (!Number.isFinite(code) || code <= 0) return toast('versionCode debe ser un entero positivo', 'error');
+    if (!name) return toast('Falta el versionName', 'error');
+    if (versions.some(v => v.versionCode === code)) return toast('Ya existe esa versión', 'error');
+    setAddingVersion(true);
+    try {
+      await api.appVersions.create({ versionCode: code, versionName: name });
+      setVersions(v => [...v, { versionCode: code, versionName: name }].sort((a, b) => b.versionCode - a.versionCode));
+      setNewVersionCode('');
+      setNewVersionName('');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setAddingVersion(false);
+    }
+  }
+
+  async function removeVersion(versionCode) {
+    try {
+      await api.appVersions.delete(versionCode);
+      setVersions(v => v.filter(x => x.versionCode !== versionCode));
+      if (minVersionCode === versionCode) setMinVersionCode(0);
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
 
   function toggleFlag(key) {
     setFlags(f => ({ ...f, [key]: !f[key] }));
@@ -95,12 +131,12 @@ export default function Settings() {
               onChange={e => setMinVersionCode(Number(e.target.value))}
             >
               <option value={0}>Sin restricción</option>
-              {APP_VERSIONS.map(v => (
+              {versions.map(v => (
                 <option key={v.versionCode} value={v.versionCode}>
                   {v.versionName} (versionCode {v.versionCode})
                 </option>
               ))}
-              {minVersionCode > 0 && !APP_VERSIONS.some(v => v.versionCode === minVersionCode) && (
+              {minVersionCode > 0 && !versions.some(v => v.versionCode === minVersionCode) && (
                 <option value={minVersionCode}>versionCode {minVersionCode} (no listada)</option>
               )}
             </select>
@@ -108,6 +144,37 @@ export default function Settings() {
               Los usuarios con una versión de la app anterior a la seleccionada verán una pantalla
               bloqueante pidiéndoles actualizar desde Play Store. "Sin restricción" la desactiva.
             </p>
+          </div>
+
+          <div className="form-group">
+            <label>Versiones publicadas</label>
+            {versions.length === 0 ? (
+              <div className="empty-state">
+                <p>No hay versiones registradas todavía</p>
+              </div>
+            ) : (
+              versions.map(v => (
+                <div key={v.versionCode} className="toggle-row" style={{ justifyContent: 'space-between' }}>
+                  <label style={{ flex: 1 }}>{v.versionName} <span style={{ opacity: 0.6 }}>(versionCode {v.versionCode})</span></label>
+                  <button className="btn btn-ghost btn-icon" onClick={() => removeVersion(v.versionCode)} aria-label={`Eliminar ${v.versionName}`}>✕</button>
+                </div>
+              ))
+            )}
+            <div className="form-row" style={{ marginTop: 14, gridTemplateColumns: '1fr 1fr auto' }}>
+              <input
+                type="number"
+                placeholder="versionCode"
+                value={newVersionCode}
+                onChange={e => setNewVersionCode(e.target.value)}
+              />
+              <input
+                placeholder="versionName (ej: 1.3.31)"
+                value={newVersionName}
+                onChange={e => setNewVersionName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addVersion(); }}
+              />
+              <button className="btn btn-secondary" onClick={addVersion} disabled={addingVersion}>+ Registrar</button>
+            </div>
           </div>
         </div>
 
