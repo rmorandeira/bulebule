@@ -1614,7 +1614,7 @@ io.on('connection', (socket) => {
     const room = {
       code,
       name: roomName?.trim() ?? '',
-      maxPlayers: vsBot ? Math.min(Math.max(2, parseInt(maxPlayers) || 2), 5) : Math.min(Math.max(2, parseInt(maxPlayers) || 6), gameSettings.maxPlayersLimit),
+      maxPlayers: Math.min(Math.max(2, parseInt(maxPlayers) || (vsBot ? 2 : 6)), gameSettings.maxPlayersLimit),
       vsBot,
       isPrivate: !!isPrivate,
       maxRounds: Math.max(0, parseInt(maxRounds) || 0),

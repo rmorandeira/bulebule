@@ -29,7 +29,6 @@ function decodeJwt(token) {
 }
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
-const SOLO_PLAYERS_OPTIONS = [2, 3, 4, 5]
 const CLOSE_DURATION = 260
 
 const PAGES = [
@@ -290,7 +289,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
           <div className="bs__collapse-inner">
             <p className="bs__label">JUGADORES</p>
             <div className="bs__pills">
-              {SOLO_PLAYERS_OPTIONS.map(n => (
+              {maxPlayersOptions.map(n => (
                 <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
                   onClick={() => setSoloPlayers(n)}>{n}</button>
               ))}
