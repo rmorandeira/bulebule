@@ -160,19 +160,25 @@ export default function Settings() {
                 </div>
               ))
             )}
-            <div className="form-row" style={{ marginTop: 14, gridTemplateColumns: '1fr 1fr auto' }}>
-              <input
-                type="number"
-                placeholder="versionCode"
-                value={newVersionCode}
-                onChange={e => setNewVersionCode(e.target.value)}
-              />
-              <input
-                placeholder="versionName (ej: 1.3.31)"
-                value={newVersionName}
-                onChange={e => setNewVersionName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') addVersion(); }}
-              />
+            <div className="form-row" style={{ marginTop: 14, gridTemplateColumns: '1fr 1fr auto', alignItems: 'end' }}>
+              <div>
+                <label style={{ fontSize: 11, opacity: 0.7 }}>versionCode (entero, de build.gradle)</label>
+                <input
+                  type="number"
+                  placeholder="ej: 56"
+                  value={newVersionCode}
+                  onChange={e => setNewVersionCode(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, opacity: 0.7 }}>versionName (texto, de build.gradle)</label>
+                <input
+                  placeholder="ej: 1.3.31"
+                  value={newVersionName}
+                  onChange={e => setNewVersionName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addVersion(); }}
+                />
+              </div>
               <button className="btn btn-secondary" onClick={addVersion} disabled={addingVersion}>+ Registrar</button>
             </div>
           </div>
