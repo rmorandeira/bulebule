@@ -5,6 +5,7 @@ import Items from './pages/Items.jsx';
 import Tournaments from './pages/Tournaments.jsx';
 import Users from './pages/Users.jsx';
 import Settings from './pages/Settings.jsx';
+import Feedback from './pages/Feedback.jsx';
 
 function useTheme() {
   const [theme, setTheme] = useState(() => localStorage.getItem('bo_theme') || 'dark');
@@ -20,6 +21,7 @@ const NAV_LABELS = {
   items:       '🎁 Items',
   tournaments: '🏆 Campeonatos',
   users:       '👥 Usuarios',
+  feedback:    '💬 Quejas y sugerencias',
   settings:    '⚙️ Ajustes',
 };
 
@@ -27,10 +29,11 @@ const NAV = [
   { key: 'items',       label: 'Items',        icon: '🎁' },
   { key: 'tournaments', label: 'Campeonatos',   icon: '🏆' },
   { key: 'users',       label: 'Usuarios',      icon: '👥' },
+  { key: 'feedback',    label: 'Quejas/sug.',   icon: '💬' },
   { key: 'settings',    label: 'Ajustes',       icon: '⚙️' },
 ];
 
-const PAGES = { items: Items, tournaments: Tournaments, users: Users, settings: Settings };
+const PAGES = { items: Items, tournaments: Tournaments, users: Users, feedback: Feedback, settings: Settings };
 
 function AppShell({ token, onLogout }) {
   const [page, setPage] = useState('items');

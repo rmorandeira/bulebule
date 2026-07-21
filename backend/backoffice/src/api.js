@@ -50,4 +50,8 @@ export const api = {
     create: (data)         => apiFetch('/api/admin/app-versions', { method: 'POST', body: JSON.stringify(data) }),
     delete: (versionCode)  => apiFetch(`/api/admin/app-versions/${versionCode}`, { method: 'DELETE' }),
   },
+  feedback: {
+    list:   (params = {})  => apiFetch(`/api/admin/feedback?${new URLSearchParams(params)}`),
+    delete: (id)            => apiFetch(`/api/admin/feedback/${id}`, { method: 'DELETE' }),
+  },
 };

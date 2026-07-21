@@ -30,6 +30,7 @@ function decodeJwt(token) {
 
 const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
 const CLOSE_DURATION = 260
+const BACKEND = import.meta.env.VITE_BACKEND_URL || ''
 
 const PAGES = [
   { id: 'clasificacion', emoji: '📊', label: 'Clasificación',  desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
@@ -311,6 +312,83 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
   )
 }
 
+// ── Sheet: quejas / sugerencias ───────────────────────────────────────────────
+
+function FeedbackSheet({ closing, onClose, onSent, user }) {
+  const { sheetRef, handleProps } = useSheetDrag(onClose)
+  const [name, setName]       = useState('')
+  const [email, setEmail]     = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function send() {
+    if (!message.trim()) return setError('Escribe tu mensaje')
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${BACKEND}/api/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: (user?.name ?? name).trim(),
+          email: (user?.email ?? email).trim(),
+          message: message.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) throw new Error(data.error || 'No se pudo enviar el mensaje')
+      onSent()
+    } catch (e) {
+      setError(e.message || 'No se pudo enviar el mensaje')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <div className={`bs-overlay${closing ? ' bs-overlay--closing' : ''}`} onClick={onClose} />
+      <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
+        <div className="bs__handle" {...handleProps} />
+
+        <p className="bs__feedback-intro">
+          ¿Algo no funciona bien o se te ocurre cómo mejorar Bule Bule? Cuéntanoslo — este
+          mensaje llega directo a los creadores del juego.
+        </p>
+
+        {!user && (
+          <>
+            <div className="bs__field">
+              <p className="bs__label">NOMBRE (OPCIONAL)</p>
+              <input className="bs__input" placeholder="Tu nombre" maxLength={100}
+                value={name} onChange={e => setName(e.target.value)} />
+            </div>
+
+            <div className="bs__field">
+              <p className="bs__label">EMAIL (OPCIONAL)</p>
+              <input className="bs__input" type="email" placeholder="tu@email.com" maxLength={200}
+                value={email} onChange={e => setEmail(e.target.value)} />
+            </div>
+          </>
+        )}
+
+        <div className="bs__field">
+          <p className="bs__label">MENSAJE</p>
+          <textarea className="bs__input bs__textarea" placeholder="Queja, sugerencia, lo que sea..."
+            maxLength={2000} rows={5}
+            value={message} onChange={e => { setMessage(e.target.value); setError('') }} />
+        </div>
+
+        {error && <p className="bs__error">{error}</p>}
+        <button className="bs__submit" onClick={send} disabled={loading}>
+          {loading ? 'Enviando...' : 'Enviar'}
+        </button>
+      </div>
+    </>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RoomList({
@@ -342,6 +420,9 @@ export default function RoomList({
   const [activeTournament, setActiveTournament] = useState(null)
   const [viewingUser, setViewingUser]           = useState(null) // { userId, name, picture }
   const [maxPlayersLimit, setMaxPlayersLimit]   = useState(Math.max(...MAX_PLAYERS_OPTIONS))
+  const [feedbackSheet, setFeedbackSheet]     = useState(false)
+  const [feedbackClosing, setFeedbackClosing] = useState(false)
+  const [feedbackToast, setFeedbackToast]     = useState(false)
 
   const pagerRef         = useRef(null)
   const scrollTimerRef   = useRef(null)
@@ -349,6 +430,8 @@ export default function RoomList({
   const closeCreateRef   = useRef(null)
   const closeFilterRef     = useRef(null)
   const closeRoomFilterRef = useRef(null)
+  const closeFeedbackRef   = useRef(null)
+  const feedbackToastRef   = useRef(null)
   const didInitRef       = useRef(false)
   const prevTabRef       = useRef(activeTab)
 
@@ -493,6 +576,25 @@ export default function RoomList({
     closeRoomFilterRef.current = setTimeout(() => { setRoomFilterSheet(false); setRoomFilterClosing(false) }, CLOSE_DURATION)
   }
 
+  function openFeedback() {
+    clearTimeout(closeFeedbackRef.current)
+    setFeedbackClosing(false)
+    setFeedbackSheet(true)
+  }
+  function closeFeedback() {
+    setFeedbackClosing(true)
+    closeFeedbackRef.current = setTimeout(() => { setFeedbackSheet(false); setFeedbackClosing(false) }, CLOSE_DURATION)
+  }
+  function handleFeedbackSent() {
+    closeFeedback()
+    clearTimeout(feedbackToastRef.current)
+    // Esperar a que la ficha termine de cerrarse antes de mostrar el toast
+    feedbackToastRef.current = setTimeout(() => {
+      setFeedbackToast(true)
+      feedbackToastRef.current = setTimeout(() => setFeedbackToast(false), 3000)
+    }, CLOSE_DURATION)
+  }
+
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   function handleGoogleSuccess(credentialResponse) {
@@ -598,6 +700,13 @@ export default function RoomList({
                 <line x1="17" y1="9" x2="23" y2="15"/>
               </svg>
             )}
+          </button>
+          <button className="rl__hd-music" onClick={openFeedback} aria-label="Quejas y sugerencias">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
           </button>
         </div>
       </header>
@@ -900,6 +1009,20 @@ export default function RoomList({
       {createSheet && (
         <CreateSheet user={user} playerName={playerName} onNameChange={onNameChange}
           closing={createClosing} onClose={closeCreate} maxPlayersLimit={maxPlayersLimit} />
+      )}
+
+      {/* Quejas / sugerencias sheet */}
+      {feedbackSheet && (
+        <FeedbackSheet closing={feedbackClosing} onClose={closeFeedback} onSent={handleFeedbackSent} user={user} />
+      )}
+
+      {feedbackToast && (
+        <div className="rl__toast">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Mensaje enviado, ¡gracias!
+        </div>
       )}
 
       {/* User detail sheet */}

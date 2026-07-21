@@ -534,7 +534,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           </div>
           </div>
           {room.hostId === myId
-            ? <button className="results-action-btn btn btn--primary" onClick={handleRematch}>Otra partida</button>
+            ? <button className="results-action-btn results-action-btn--lifted btn btn--primary" onClick={handleRematch}>Otra partida</button>
             : <p className="results-action-label">Esperando al host...</p>}
         </>
         )

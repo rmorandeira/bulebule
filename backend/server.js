@@ -211,6 +211,16 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS feedback (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT,
+    email      TEXT,
+    message    TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+`);
+
 // ── Schema migrations ─────────────────────────────────────────────────────────
 ;(function migrateItemsSchema() {
   const cols = db.prepare('PRAGMA table_info(items)').all().map(c => c.name);
@@ -508,9 +518,8 @@ function awardRoundPoints(room) {
     const roundPts = ROUND_PTS_BASE + handRank * ROUND_PTS_MULT;
     room.pendingScores[uid] = (room.pendingScores[uid] ?? 0) + roundPts;
 
-    // Track final hand (repóker players have hand=null, re-evaluate from dice)
-    const hand = player.hand ?? (player.liberado ? evaluateHand(player.currentDice) : null);
-    if (hand) stmts.upsertHandStat.run(uid, hand.desc, hand.rank);
+    // Track final hand
+    if (player.hand) stmts.upsertHandStat.run(uid, player.hand.desc, player.hand.rank);
 
     // Track rolls used this round
     if (player.rollCount > 0) stmts.upsertRollStat.run(uid, player.rollCount);
@@ -1070,7 +1079,6 @@ function finishTurn(room, player) {
   player.hand = evaluateHand(player.currentDice);
   if (player.hand.rank === 7) {
     player.liberado = true;
-    player.hand = null; // el liberado no compite por el peor puesto
   }
   if (room.currentPlayerIndex === (room.startingPlayerIndex ?? 0)) {
     room.maxRolls = player.rollCount;
@@ -1102,8 +1110,8 @@ function finishTurn(room, player) {
 function endRound(room) {
   // En desempate solo compiten los jugadores marcados con inDesempate
   const participants = room.desempate
-    ? room.players.filter(p => p.inDesempate && p.hand)
-    : room.players.filter(p => p.hand);
+    ? room.players.filter(p => p.inDesempate && p.hand && !p.liberado)
+    : room.players.filter(p => p.hand && !p.liberado);
   const liberadoWinner = room.players.find(p => p.liberado);
   const nonLiberado = room.players.filter(p => !p.liberado);
 
@@ -1162,6 +1170,24 @@ function endRound(room) {
 }
 
 app.get('/api/rankings', (_, res) => res.json({ rankings: buildRankings().slice(0, 100) }));
+
+// Buzón de quejas/sugerencias (botón de ayuda en el lobby)
+const feedbackLimiters = new Map(); // ip -> rate limiter
+app.post('/api/feedback', (req, res) => {
+  const ip = (req.headers['x-forwarded-for']?.split(',')[0] ?? req.socket.remoteAddress ?? 'unknown').trim();
+  if (!feedbackLimiters.has(ip)) feedbackLimiters.set(ip, makeRateLimiter(3, 10 * 60_000));
+  if (!feedbackLimiters.get(ip)()) return res.status(429).json({ error: 'Demasiados mensajes, inténtalo más tarde' });
+
+  const { name, email, message } = req.body ?? {};
+  const msg = typeof message === 'string' ? message.trim() : '';
+  if (!msg) return res.status(400).json({ error: 'Falta el mensaje' });
+  if (msg.length > 2000) return res.status(400).json({ error: 'Mensaje demasiado largo' });
+
+  const cleanName  = typeof name  === 'string' ? name.trim().slice(0, 100)  || null : null;
+  const cleanEmail = typeof email === 'string' ? email.trim().slice(0, 200) || null : null;
+  db.prepare('INSERT INTO feedback (name, email, message) VALUES (?, ?, ?)').run(cleanName, cleanEmail, msg);
+  res.json({ ok: true });
+});
 
 // ── Backoffice admin token (persisted in SQLite) ──────────────────────────────
 const crypto = require('crypto');
@@ -1338,6 +1364,19 @@ app.post('/api/admin/app-versions', requireAdmin, (req, res) => {
 
 app.delete('/api/admin/app-versions/:versionCode', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM app_versions WHERE version_code=?').run(req.params.versionCode);
+  res.json({ ok: true });
+});
+
+// Mensajes de quejas/sugerencias (buzón del botón de ayuda)
+app.get('/api/admin/feedback', requireAdmin, (req, res) => {
+  const { limit = 50, offset = 0 } = req.query;
+  const items = db.prepare('SELECT * FROM feedback ORDER BY created_at DESC LIMIT ? OFFSET ?').all(+limit, +offset);
+  const total = db.prepare('SELECT COUNT(*) as c FROM feedback').get().c;
+  res.json({ items, total });
+});
+
+app.delete('/api/admin/feedback/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM feedback WHERE id=?').run(req.params.id);
   res.json({ ok: true });
 });
 
