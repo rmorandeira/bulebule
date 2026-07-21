@@ -278,7 +278,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
                   className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
                   onClick={() => setIsPrivate(v => !v)} />
               </div>
-              <p className="bs__label">JUGADORES MÁXIMOS</p>
+              <p className="bs__label">Número máximo de jugadores</p>
               <div className="bs__pills">
                 {maxPlayersOptions.map(n => (
                   <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
@@ -291,11 +291,11 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
           {/* Solo play fields — siempre montado, oculto en modo multi */}
           <div className={`bs__collapse${mode === 'solo' ? ' bs__collapse--open' : ''}`}>
             <div className="bs__collapse-inner">
-              <p className="bs__label">JUGADORES</p>
+              <p className="bs__label">Número de bots</p>
               <div className="bs__pills">
                 {maxPlayersOptions.map(n => (
                   <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
-                    onClick={() => setSoloPlayers(n)}>{n}</button>
+                    onClick={() => setSoloPlayers(n)}>{n - 1}</button>
                 ))}
               </div>
             </div>
