@@ -165,6 +165,31 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const prevBotPhaseRef = useRef(null)
   const prevRollCountRef = useRef({})
 
+  // Confirmado por ack en vez de marcar "enviado" al emitir: si el paquete se
+  // pierde por un corte de conexión (app minimizada), el ack nunca llega y el
+  // efecto de reconexión de abajo puede reintentarlo.
+  const emitBotReady = useCallback(() => {
+    if (botReadySentRef.current) return
+    socket.emit('bot_ready', (ack) => {
+      if (ack?.ok) botReadySentRef.current = true
+    })
+  }, [])
+
+  // Red de seguridad: si el socket se reconecta (la app vuelve de background)
+  // mientras se esperaba la confirmación del turno del bot, reintenta el
+  // aviso — el paquete original pudo perderse durante el corte.
+  useEffect(() => {
+    function onReconnect() {
+      if (!room.botPhase || botReadySentRef.current) return
+      // Da margen a que las animaciones locales pendientes (que también
+      // estaban congeladas) se completen y disparen el flujo normal antes
+      // de forzar el aviso.
+      setTimeout(() => { if (!botReadySentRef.current) emitBotReady() }, 1000)
+    }
+    socket.on('connect', onReconnect)
+    return () => socket.off('connect', onReconnect)
+  }, [room.botPhase, emitBotReady])
+
   // Analytics: game_start on mount
   useEffect(() => {
     track('game_start', { playerCount: room.players.length, vsBot: room.vsBot ?? false })
@@ -385,12 +410,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
       setBotDiscards([])
     }
     if (!botPhase) return
-
-    const emitBotReady = () => {
-      if (botReadySentRef.current) return
-      botReadySentRef.current = true
-      socket.emit('bot_ready')
-    }
 
     if (botPhase === 'rolled') {
       // Fallback por si la animación nunca llega a dispararse (el camino
@@ -813,11 +832,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       if (isMyTurn && faces?.length === 5) socket.emit('report_faces', { faces })
                       if (currentPlayer?.isBot && room.botPhase === 'rolled') {
                         if (faces?.length === 5) socket.emit('report_faces', { faces })
-                        if (!botReadySentRef.current) {
-                          botReadySentRef.current = true
-                          clearTimeout(botReadyTimerRef.current)
-                          socket.emit('bot_ready')
-                        }
+                        clearTimeout(botReadyTimerRef.current)
+                        emitBotReady()
                       }
                     }}
                   />

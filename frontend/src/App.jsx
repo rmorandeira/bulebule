@@ -256,10 +256,18 @@ export default function App() {
     socket.on('connect', () => {
       setMyId(socket.id)
       checkForceUpdate()
-      // Rejoin lobby after mobile app-switch reconnect
+      // Rejoin after mobile app-switch reconnect — works mid-game too (not
+      // just from the lobby), the server has a grace period before it drops
+      // a disconnected player. If it fails (grace period already expired),
+      // fall back to the room list instead of leaving a frozen game on screen.
       const r = roomRef.current
-      if (r?.phase === 'lobby') {
-        socket.emit('join_room', { code: r.code, playerName: playerNameRef.current, diceSkin: localStorage.getItem('bule_dice_skin') ?? null })
+      if (r?.code) {
+        socket.emit('join_room', { code: r.code, playerName: playerNameRef.current, diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
+          if (!res?.ok && roomRef.current?.code === r.code) {
+            setRoom(null)
+            setScreen('list')
+          }
+        })
       }
     })
     socket.on('room_state', setRoom)

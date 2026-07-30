@@ -1693,11 +1693,11 @@ io.on('connection', (socket) => {
     const normalCode = code?.toUpperCase();
     const room = rooms[normalCode];
     if (!room) return cb?.({ ok: false, error: 'Sala no encontrada' });
-    if (room.vsBot) return cb?.({ ok: false, error: 'No se puede unir a esta sala' });
-    if (room.phase !== 'lobby') return cb?.({ ok: false, error: 'La partida ya ha comenzado' });
 
-    // Rejoin: player with same name already in the lobby (e.g. mobile reconnect)
-    const existing = room.players.find(p => p.name === playerName.trim());
+    // Rejoin: player with same name already in the room (e.g. mobile app-switch
+    // reconnect). Checked before the vsBot/lobby-only guards below so it also
+    // works while a game is already in progress, not just from the lobby.
+    const existing = room.players.find(p => !p.isBot && p.name === playerName.trim());
     if (existing) {
       const oldId = existing.id;
       existing.id = socket.id;
@@ -1706,12 +1706,15 @@ io.on('connection', (socket) => {
       if (prevSocket) prevSocket.leave(normalCode);
       socket.join(normalCode);
       socket.data.roomCode = normalCode;
-      console.log(`join_room rejoin: "${room.name}" player="${playerName}"`);
+      console.log(`join_room rejoin: "${room.name}" player="${playerName}" phase=${room.phase}`);
       cb?.({ ok: true, code: normalCode });
       broadcast(normalCode);
       broadcastRoomList();
       return;
     }
+
+    if (room.vsBot) return cb?.({ ok: false, error: 'No se puede unir a esta sala' });
+    if (room.phase !== 'lobby') return cb?.({ ok: false, error: 'La partida ya ha comenzado' });
 
     if (room.isChallenge && room.challengedUserId && socket.data.userId !== room.challengedUserId) {
       return cb?.({ ok: false, error: 'Esta sala es un reto privado' });
@@ -2169,17 +2172,27 @@ io.on('connection', (socket) => {
     const room = rooms[code];
     if (!room) return;
 
-    if (room.vsBot) {
-      clearTiebreakerTimer(room);
-      stmts.deletePendingChallenge.run(code);
-      delete rooms[code];
-      return;
-    }
-
-    const disconnectingName = room.players.find(p => p.id === socket.id)?.name ?? null;
+    // Grace period before cleaning up, so a brief disconnect (app minimized,
+    // network blip) gives the player a chance to reconnect via join_room's
+    // rejoin path instead of losing the room outright. Applies to vsBot rooms
+    // too — they used to be deleted instantly here, which meant minimizing
+    // the app during a bot game killed the game with no way back.
+    const disconnectingId = socket.id;
+    const disconnectingPlayer = room.players.find(p => p.id === disconnectingId);
+    const disconnectingName = disconnectingPlayer?.name ?? null;
     setTimeout(() => {
       const r = rooms[code];
       if (!r) return;
+      // join_room's rejoin path mutates the same player object's id in place,
+      // so if it no longer matches the id that disconnected, they reconnected
+      // in the meantime — nothing to clean up.
+      if (disconnectingPlayer && disconnectingPlayer.id !== disconnectingId) return;
+      if (r.vsBot) {
+        clearTiebreakerTimer(r);
+        stmts.deletePendingChallenge.run(code);
+        delete rooms[code];
+        return;
+      }
       r.players = r.players.filter(p => p.id !== socket.id);
       if (r.players.length === 0 || (r.phase !== 'lobby' && r.players.filter(p => !p.isBot).length < 2)) {
         clearContinueTimer(r);
