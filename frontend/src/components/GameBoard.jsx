@@ -783,7 +783,15 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                 <div key={p.id} className={`scoreboard__row ${isActive ? 'scoreboard__row--active' : ''} ${p.done ? 'scoreboard__row--done' : ''}`}>
                   <PalilloState player={p} />
                   <div className="scoreboard__player-info">
-                    <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                    <span className="scoreboard__name-row">
+                      {p.id === myId && (
+                        <span
+                          className={`rl__online-dot${connected ? '' : ' rl__online-dot--off'}`}
+                          title={connected ? 'Conectado' : 'Sin conexión'}
+                        />
+                      )}
+                      <span className="scoreboard__name">{p.name}{p.id === myId ? ' (tú)' : ''}</span>
+                    </span>
                     {p.done && p.hand && (
                       <span className="scoreboard__hand-label">
                         {p.hand.desc}
