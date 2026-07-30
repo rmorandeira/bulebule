@@ -44,6 +44,7 @@ const BUBBLE_FADE_MS = 250
 const BUBBLE_LIFETIME_MS = 5000
 
 export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic }) {
+  const [connected, setConnected] = useState(socket.connected)
   const [pendingDiscards, setPendingDiscards] = useState([])
   const [shakeEnabled, setShakeEnabled] = useState(false)
   const [botDiscards, setBotDiscards] = useState([])
@@ -189,6 +190,30 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     socket.on('connect', onReconnect)
     return () => socket.off('connect', onReconnect)
   }, [room.botPhase, emitBotReady])
+
+  // Estado de conexión — feedback visible durante la partida (antes solo
+  // existía en la lista de salas, aquí se quedaba congelado sin explicación).
+  useEffect(() => {
+    function onConnect() { setConnected(true) }
+    function onDisconnect() { setConnected(false) }
+    socket.on('connect', onConnect)
+    socket.on('disconnect', onDisconnect)
+    return () => {
+      socket.off('connect', onConnect)
+      socket.off('disconnect', onDisconnect)
+    }
+  }, [])
+
+  // Vigía: si el turno del bot no progresa en un tiempo razonable estando
+  // conectado (bug, sala en un estado raro, etc), ofrece una salida en vez
+  // de dejar el tablero congelado sin ninguna acción posible.
+  const [botStuck, setBotStuck] = useState(false)
+  useEffect(() => {
+    setBotStuck(false)
+    if (!room.botPhase || !connected) return
+    const timer = setTimeout(() => setBotStuck(true), 15000)
+    return () => clearTimeout(timer)
+  }, [room.botPhase, room.currentPlayerIndex, connected])
 
   // Analytics: game_start on mount
   useEffect(() => {
@@ -493,6 +518,20 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           </button>
         </div>
       </nav>
+
+      {!connected && (
+        <div className="reconnect-banner" role="status">
+          <span className="reconnect-banner__dot" />
+          Reconectando…
+        </div>
+      )}
+
+      {connected && botStuck && (
+        <div className="stuck-banner" role="alert">
+          <span>El turno del bot está tardando más de lo normal.</span>
+          <button className="stuck-banner__btn" onClick={() => setLeaveIntent('exit')}>Salir de la partida</button>
+        </div>
+      )}
 
       {/* Fin de partida */}
       {room.phase === 'finished' ? (() => {

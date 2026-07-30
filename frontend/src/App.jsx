@@ -144,6 +144,7 @@ export default function App() {
   }
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
   const [abandonedBy, setAbandonedBy] = useState(null)
+  const [connectionLostNotice, setConnectionLostNotice] = useState(false)
   const [updateRequired, setUpdateRequired] = useState(false)
   const [pendingInvite, setPendingInvite] = useState(null)
   const swRegistered       = useRef(false)
@@ -266,6 +267,7 @@ export default function App() {
           if (!res?.ok && roomRef.current?.code === r.code) {
             setRoom(null)
             setScreen('list')
+            setConnectionLostNotice(true)
           }
         })
       }
@@ -501,6 +503,20 @@ export default function App() {
             <p className="modal__text">{abandonedBy} ha abandonado la partida</p>
             <div className="modal__actions">
               <button className="btn btn--primary" onClick={() => setAbandonedBy(null)}>Continuar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {connectionLostNotice && (
+        <div className="modal-overlay">
+          <div className="modal" role="alertdialog" aria-modal="true">
+            <h2 className="modal__title">Se perdió la conexión</h2>
+            <p className="modal__text">
+              La partida se cerró por un corte de conexión demasiado largo (app en segundo plano, red inestable
+              o el servidor no estaba disponible). Vuelve a crear o unirte a una partida.
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--primary" onClick={() => setConnectionLostNotice(false)}>Entendido</button>
             </div>
           </div>
         </div>

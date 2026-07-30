@@ -8,6 +8,17 @@ const fs = require('fs');
 const path = require('path');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
 
+// Última red de seguridad: un error asíncrono sin capturar (p.ej. dentro de
+// un setTimeout de un temporizador de turno/bot) tumba el proceso de Node
+// por defecto, cortando el servicio a todo el mundo de golpe. Lo logueamos
+// y seguimos vivos en vez de morir por un caso raro de una sola partida.
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandledRejection:', reason);
+});
+
 let VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
 let VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
 if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
@@ -1445,6 +1456,20 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
 });
 
 io.on('connection', (socket) => {
+  // Envuelve todos los listeners registrados en este socket: un error
+  // inesperado dentro de un evento concreto (sala mal formada, bot en un
+  // estado raro, etc) no debe tumbar el proceso de Node entero — eso dejaría
+  // sin servicio a todo el mundo de golpe, no solo a este socket. Se limita
+  // a loguear y dejar ese evento sin respuesta.
+  const registerListener = socket.on.bind(socket);
+  socket.on = (event, handler) => registerListener(event, (...args) => {
+    try {
+      return handler(...args);
+    } catch (err) {
+      console.error(`[socket:${event}] error no controlado:`, err);
+    }
+  });
+
   const rl = {
     action: makeRateLimiter(15, 5_000),   // roll/stand/discard: 15 per 5s
     room:   makeRateLimiter(5,  60_000),  // create/join/leave/start: 5 per min

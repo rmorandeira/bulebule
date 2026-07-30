@@ -1235,6 +1235,62 @@ body {
   z-index: 10;
 }
 
+.reconnect-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+
+.reconnect-banner__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: reconnect-pulse 1s ease-in-out infinite;
+}
+
+@keyframes reconnect-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.stuck-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(245, 158, 11, 0.12);
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+
+.stuck-banner__btn {
+  background: none;
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+  cursor: pointer;
+}
+
 .navbar__exit {
   background: none;
   border: none;
@@ -2425,6 +2481,10 @@ body {
   border-radius: 50%;
   background: #22c55e;
   flex-shrink: 0;
+}
+
+.rl__online-dot--off {
+  background: #ef4444;
 }
 
 /* Empty state */

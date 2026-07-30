@@ -679,6 +679,10 @@ export default function RoomList({
           <div className="rl__hd-name-row">
             <span className="rl__hd-name">{user?.name || playerName}</span>
             {myStats && <TierDot tier={myStats.tier} />}
+            <span
+              className={`rl__online-dot${connected ? '' : ' rl__online-dot--off'}`}
+              title={connected ? 'Conectado' : 'Sin conexión'}
+            />
             {!connected && <span className="rl__offline">off</span>}
           </div>
           {myStats && <span className="rl__hd-pts">{myStats.score.toLocaleString()} B</span>}
