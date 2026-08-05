@@ -2257,6 +2257,25 @@ body {
   text-decoration: underline;
 }
 
+.rl__consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 320px;
+  font-size: 12px;
+  color: #888;
+  text-align: left;
+  cursor: pointer;
+}
+.rl__consent-row input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.rl__consent-row a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .btn--google {
   display: flex;
   align-items: center;
@@ -2270,6 +2289,23 @@ body {
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.btn--google:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rl__google-btn-wrap {
+  position: relative;
+  display: inline-block;
+}
+.rl__google-btn-wrap--disabled {
+  opacity: 0.5;
+}
+.rl__google-btn-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
 }
 
 /* Error */

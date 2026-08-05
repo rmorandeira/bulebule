@@ -4,6 +4,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { Capacitor } from '@capacitor/core'
 import socket from '../socket'
 import { track } from '../analytics'
+import { useTranslation } from '../i18n'
 import { dismissRoomNotification } from '../utils/push'
 import UserSection from './UserSection'
 import TournamentList from './TournamentList'
@@ -32,11 +33,11 @@ const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 8]
 const CLOSE_DURATION = 260
 const BACKEND = import.meta.env.VITE_BACKEND_URL || ''
 
-const PAGES = [
-  { id: 'clasificacion', emoji: '📊', label: 'Clasificación',  desc: 'Compite en partidas individuales y mejora tu posición en la clasificación mundial' },
-  { id: 'challenge',     emoji: '🏆', label: 'Challengue',     desc: 'Reta a otros jugadores en duelos 1vs1 y demuestra quién es el mejor' },
-  { id: 'online',        emoji: '🎲', label: 'Juego online',   desc: 'Juega una partida tú sólo o contra la máquina' },
-  { id: 'tienda',        emoji: '🎁', label: 'Tienda online',  desc: 'Utiliza tus Bules para comprar objetos y regalos' },
+const PAGE_META = [
+  { id: 'clasificacion', emoji: '📊' },
+  { id: 'challenge',     emoji: '🏆' },
+  { id: 'online',        emoji: '🎲' },
+  { id: 'tienda',        emoji: '🎁' },
 ]
 const DEFAULT_PAGE = 'online'
 
@@ -395,6 +396,9 @@ export default function RoomList({
   user, playerName, onNameChange, onLogin, onUpdate, onLogout, onDeleteAccount,
   musicOn, onToggleMusic,
 }) {
+  const { t, lang } = useTranslation()
+  const PAGES = PAGE_META.map(p => ({ ...p, label: t(`pages.${p.id}Label`), desc: t(`pages.${p.id}Desc`) }))
+  const [consentChecked, setConsentChecked] = useState(false)
   const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
   const [rooms, setRooms]                   = useState([])
   const [roomSearch, setRoomSearch]         = useState('')
@@ -598,18 +602,20 @@ export default function RoomList({
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   function handleGoogleSuccess(credentialResponse) {
+    if (!consentChecked) return setError(t('login.consentRequired'))
     const payload = decodeJwt(credentialResponse.credential)
-    if (!payload) return setError('Error al iniciar sesión con Google')
-    onLogin({ name: payload.name, email: payload.email, picture: payload.picture, googleId: payload.sub, idToken: credentialResponse.credential })
+    if (!payload) return setError(t('login.googleError'))
+    onLogin({ name: payload.name, email: payload.email, picture: payload.picture, googleId: payload.sub, idToken: credentialResponse.credential, consentAcceptedAt: Date.now() })
     setError('')
   }
 
   async function handleNativeGoogleLogin() {
+    if (!consentChecked) return setError(t('login.consentRequired'))
     try {
       const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
       try { await GoogleAuth.signOut() } catch (_) {}
       const user = await GoogleAuth.signIn()
-      onLogin({ name: user.name, email: user.email, picture: user.imageUrl, googleId: user.id, idToken: user.authentication?.idToken })
+      onLogin({ name: user.name, email: user.email, picture: user.imageUrl, googleId: user.id, idToken: user.authentication?.idToken, consentAcceptedAt: Date.now() })
       setError('')
     } catch (e) {
       console.error('[GoogleAuth] signIn error:', e)
@@ -620,12 +626,12 @@ export default function RoomList({
   // ── Rooms ─────────────────────────────────────────────────────────────────
 
   function join(code) {
-    if (!connected) return setError('Sin conexión al servidor')
-    if (!playerName?.trim()) return setError('Introduce tu nombre primero')
+    if (!connected) return setError(t('online.noConnection'))
+    if (!playerName?.trim()) return setError(t('online.enterNameFirst'))
     setJoiningCode(code)
     socket.emit('join_room', { code, playerName: playerName.trim(), diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       setJoiningCode(null)
-      if (!res?.ok) return setError(res?.error || 'No se pudo unir a la sala')
+      if (!res?.ok) return setError(res?.error || t('online.joinError'))
       track('room_join')
       dismissRoomNotification(code)
     })
@@ -638,7 +644,7 @@ export default function RoomList({
 
   function joinByCode() {
     const entered = codeInput.trim().toUpperCase()
-    if (entered !== codeModal.code) { setCodeError('Código incorrecto'); return }
+    if (entered !== codeModal.code) { setCodeError(t('roomModal.wrongCode')); return }
     setCodeModal(null)
     join(codeModal.code)
   }
@@ -679,18 +685,18 @@ export default function RoomList({
           <div className="rl__hd-name-row">
             <span
               className={`rl__online-dot${connected ? '' : ' rl__online-dot--off'}`}
-              title={connected ? 'Conectado' : 'Sin conexión'}
+              title={connected ? t('header.connected') : t('header.disconnected')}
             />
             <span className="rl__hd-name">{user?.name || playerName}</span>
             {myStats && <TierDot tier={myStats.tier} />}
             {!connected && <span className="rl__offline">off</span>}
           </div>
           {myStats && <span className="rl__hd-pts">{myStats.score.toLocaleString()} B</span>}
-          {myRank && <span className="rl__hd-rank">Ranking {myRank}/{rankTotal}</span>}
+          {myRank && <span className="rl__hd-rank">{t('header.ranking', { rank: myRank, total: rankTotal })}</span>}
         </div>
         <img className="rl__logo" src="/assets/logo-bulebule.png" alt="Bule Bule" draggable={false} />
         <div className="rl__hd-right">
-          <button className="rl__hd-music" onClick={onToggleMusic} aria-label={musicOn ? 'Silenciar música' : 'Activar música'}>
+          <button className="rl__hd-music" onClick={onToggleMusic} aria-label={musicOn ? t('header.muteAria') : t('header.unmuteAria')}>
             {musicOn ? (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
@@ -705,7 +711,7 @@ export default function RoomList({
               </svg>
             )}
           </button>
-          <button className="rl__hd-music" onClick={openFeedback} aria-label="Quejas y sugerencias">
+          <button className="rl__hd-music" onClick={openFeedback} aria-label={t('header.feedbackAria')}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
@@ -744,18 +750,18 @@ export default function RoomList({
                 <svg className="rl__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input className="rl__search" placeholder="Buscar jugador"
+                <input className="rl__search" placeholder={t('ranking.searchPlaceholder')}
                   value={rankSearch}
                   onChange={e => setRankSearch(e.target.value)} />
                 {rankSearch && (
-                  <button className="rl__search-clear" onClick={() => setRankSearch('')} aria-label="Borrar búsqueda">
+                  <button className="rl__search-clear" onClick={() => setRankSearch('')} aria-label={t('ranking.searchClearAria')}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                   </button>
                 )}
               </div>
-              <button className={`rl__icon-btn${isFilterActive ? ' rl__icon-btn--active' : ''}`} aria-label="Filtrar" onClick={openFilter}>
+              <button className={`rl__icon-btn${isFilterActive ? ' rl__icon-btn--active' : ''}`} aria-label={t('ranking.filterAria')} onClick={openFilter}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                 </svg>
@@ -763,7 +769,7 @@ export default function RoomList({
             </div>
             {filteredRankings.length === 0 ? (
               <p className="rl__empty">
-                {rankSearch ? 'No se encontró ningún jugador' : 'Juega partidas para aparecer en la clasificación'}
+                {rankSearch ? t('ranking.emptySearch') : t('ranking.emptyDefault')}
               </p>
             ) : filteredRankings.map(r => (
               <div
@@ -774,10 +780,10 @@ export default function RoomList({
                 <span className="rl__rank-pos">{r.rank}</span>
                 <span className="rl__rank-name">
                   {getFavorites()[r.userId] && <span className="rl__fav-star">★</span>}
-                  {r.online && <span className="rl__online-dot" title="En línea" />}
+                  {r.online && <span className="rl__online-dot" title={t('ranking.onlineTooltip')} />}
                   {r.name}<TierDot tier={r.tier} />
-                  {r.isPlaying && <span className="rl__playing-pill">jugando</span>}
-                  {r.userId === user?.email && <span className="rl__you-pill">tú</span>}
+                  {r.isPlaying && <span className="rl__playing-pill">{t('ranking.playingPill')}</span>}
+                  {r.userId === user?.email && <span className="rl__you-pill">{t('ranking.youPill')}</span>}
                 </span>
                 <span className="rl__rank-score">{r.score.toLocaleString()}</span>
               </div>
@@ -791,24 +797,43 @@ export default function RoomList({
             {error && <p className="rl__error">{error}</p>}
             {!user && (
               <div className="rl__login-row">
+                <label className="rl__consent-row">
+                  <input
+                    type="checkbox"
+                    checked={consentChecked}
+                    onChange={e => { setConsentChecked(e.target.checked); if (e.target.checked) setError('') }}
+                  />
+                  <span>
+                    {t('login.consentPrefix')}{' '}
+                    <a href="/privacidad.html" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                      {t('login.privacyLink')}
+                    </a>{' '}
+                    {t('login.and')}{' '}
+                    <a href="/terminos.html" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                      {t('login.termsLink')}
+                    </a>
+                  </span>
+                </label>
                 {Capacitor.isNativePlatform() ? (
-                  <button className="btn btn--google" onClick={handleNativeGoogleLogin}>
+                  <button className="btn btn--google" onClick={handleNativeGoogleLogin} disabled={!consentChecked}>
                     <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                    Iniciar sesión con Google
+                    {t('login.googleButton')}
                   </button>
                 ) : (
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => setError('Error al iniciar sesión con Google')}
-                    shape="pill" size="medium" text="signin_with" locale="es"
-                  />
+                  <div className={`rl__google-btn-wrap${consentChecked ? '' : ' rl__google-btn-wrap--disabled'}`}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setError(t('login.googleError'))}
+                      shape="pill" size="medium" text="signin_with" locale={lang}
+                    />
+                    {!consentChecked && (
+                      <div
+                        className="rl__google-btn-overlay"
+                        onClick={() => setError(t('login.consentRequired'))}
+                      />
+                    )}
+                  </div>
                 )}
-                <p className="rl__login-privacy">
-                  Al iniciar sesión aceptas nuestra{' '}
-                  <a href="/privacidad.html" target="_blank" rel="noopener noreferrer">
-                    Política de Privacidad
-                  </a>
-                </p>
               </div>
             )}
             <div className="rl__toolbar">
@@ -816,18 +841,18 @@ export default function RoomList({
                 <svg className="rl__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input className="rl__search" placeholder="Buscar sala"
+                <input className="rl__search" placeholder={t('online.searchPlaceholder')}
                   value={roomSearch}
                   onChange={e => setRoomSearch(e.target.value)} />
                 {roomSearch && (
-                  <button className="rl__search-clear" onClick={() => setRoomSearch('')} aria-label="Borrar búsqueda">
+                  <button className="rl__search-clear" onClick={() => setRoomSearch('')} aria-label={t('ranking.searchClearAria')}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                   </button>
                 )}
               </div>
-              <button className={`rl__icon-btn${isRoomFilterActive ? ' rl__icon-btn--active' : ''}`} aria-label="Filtrar" onClick={openRoomFilter}>
+              <button className={`rl__icon-btn${isRoomFilterActive ? ' rl__icon-btn--active' : ''}`} aria-label={t('ranking.filterAria')} onClick={openRoomFilter}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                 </svg>
@@ -836,13 +861,13 @@ export default function RoomList({
             <div className="rl__rooms">
               {filteredRooms.length === 0 ? (
                 <p className="rl__empty">
-                  {roomSearch ? 'No se encontró ninguna sala' : 'No hay partidas abiertas ahora mismo'}
+                  {roomSearch ? t('online.emptySearch') : t('online.emptyDefault')}
                 </p>
               ) : filteredRooms.map(room => {
                 const canJoin = room.phase === 'lobby' && !isFull(room)
                 return (
                   <div key={room.code} className="rl__room">
-                    {room.isChallenge && <span className="rl__challenge-dot" aria-label="Reto pendiente" />}
+                    {room.isChallenge && <span className="rl__challenge-dot" aria-label={t('online.pendingChallengeAria')} />}
                     <div className="rl__room-info">
                       <span className="rl__room-name">
                         {room.name}
@@ -864,14 +889,14 @@ export default function RoomList({
                         ) : null}
                       </span>
                       <span className="rl__room-meta">
-                        {room.playerCount} / {room.maxPlayers} Jugadores
-                        {!canJoin && <span className="rl__room-status">{isFull(room) ? ' · Llena' : ' · En curso'}</span>}
+                        {room.playerCount} / {room.maxPlayers} {t('online.players')}
+                        {!canJoin && <span className="rl__room-status">{isFull(room) ? ` · ${t('online.full')}` : ` · ${t('online.inProgress')}`}</span>}
                       </span>
                     </div>
                     <button className="rl__join-btn"
                       onClick={() => handleJoinClick(room)}
                       disabled={!canJoin || joiningCode !== null || !connected}>
-                      {joiningCode === room.code ? '...' : room.isChallenge ? 'Entrar' : 'Unirse'}
+                      {joiningCode === room.code ? '...' : room.isChallenge ? t('online.enter') : t('online.join')}
                     </button>
                   </div>
                 )
@@ -921,7 +946,7 @@ export default function RoomList({
       {activeTab === 'online' && (
         <div className="rl__create-bar">
           <button className="rl__create-bar-btn" onClick={openCreate} disabled={!connected}>
-            Jugar
+            {t('createBar.play')}
           </button>
         </div>
       )}
@@ -930,7 +955,7 @@ export default function RoomList({
       <nav className="rl__navbar">
         {/* Ranking */}
         <button className={`rl__nav-btn${activeTab === 'clasificacion' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => goToPage('clasificacion')} aria-label="Clasificación">
+          onClick={() => goToPage('clasificacion')} aria-label={t('navbar.ranking')}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="20" x2="18" y2="10"/>
             <line x1="12" y1="20" x2="12" y2="4"/>
@@ -940,7 +965,7 @@ export default function RoomList({
 
         {/* Challenge */}
         <button className={`rl__nav-btn${activeTab === 'challenge' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => goToPage('challenge')} aria-label="Challengue">
+          onClick={() => goToPage('challenge')} aria-label={t('navbar.challenge')}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 2h12v8c0 3.3-2.7 6-6 6s-6-2.7-6-6V2z"/>
             <path d="M6 4 Q2 7 6 10"/>
@@ -953,7 +978,7 @@ export default function RoomList({
 
         {/* Home — dado */}
         <button className={`rl__nav-btn${activeTab === 'online' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => goToPage('online')} aria-label="Juego online">
+          onClick={() => goToPage('online')} aria-label={t('navbar.online')}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="3"/>
             <circle cx="8.5"  cy="8.5"  r="1.2" fill="currentColor" stroke="none"/>
@@ -965,7 +990,7 @@ export default function RoomList({
 
         {/* Shop */}
         <button className={`rl__nav-btn${activeTab === 'tienda' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => goToPage('tienda')} aria-label="Tienda">
+          onClick={() => goToPage('tienda')} aria-label={t('navbar.shop')}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
             <line x1="3" y1="6" x2="21" y2="6"/>
@@ -975,7 +1000,7 @@ export default function RoomList({
 
         {/* User */}
         <button className={`rl__nav-btn${activeTab === 'user' ? ' rl__nav-btn--active' : ''}`}
-          aria-label="Usuario"
+          aria-label={t('navbar.user')}
           onClick={() => user ? setActiveTab('user') : goToPage('online')}>
           {user?.picture ? (
             <img src={user.picture} alt={user.name} referrerPolicy="no-referrer"
@@ -1025,7 +1050,7 @@ export default function RoomList({
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
-          Mensaje enviado, ¡gracias!
+          {t('toast.feedbackSent')}
         </div>
       )}
 
@@ -1045,15 +1070,15 @@ export default function RoomList({
       {codeModal && (
         <div className="modal-overlay" onClick={() => setCodeModal(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-box__title">Sala privada</h3>
-            <p className="modal-box__hint">Introduce el código para unirte a <strong>{codeModal.name}</strong></p>
+            <h3 className="modal-box__title">{t('roomModal.title')}</h3>
+            <p className="modal-box__hint">{t('roomModal.hintPrefix')} <strong>{codeModal.name}</strong></p>
             <input className="input input--code" maxLength={4} autoFocus value={codeInput}
               onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeError('') }}
               onKeyDown={e => e.key === 'Enter' && joinByCode()} placeholder="XXXX" />
             {codeError && <p className="error">{codeError}</p>}
             <div className="modal-box__actions">
-              <button className="btn btn--secondary" onClick={() => setCodeModal(null)}>Cancelar</button>
-              <button className="btn btn--primary" onClick={joinByCode} disabled={codeInput.trim().length !== 4}>Unirse</button>
+              <button className="btn btn--secondary" onClick={() => setCodeModal(null)}>{t('common.cancel')}</button>
+              <button className="btn btn--primary" onClick={joinByCode} disabled={codeInput.trim().length !== 4}>{t('roomModal.join')}</button>
             </div>
           </div>
         </div>

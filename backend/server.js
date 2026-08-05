@@ -251,6 +251,9 @@ db.exec(`
   const cols = db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
   if (!cols.includes('active'))  db.prepare('ALTER TABLE users ADD COLUMN active  INTEGER NOT NULL DEFAULT 1').run();
   if (!cols.includes('visible')) db.prepare('ALTER TABLE users ADD COLUMN visible INTEGER NOT NULL DEFAULT 1').run();
+  // RGPD: fecha de aceptación de política de privacidad / términos y condiciones
+  if (!cols.includes('privacy_accepted_at')) db.prepare('ALTER TABLE users ADD COLUMN privacy_accepted_at INTEGER').run();
+  if (!cols.includes('terms_accepted_at'))   db.prepare('ALTER TABLE users ADD COLUMN terms_accepted_at   INTEGER').run();
 })();
 
 db.exec(`
@@ -409,10 +412,13 @@ function broadcastTournament(tournamentId) {
 }
 
 const stmts = {
-  upsertUser:    db.prepare(`INSERT INTO users (user_id, name, email, picture)
-                               VALUES (?, ?, ?, ?)
+  upsertUser:    db.prepare(`INSERT INTO users (user_id, name, email, picture, privacy_accepted_at, terms_accepted_at)
+                               VALUES (?, ?, ?, ?, ?, ?)
                                ON CONFLICT(user_id) DO UPDATE
-                                 SET name=excluded.name, email=excluded.email, picture=excluded.picture, updated_at=unixepoch()`),
+                                 SET name=excluded.name, email=excluded.email, picture=excluded.picture,
+                                     privacy_accepted_at = COALESCE(users.privacy_accepted_at, excluded.privacy_accepted_at),
+                                     terms_accepted_at   = COALESCE(users.terms_accepted_at,   excluded.terms_accepted_at),
+                                     updated_at=unixepoch()`),
   ensureUser:    db.prepare(`INSERT OR IGNORE INTO users (user_id, name, picture) VALUES (?, ?, ?)`),
   ensureStats:   db.prepare(`INSERT OR IGNORE INTO player_stats (user_id) VALUES (?)`),
   getStats:      db.prepare(`SELECT * FROM player_stats WHERE user_id = ?`),
@@ -1965,7 +1971,7 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
-  socket.on('register_user', async ({ userId, name, email, picture, idToken }) => {
+  socket.on('register_user', async ({ userId, name, email, picture, idToken, consentAcceptedAt }, cb) => {
     if (!userId || !name) return;
 
     let isGoogleUser = false;
@@ -1998,10 +2004,15 @@ io.on('connection', (socket) => {
     }
 
     // Solo persistir en BD los usuarios autenticados con Google
+    let consent = null;
     if (isGoogleUser) {
-      stmts.upsertUser.run(userId, name, email ?? null, picture ?? null);
+      const consentTs = Number.isFinite(consentAcceptedAt) ? Math.floor(consentAcceptedAt / 1000) : null;
+      stmts.upsertUser.run(userId, name, email ?? null, picture ?? null, consentTs, consentTs);
       stmts.ensureStats.run(userId);
+      const row = db.prepare('SELECT privacy_accepted_at, terms_accepted_at FROM users WHERE user_id=?').get(userId);
+      consent = { privacyAcceptedAt: row.privacy_accepted_at, termsAcceptedAt: row.terms_accepted_at };
     }
+    cb?.({ ok: true, consent });
 
     // Emitir retos pendientes (llegaron cuando estaba offline)
     const pending = stmts.getPendingChallenges.all(userId);

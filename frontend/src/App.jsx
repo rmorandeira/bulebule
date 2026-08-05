@@ -5,6 +5,7 @@ import { initAdMob } from './utils/admob'
 import { dismissRoomNotification } from './utils/push'
 import { track } from './analytics'
 import { APP_VERSION_CODE } from './version'
+import { useTranslation } from './i18n'
 import RoomList from './components/RoomList'
 import CreateRoom from './components/CreateRoom'
 import WaitingRoom from './components/WaitingRoom'
@@ -53,6 +54,7 @@ async function setupPush(userId) {
 }
 
 export default function App() {
+  const { t } = useTranslation()
   useEffect(() => { initAdMob() }, [])
 
   // Push nativo: registrar listeners en cuanto arranca la app (no esperar al login)
@@ -322,7 +324,19 @@ export default function App() {
     localStorage.setItem('bule_user', JSON.stringify(userToStore))
     setUser(userToStore)
     setPlayerName(userData.name)
-    socket.emit('register_user', { userId: userData.email, name: userData.name, email: userData.email, picture: userData.picture, idToken })
+    socket.emit('register_user', {
+      userId: userData.email, name: userData.name, email: userData.email, picture: userData.picture,
+      idToken, consentAcceptedAt: userData.consentAcceptedAt,
+    }, (res) => {
+      if (res?.consent) {
+        setUser(u => {
+          if (!u || u.email !== userData.email) return u
+          const updated = { ...u, privacyAcceptedAt: res.consent.privacyAcceptedAt, termsAcceptedAt: res.consent.termsAcceptedAt }
+          localStorage.setItem('bule_user', JSON.stringify(updated))
+          return updated
+        })
+      }
+    })
     if (!Capacitor.isNativePlatform() && 'Notification' in window) {
       Notification.requestPermission().then(perm => {
         if (perm === 'granted') setupPush(userData.email)
@@ -417,7 +431,7 @@ export default function App() {
           className={`intro__btn${introLogoPhase === 'center' ? ' intro__btn--visible' : ''}`}
           onClick={handleComenzar}
         >
-          Comenzar
+          {t('intro.start')}
         </button>
         <p className="intro__version">{__APP_VERSION__}</p>
       </div>
@@ -466,8 +480,8 @@ export default function App() {
     return (
       <div className="modal-overlay">
         <div className="modal" role="alertdialog" aria-modal="true">
-          <h2 className="modal__title">Nueva versión disponible</h2>
-          <p className="modal__text">Hay una actualización importante de Bule Bule. Actualiza la app para seguir jugando.</p>
+          <h2 className="modal__title">{t('updateModal.title')}</h2>
+          <p className="modal__text">{t('updateModal.text')}</p>
           <div className="modal__actions">
             <a
               className="btn btn--primary"
@@ -475,7 +489,7 @@ export default function App() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Actualizar ahora
+              {t('updateModal.button')}
             </a>
           </div>
         </div>
