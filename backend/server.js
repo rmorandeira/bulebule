@@ -1221,7 +1221,7 @@ const ADMIN_TOKEN = (() => {
 })();
 
 // ── Ajustes del juego (parámetros + feature flags, persistidos en `config`) ──
-const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {}, minVersionCode: 0 };
+const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {}, minVersionCode: 0, forceLatestVersion: false };
 function loadSettings() {
   const row = db.prepare('SELECT value FROM config WHERE key=?').get('game_settings');
   if (!row) return { ...DEFAULT_SETTINGS, featureFlags: {} };
@@ -1334,15 +1334,27 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
   res.json({ settings: gameSettings });
 });
 
+function latestAppVersionCode() {
+  const row = db.prepare('SELECT MAX(version_code) as maxCode FROM app_versions').get();
+  return row?.maxCode ?? 0;
+}
+
 app.put('/api/admin/settings', requireAdmin, (req, res) => {
-  const { maxPlayersLimit, featureFlags, minVersionCode } = req.body;
+  const { maxPlayersLimit, featureFlags, minVersionCode, forceLatestVersion } = req.body;
   const limit = parseInt(maxPlayersLimit);
   if (!Number.isFinite(limit) || limit < 2 || limit > 10)
     return res.status(400).json({ error: 'maxPlayersLimit debe estar entre 2 y 10' });
+
+  const forceLatest = forceLatestVersion !== undefined ? !!forceLatestVersion : (gameSettings.forceLatestVersion ?? false);
+
   // minVersionCode es opcional: un backoffice desplegado antes de que existiera este campo
   // no lo envía, y no debe bloquear el resto de los ajustes.
   let minVer = gameSettings.minVersionCode ?? 0;
-  if (minVersionCode !== undefined) {
+  if (forceLatest) {
+    // Modo "forzar a última publicada": el valor lo decide siempre el propio
+    // servidor a partir de app_versions, ignorando lo que llegue del cliente.
+    minVer = latestAppVersionCode();
+  } else if (minVersionCode !== undefined) {
     const parsed = parseInt(minVersionCode);
     if (!Number.isFinite(parsed) || parsed < 0)
       return res.status(400).json({ error: 'minVersionCode debe ser un número igual o mayor que 0' });
@@ -1354,7 +1366,7 @@ app.put('/api/admin/settings', requireAdmin, (req, res) => {
       if (typeof k === 'string' && k.trim()) flags[k.trim()] = !!v;
     }
   }
-  saveSettings({ maxPlayersLimit: limit, featureFlags: flags, minVersionCode: minVer });
+  saveSettings({ maxPlayersLimit: limit, featureFlags: flags, minVersionCode: minVer, forceLatestVersion: forceLatest });
 
   res.json({ ok: true, settings: gameSettings });
 });
@@ -1372,6 +1384,9 @@ app.post('/api/admin/app-versions', requireAdmin, (req, res) => {
   if (!versionName?.trim()) return res.status(400).json({ error: 'versionName es obligatorio' });
   try {
     db.prepare('INSERT INTO app_versions (version_code, version_name) VALUES (?, ?)').run(code, versionName.trim());
+    // En modo "forzar a última publicada" mantenemos minVersionCode siempre
+    // sincronizado, sin depender de que alguien vuelva a guardar Ajustes.
+    if (gameSettings.forceLatestVersion) saveSettings({ ...gameSettings, minVersionCode: latestAppVersionCode() });
     res.json({ ok: true });
   } catch (e) {
     if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return res.status(409).json({ error: 'Ya existe una versión con ese versionCode' });
@@ -1381,6 +1396,7 @@ app.post('/api/admin/app-versions', requireAdmin, (req, res) => {
 
 app.delete('/api/admin/app-versions/:versionCode', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM app_versions WHERE version_code=?').run(req.params.versionCode);
+  if (gameSettings.forceLatestVersion) saveSettings({ ...gameSettings, minVersionCode: latestAppVersionCode() });
   res.json({ ok: true });
 });
 

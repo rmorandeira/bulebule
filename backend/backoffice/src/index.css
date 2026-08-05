@@ -211,11 +211,22 @@ input::placeholder, textarea::placeholder { color: var(--text-subtle); }
 textarea { resize: vertical; min-height: 70px; }
 select option { background: var(--surface2); }
 
-input[type="checkbox"] {
+input[type="checkbox"], input[type="radio"] {
   width: auto;
   accent-color: var(--primary);
   cursor: pointer;
 }
+
+.radio-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.radio-row input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+.radio-row .radio-row__title { font-size: 13px; font-weight: 600; color: var(--text); }
+.radio-row .radio-row__hint { font-size: 12px; color: var(--text-muted, #888); margin-top: 2px; }
 
 .toggle-row {
   display: flex;

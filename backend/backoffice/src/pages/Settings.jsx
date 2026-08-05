@@ -9,6 +9,7 @@ export default function Settings() {
   const [saving, setSaving]             = useState(false);
   const [maxPlayersLimit, setMaxPlayersLimit] = useState(8);
   const [minVersionCode, setMinVersionCode] = useState(0);
+  const [forceLatestVersion, setForceLatestVersion] = useState(false);
   const [flags, setFlags]               = useState({});
   const [newFlagKey, setNewFlagKey]     = useState('');
   const [versions, setVersions]         = useState([]);
@@ -25,6 +26,7 @@ export default function Settings() {
       ]);
       setMaxPlayersLimit(settings.maxPlayersLimit ?? 8);
       setMinVersionCode(settings.minVersionCode ?? 0);
+      setForceLatestVersion(settings.forceLatestVersion ?? false);
       setFlags(settings.featureFlags ?? {});
       setVersions(appVersions ?? []);
     } catch (e) {
@@ -45,7 +47,9 @@ export default function Settings() {
     setAddingVersion(true);
     try {
       await api.appVersions.create({ versionCode: code, versionName: name });
-      setVersions(v => [...v, { versionCode: code, versionName: name }].sort((a, b) => b.versionCode - a.versionCode));
+      const next = [...versions, { versionCode: code, versionName: name }].sort((a, b) => b.versionCode - a.versionCode);
+      setVersions(next);
+      if (forceLatestVersion) setMinVersionCode(next[0]?.versionCode ?? 0);
       setNewVersionCode('');
       setNewVersionName('');
     } catch (e) {
@@ -58,8 +62,10 @@ export default function Settings() {
   async function removeVersion(versionCode) {
     try {
       await api.appVersions.delete(versionCode);
-      setVersions(v => v.filter(x => x.versionCode !== versionCode));
-      if (minVersionCode === versionCode) setMinVersionCode(0);
+      const next = versions.filter(x => x.versionCode !== versionCode);
+      setVersions(next);
+      if (forceLatestVersion) setMinVersionCode(next[0]?.versionCode ?? 0);
+      else if (minVersionCode === versionCode) setMinVersionCode(0);
     } catch (e) {
       toast(e.message, 'error');
     }
@@ -88,7 +94,13 @@ export default function Settings() {
   async function handleSave() {
     setSaving(true);
     try {
-      await api.settings.update({ maxPlayersLimit: Number(maxPlayersLimit), featureFlags: flags, minVersionCode: Number(minVersionCode) });
+      const { settings } = await api.settings.update({
+        maxPlayersLimit: Number(maxPlayersLimit),
+        featureFlags: flags,
+        minVersionCode: Number(minVersionCode),
+        forceLatestVersion,
+      });
+      setMinVersionCode(settings.minVersionCode ?? 0);
       toast('Ajustes guardados', 'success');
     } catch (e) {
       toast(e.message, 'error');
@@ -124,24 +136,65 @@ export default function Settings() {
 
         <div className="panel-section">
           <h3>Actualización forzosa</h3>
+
           <div className="form-group">
-            <label>Versión mínima de la aplicación</label>
-            <select
-              value={minVersionCode}
-              onChange={e => setMinVersionCode(Number(e.target.value))}
-            >
-              <option value={0}>Sin restricción</option>
-              {versions.map(v => (
-                <option key={v.versionCode} value={v.versionCode}>
-                  {v.versionName} (versionCode {v.versionCode})
-                </option>
-              ))}
-              {minVersionCode > 0 && !versions.some(v => v.versionCode === minVersionCode) && (
-                <option value={minVersionCode}>versionCode {minVersionCode} (no listada)</option>
-              )}
-            </select>
-            <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 6 }}>
-              Los usuarios con una versión de la app anterior a la seleccionada verán una pantalla
+            <label className="radio-row">
+              <input
+                type="radio"
+                name="version-mode"
+                checked={forceLatestVersion}
+                onChange={() => {
+                  setForceLatestVersion(true);
+                  setMinVersionCode(versions[0]?.versionCode ?? 0);
+                }}
+              />
+              <span>
+                <span className="radio-row__title">Forzar a última versión publicada</span>
+                <span className="radio-row__hint" style={{ display: 'block' }}>
+                  {versions[0]
+                    ? `Se mantendrá siempre sincronizado con la versión más reciente registrada abajo (actualmente ${versions[0].versionName}, versionCode ${versions[0].versionCode}). No hace falta volver aquí después de registrar una nueva versión.`
+                    : 'Aún no hay versiones registradas — no se forzará nada hasta que registres al menos una.'}
+                </span>
+              </span>
+            </label>
+
+            <label className="radio-row" style={{ marginBottom: forceLatestVersion ? 0 : undefined }}>
+              <input
+                type="radio"
+                name="version-mode"
+                checked={!forceLatestVersion}
+                onChange={() => setForceLatestVersion(false)}
+              />
+              <span>
+                <span className="radio-row__title">Seleccionar versión</span>
+                <span className="radio-row__hint" style={{ display: 'block' }}>
+                  Elige manualmente la versión mínima. Se queda fija hasta que la cambies tú.
+                </span>
+              </span>
+            </label>
+
+            {!forceLatestVersion && (
+              <div style={{ marginTop: 10 }}>
+                <label>Versión mínima de la aplicación</label>
+                <select
+                  value={minVersionCode}
+                  onChange={e => setMinVersionCode(Number(e.target.value))}
+                >
+                  <option value={0}>Sin restricción</option>
+                  {versions.map(v => (
+                    <option key={v.versionCode} value={v.versionCode}>
+                      {v.versionName} (versionCode {v.versionCode})
+                    </option>
+                  ))}
+                  {minVersionCode > 0 && !versions.some(v => v.versionCode === minVersionCode) && (
+                    <option value={minVersionCode}>versionCode {minVersionCode} (no listada)</option>
+                  )}
+                </select>
+              </div>
+            )}
+
+            <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 10 }}>
+              Los usuarios con una versión de la app anterior a la mínima verán una pantalla
               bloqueante pidiéndoles actualizar desde Play Store. "Sin restricción" la desactiva.
             </p>
           </div>
