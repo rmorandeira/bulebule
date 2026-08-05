@@ -11,6 +11,7 @@ import TournamentList from './TournamentList'
 import Marketplace from './Marketplace'
 import TournamentLobby from './TournamentLobby'
 import UserDetailSheet from './UserDetailSheet'
+import HowToPlaySheet from './HowToPlaySheet'
 
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 const TIER_EMOJI = { Diamante: '💎', Oro: '🥇', Plata: '🥈', Bronce: '🥉' }
@@ -426,6 +427,8 @@ export default function RoomList({
   const [maxPlayersLimit, setMaxPlayersLimit]   = useState(Math.max(...MAX_PLAYERS_OPTIONS))
   const [feedbackSheet, setFeedbackSheet]     = useState(false)
   const [feedbackClosing, setFeedbackClosing] = useState(false)
+  const [helpSheet, setHelpSheet]     = useState(false)
+  const [helpClosing, setHelpClosing] = useState(false)
   const [feedbackToast, setFeedbackToast]     = useState(false)
 
   const pagerRef         = useRef(null)
@@ -436,6 +439,7 @@ export default function RoomList({
   const closeRoomFilterRef = useRef(null)
   const closeFeedbackRef   = useRef(null)
   const feedbackToastRef   = useRef(null)
+  const closeHelpRef       = useRef(null)
   const didInitRef       = useRef(false)
   const prevTabRef       = useRef(activeTab)
 
@@ -580,6 +584,24 @@ export default function RoomList({
     closeRoomFilterRef.current = setTimeout(() => { setRoomFilterSheet(false); setRoomFilterClosing(false) }, CLOSE_DURATION)
   }
 
+  function openHelp() {
+    clearTimeout(closeHelpRef.current)
+    setHelpClosing(false)
+    setHelpSheet(true)
+  }
+  function closeHelp() {
+    setHelpClosing(true)
+    closeHelpRef.current = setTimeout(() => { setHelpSheet(false); setHelpClosing(false) }, CLOSE_DURATION)
+  }
+
+  // Onboarding: la primera vez que alguien llega a la pantalla principal
+  // (con o sin cuenta) le mostramos las reglas del juego automáticamente
+  useEffect(() => {
+    if (localStorage.getItem('bule_seen_rules')) return
+    localStorage.setItem('bule_seen_rules', '1')
+    openHelp()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   function openFeedback() {
     clearTimeout(closeFeedbackRef.current)
     setFeedbackClosing(false)
@@ -711,11 +733,16 @@ export default function RoomList({
               </svg>
             )}
           </button>
-          <button className="rl__hd-music" onClick={openFeedback} aria-label={t('header.feedbackAria')}>
+          <button className="rl__hd-music" onClick={openHelp} aria-label="Cómo se juega">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
               <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </button>
+          <button className="rl__hd-music" onClick={openFeedback} aria-label={t('header.feedbackAria')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
             </svg>
           </button>
         </div>
@@ -1022,6 +1049,11 @@ export default function RoomList({
           closing={roomFilterClosing}
           onClose={closeRoomFilter}
         />
+      )}
+
+      {/* Cómo se juega */}
+      {helpSheet && (
+        <HowToPlaySheet closing={helpClosing} onClose={closeHelp} />
       )}
 
       {/* Rank filter sheet */}

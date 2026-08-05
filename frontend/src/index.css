@@ -2909,6 +2909,83 @@ body {
   margin: 0 0 4px;
 }
 
+/* Cómo se juega (sheet de reglas) */
+.rules__heading {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 4px 0 4px;
+}
+
+.rules__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rules__section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+  margin: 0;
+}
+
+.rules__text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0;
+}
+
+.rules__hands {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rules__hand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: 10px;
+}
+
+.rules__hand-rank {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rules__hand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rules__hand-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.rules__hand-desc {
+  font-size: 12px;
+  color: var(--text-subtle);
+  margin: 0;
+}
+
 /* Toast flotante (confirmación de envío) */
 .rl__toast {
   position: fixed;
@@ -3851,8 +3928,7 @@ body {
 }
 
 .usec__theme-seg {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   background: var(--border);
   border-radius: 10px;
   padding: 3px;
@@ -3860,6 +3936,7 @@ body {
 }
 
 .usec__theme-btn {
+  flex: 1 1 0;
   background: none;
   border: none;
   border-radius: 8px;
