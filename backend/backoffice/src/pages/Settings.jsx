@@ -75,6 +75,15 @@ export default function Settings() {
     setFlags(f => ({ ...f, [key]: !f[key] }));
   }
 
+  // Un flag ausente cuenta como activado (comportamiento por defecto antes
+  // de que existiera esta pantalla) — igual que en el servidor.
+  function flagOn(key) {
+    return flags[key] !== false;
+  }
+  function setFlag(key, value) {
+    setFlags(f => ({ ...f, [key]: value }));
+  }
+
   function removeFlag(key) {
     setFlags(f => {
       const next = { ...f };
@@ -111,7 +120,8 @@ export default function Settings() {
 
   if (loading) return <div className="loading">Cargando…</div>;
 
-  const flagEntries = Object.entries(flags);
+  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis'];
+  const flagEntries = Object.entries(flags).filter(([key]) => !RESERVED_FLAGS.includes(key));
 
   return (
     <div>
@@ -234,6 +244,37 @@ export default function Settings() {
               </div>
               <button className="btn btn-secondary" onClick={addVersion} disabled={addingVersion}>+ Registrar</button>
             </div>
+          </div>
+        </div>
+
+        <div className="panel-section">
+          <h3>Modo Historia y comunicación</h3>
+
+          <div className="toggle-row" style={{ justifyContent: 'space-between' }}>
+            <label style={{ flex: 1 }}>Modo Historia</label>
+            <Switch checked={flagOn('storyMode')} onChange={() => setFlag('storyMode', !flagOn('storyMode'))} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
+            Si se desactiva, los jugadores no podrán entrar al mapa ni combatir en Modo Historia (tanto en la app como si fuerzan la petición).
+          </p>
+
+          <div className="toggle-row" style={{ justifyContent: 'space-between', marginTop: 16 }}>
+            <label style={{ flex: 1 }}>Comentarios (mensajes de texto en sala)</label>
+            <Switch checked={flagOn('comments')} onChange={() => setFlag('comments', !flagOn('comments'))} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
+            Mensajes de texto libre que los jugadores se envían mientras esperan su turno.
+          </p>
+          {!flagOn('comments') && (
+            <p style={{ fontSize: 12, color: 'var(--warning)', marginTop: 6 }}>
+              ⚠️ Al desactivar los comentarios también se desactiva la opción de "denunciar mal comportamiento"
+              en el perfil de usuario, ya que depende de poder describir el mensaje a reportar.
+            </p>
+          )}
+
+          <div className="toggle-row" style={{ justifyContent: 'space-between', marginTop: 16 }}>
+            <label style={{ flex: 1 }}>Emoticonos (reacciones rápidas en sala)</label>
+            <Switch checked={flagOn('emojis')} onChange={() => setFlag('emojis', !flagOn('emojis'))} />
           </div>
         </div>
 

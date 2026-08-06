@@ -38,13 +38,24 @@ function CloseIcon() {
 
 // Barra que se muestra mientras el jugador espera su turno: dos botones que
 // despliegan, respectivamente, reacciones rápidas y un campo de texto libre.
+// Ambos se pueden desactivar por separado desde el backoffice (Ajustes).
 export default function WaitingBar({ label }) {
   const [openPanel, setOpenPanel] = useState(null)   // null | 'quick' | 'custom' — objetivo
   const [renderPanel, setRenderPanel] = useState(null) // panel montado (se retrasa en el cierre)
   const [closing, setClosing] = useState(false)
   const [customText, setCustomText] = useState('')
+  const [emojisEnabled, setEmojisEnabled] = useState(true)
+  const [commentsEnabled, setCommentsEnabled] = useState(true)
   const closeTimerRef = useRef(null)
   const inputRef = useRef(null)
+
+  useEffect(() => {
+    socket.emit('get_settings', (res) => {
+      if (!res?.ok) return
+      setEmojisEnabled(res.settings?.featureFlags?.emojis !== false)
+      setCommentsEnabled(res.settings?.featureFlags?.comments !== false)
+    })
+  }, [])
 
   useEffect(() => () => clearTimeout(closeTimerRef.current), [])
 
@@ -72,14 +83,14 @@ export default function WaitingBar({ label }) {
 
   function sendQuick(emoji) {
     playTapSound()
-    socket.emit('send_message', { text: emoji })
+    socket.emit('send_message', { text: emoji, kind: 'emoji' })
     closePanel()
   }
 
   function sendCustom() {
     const text = customText.trim()
     if (!text) return
-    socket.emit('send_message', { text })
+    socket.emit('send_message', { text, kind: 'text' })
     closePanel()
   }
 
@@ -87,13 +98,17 @@ export default function WaitingBar({ label }) {
     return (
       <div className="waiting-bar">
         <div className="waiting-bar__row">
-          <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('quick')} aria-label="Mensajes rápidos">
-            <SmileIcon />
-          </button>
+          {emojisEnabled && (
+            <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('quick')} aria-label="Mensajes rápidos">
+              <SmileIcon />
+            </button>
+          )}
           <div className="waiting-label">{label}</div>
-          <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('custom')} aria-label="Mensaje personalizado">
-            <ChatIcon />
-          </button>
+          {commentsEnabled && (
+            <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('custom')} aria-label="Mensaje personalizado">
+              <ChatIcon />
+            </button>
+          )}
         </div>
       </div>
     )

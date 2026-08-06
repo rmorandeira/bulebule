@@ -1337,6 +1337,8 @@ app.post('/api/report-message', (req, res) => {
   if (!reportMessageLimiters.has(ip)) reportMessageLimiters.set(ip, makeRateLimiter(5, 10 * 60_000));
   if (!reportMessageLimiters.get(ip)()) return res.status(429).json({ error: 'Demasiados reportes, inténtalo más tarde' });
 
+  if (!isFeatureEnabled('comments')) return res.status(403).json({ error: 'Función desactivada' });
+
   const { reporterName, reportedPlayer, messageText } = req.body ?? {};
   const msg = typeof messageText === 'string' ? messageText.trim() : '';
   if (!msg) return res.status(400).json({ error: 'Falta el mensaje reportado' });
@@ -1385,6 +1387,11 @@ function saveSettings(next) {
     INSERT INTO config (key, value) VALUES ('game_settings', ?)
     ON CONFLICT(key) DO UPDATE SET value=excluded.value
   `).run(JSON.stringify(gameSettings));
+}
+// Un flag ausente cuenta como activado — así los despliegues anteriores a
+// la existencia de estos flags no cambian de comportamiento sin querer.
+function isFeatureEnabled(key) {
+  return gameSettings.featureFlags?.[key] !== false;
 }
 
 // ── Backoffice admin API ──────────────────────────────────────────────────────
@@ -1674,6 +1681,7 @@ io.on('connection', (socket) => {
 
   socket.on('get_story_progress', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    if (!isFeatureEnabled('storyMode')) return cb?.({ ok: false, error: 'Modo Historia desactivado temporalmente' });
     const uid = socket.data.userId;
     if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión para jugar Modo Historia' });
 
@@ -1859,6 +1867,7 @@ io.on('connection', (socket) => {
     }
 
     if (storyNode) {
+      if (!isFeatureEnabled('storyMode')) return cb?.({ ok: false, error: 'Modo Historia desactivado temporalmente' });
       // Nunca confiar en el maxPlayers/vsBot del cliente: se derivan del
       // progreso persistido en servidor.
       const uid = socket.data.userId;
@@ -2133,7 +2142,10 @@ io.on('connection', (socket) => {
   });
 
   // POC de mensajería: reacciones/mensajes cortos entre jugadores de la misma sala
-  socket.on('send_message', ({ text } = {}, cb) => {
+  socket.on('send_message', ({ text, kind = 'text' } = {}, cb) => {
+    if (kind === 'emoji' ? !isFeatureEnabled('emojis') : !isFeatureEnabled('comments')) {
+      return cb?.({ ok: false, error: 'Función desactivada' });
+    }
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return cb?.({ ok: false });

@@ -170,7 +170,7 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
 
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
-function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit, onSelectStory }) {
+function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit, storyModeEnabled = true, onSelectStory }) {
   const { sheetRef, handleProps } = useSheetDrag(onClose)
   const maxPlayersOptions = MAX_PLAYERS_OPTIONS.filter(n => n <= maxPlayersLimit)
   const [mode, setMode]             = useState('multi') // 'multi' | 'solo' | 'story'
@@ -193,6 +193,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
 
   function create() {
     if (mode === 'story') {
+      if (!storyModeEnabled) return setError('Modo Historia desactivado temporalmente')
       if (!user) return setError('Debes iniciar sesión para jugar Modo Historia')
       onSelectStory()
       return
@@ -266,10 +267,12 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
             onClick={() => { setMode('solo'); setError('') }}>
             Solo Play
           </button>
-          <button className={`bs__mode-btn${mode === 'story' ? ' bs__mode-btn--active' : ''}`}
-            onClick={() => { setMode('story'); setError('') }}>
-            Modo Historia
-          </button>
+          {storyModeEnabled && (
+            <button className={`bs__mode-btn${mode === 'story' ? ' bs__mode-btn--active' : ''}`}
+              onClick={() => { setMode('story'); setError('') }}>
+              Modo Historia
+            </button>
+          )}
         </div>
 
         {/* Ambos paneles ocupan la misma celda de grid: la altura de la ficha
@@ -445,6 +448,7 @@ export default function RoomList({
   const [activeTournament, setActiveTournament] = useState(null)
   const [viewingUser, setViewingUser]           = useState(null) // { userId, name, picture }
   const [maxPlayersLimit, setMaxPlayersLimit]   = useState(Math.max(...MAX_PLAYERS_OPTIONS))
+  const [featureFlags, setFeatureFlags]         = useState({})
   const [feedbackSheet, setFeedbackSheet]     = useState(false)
   const [feedbackClosing, setFeedbackClosing] = useState(false)
   const [helpSheet, setHelpSheet]     = useState(false)
@@ -494,6 +498,7 @@ export default function RoomList({
     socket.emit('get_settings', (res) => {
       if (!res?.ok) return
       setMaxPlayersLimit(res.settings?.maxPlayersLimit ?? Math.max(...MAX_PLAYERS_OPTIONS))
+      setFeatureFlags(res.settings?.featureFlags ?? {})
     })
   }
 
@@ -1090,6 +1095,7 @@ export default function RoomList({
       {createSheet && (
         <CreateSheet user={user} playerName={playerName} onNameChange={onNameChange}
           closing={createClosing} onClose={closeCreate} maxPlayersLimit={maxPlayersLimit}
+          storyModeEnabled={featureFlags.storyMode !== false}
           onSelectStory={() => { closeCreate(); onEnterStory() }} />
       )}
 

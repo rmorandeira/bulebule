@@ -60,6 +60,13 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
   const [reportError, setReportError]     = useState('')
   const [reportSending, setReportSending] = useState(false)
   const [reportSent, setReportSent]       = useState(false)
+  const [commentsEnabled, setCommentsEnabled] = useState(true)
+
+  useEffect(() => {
+    socket.emit('get_settings', (res) => {
+      if (res?.ok) setCommentsEnabled(res.settings?.featureFlags?.comments !== false)
+    })
+  }, [])
 
   async function submitReport() {
     if (!reportText.trim()) return setReportError(t('user.settings.reportErrorEmpty'))
@@ -649,7 +656,9 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
 
       <div className="usec__settings-section">
         <p className="usec__settings-label">{t('user.settings.safety')}</p>
-        {reportSent ? (
+        {!commentsEnabled ? (
+          <p className="us__version-text">{t('user.settings.reportDisabled')}</p>
+        ) : reportSent ? (
           <p className="us__version-text">{t('user.settings.reportSent')}</p>
         ) : (
           <>
