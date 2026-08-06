@@ -7,6 +7,8 @@ import { imgSrc } from '../utils/imgSrc'
 import { APP_VERSION_NAME } from '../version'
 import { useTranslation, setLanguage } from '../i18n'
 
+const BACKEND = import.meta.env.VITE_BACKEND_URL || ''
+
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
 // Map raw game values to display names
@@ -52,6 +54,38 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
   const [rankTotal, setRankTotal] = useState(0)
   const [handStats, setHandStats] = useState(null)
   const [rollStats, setRollStats] = useState(null)
+  const [reportOpen, setReportOpen]       = useState(false)
+  const [reportedPlayer, setReportedPlayer] = useState('')
+  const [reportText, setReportText]       = useState('')
+  const [reportError, setReportError]     = useState('')
+  const [reportSending, setReportSending] = useState(false)
+  const [reportSent, setReportSent]       = useState(false)
+
+  async function submitReport() {
+    if (!reportText.trim()) return setReportError(t('user.settings.reportErrorEmpty'))
+    setReportSending(true)
+    setReportError('')
+    try {
+      const res = await fetch(`${BACKEND}/api/report-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reporterName: user?.name ?? null,
+          reportedPlayer: reportedPlayer.trim(),
+          messageText: reportText.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) throw new Error(data.error || t('user.settings.reportErrorGeneric'))
+      setReportSent(true)
+      setReportedPlayer('')
+      setReportText('')
+    } catch (e) {
+      setReportError(e.message || t('user.settings.reportErrorGeneric'))
+    } finally {
+      setReportSending(false)
+    }
+  }
 
   const TABS = [
     { id: 'stats',     label: t('user.tabs.stats') },
@@ -610,6 +644,48 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
               date: fmtAcceptedDate(user.privacyAcceptedAt ?? Math.floor(user.consentAcceptedAt / 1000), lang),
             })}
           </p>
+        )}
+      </div>
+
+      <div className="usec__settings-section">
+        <p className="usec__settings-label">{t('user.settings.safety')}</p>
+        {reportSent ? (
+          <p className="us__version-text">{t('user.settings.reportSent')}</p>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="us__privacy-link"
+              onClick={() => setReportOpen(open => !open)}
+            >
+              {t('user.settings.reportLink')}
+            </button>
+            {reportOpen && (
+              <div className="bs__field" style={{ marginTop: 10 }}>
+                <p className="bs__label">{t('user.settings.reportPlayerLabel')}</p>
+                <input
+                  className="bs__input"
+                  placeholder={t('user.settings.reportPlayerPlaceholder')}
+                  maxLength={100}
+                  value={reportedPlayer}
+                  onChange={e => setReportedPlayer(e.target.value)}
+                />
+                <p className="bs__label" style={{ marginTop: 10 }}>{t('user.settings.reportMessageLabel')}</p>
+                <textarea
+                  className="bs__input bs__textarea"
+                  placeholder={t('user.settings.reportMessagePlaceholder')}
+                  maxLength={500}
+                  rows={4}
+                  value={reportText}
+                  onChange={e => { setReportText(e.target.value); setReportError('') }}
+                />
+                {reportError && <p className="bs__error">{reportError}</p>}
+                <button className="bs__submit" onClick={submitReport} disabled={reportSending} style={{ marginTop: 10 }}>
+                  {reportSending ? t('user.settings.reportSending') : t('user.settings.reportSubmit')}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

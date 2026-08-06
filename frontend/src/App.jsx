@@ -11,6 +11,7 @@ import CreateRoom from './components/CreateRoom'
 import WaitingRoom from './components/WaitingRoom'
 import GameBoard from './components/GameBoard'
 import ChallengeInvite from './components/ChallengeInvite'
+import StoryMap from './components/StoryMap'
 
 function loadUser() {
   try { return JSON.parse(localStorage.getItem('bule_user')) } catch { return null }
@@ -152,6 +153,7 @@ export default function App() {
   const swRegistered       = useRef(false)
   const sessionTrackedRef  = useRef(false)
   const roomRef            = useRef(null)
+  const lastStoryNodeRef   = useRef(null)
   const playerNameRef      = useRef(playerName)
   const musicRef           = useRef(null)
   const gameMusicRef  = useRef(null)
@@ -246,7 +248,10 @@ export default function App() {
     if (!user) track('session_guest')
   }, [myId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { roomRef.current = room }, [room])
+  useEffect(() => {
+    roomRef.current = room
+    if (room) lastStoryNodeRef.current = room.storyNode ?? null
+  }, [room])
   useEffect(() => { playerNameRef.current = playerName }, [playerName])
 
   useEffect(() => {
@@ -276,8 +281,9 @@ export default function App() {
     })
     socket.on('room_state', setRoom)
     socket.on('room_destroyed', ({ byPlayer } = {}) => {
+      const wasStory = !!lastStoryNodeRef.current
       setRoom(null)
-      setScreen('list')
+      setScreen(wasStory ? 'story' : 'list')
       if (byPlayer) setAbandonedBy(byPlayer)
     })
     socket.on('room_invite', ({ roomCode, roomName, inviterName }) => {
@@ -373,8 +379,9 @@ export default function App() {
   }
 
   function handleLeave() {
+    const wasStory = !!room?.storyNode
     setRoom(null)
-    setScreen('list')
+    setScreen(wasStory ? 'story' : 'list')
   }
 
   function acceptInvite() {
@@ -476,6 +483,16 @@ export default function App() {
     )
   }
 
+  if (screen === 'story' && user) {
+    return (
+      <StoryMap
+        user={user}
+        playerName={playerName}
+        onBack={() => setScreen('list')}
+      />
+    )
+  }
+
   if (updateRequired) {
     return (
       <div className="modal-overlay">
@@ -509,6 +526,7 @@ export default function App() {
         onUpdate={handleUpdateUser}
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
+        onEnterStory={() => setScreen('story')}
       />
       {abandonedBy && (
         <div className="modal-overlay">

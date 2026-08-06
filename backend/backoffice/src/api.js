@@ -54,4 +54,8 @@ export const api = {
     list:   (params = {})  => apiFetch(`/api/admin/feedback?${new URLSearchParams(params)}`),
     delete: (id)            => apiFetch(`/api/admin/feedback/${id}`, { method: 'DELETE' }),
   },
+  reportedMessages: {
+    list:   (params = {})  => apiFetch(`/api/admin/reported-messages?${new URLSearchParams(params)}`),
+    delete: (id)            => apiFetch(`/api/admin/reported-messages/${id}`, { method: 'DELETE' }),
+  },
 };

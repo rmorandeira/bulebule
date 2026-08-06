@@ -2778,8 +2778,7 @@ body {
 
 /* Mode selector (Multijugador / Solo Play) — segmented control */
 .bs__mode-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
   background: var(--border);
   border-radius: 14px;
   padding: 4px;
@@ -2788,16 +2787,20 @@ body {
 }
 
 .bs__mode-btn {
+  flex: 1 1 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 12px 6px;
   border-radius: 11px;
   border: none;
   background: none;
   color: var(--text-subtle);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   -webkit-tap-highlight-color: transparent;
@@ -4507,6 +4510,59 @@ body {
 .chi__btn--accept {
   background: var(--primary);
   color: var(--primary-text);
+}
+
+/* ── Modo Historia ────────────────────────────────────────────────────────── */
+.story {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.story__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.story__lives {
+  display: flex;
+  gap: 4px;
+}
+.story__life {
+  font-size: 16px;
+  color: var(--border);
+}
+.story__life--full {
+  color: #ef4444;
+}
+
+.story__life-timer {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-subtle);
+  margin: 8px 0 0;
+  flex-shrink: 0;
+}
+
+.story__scene-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  touch-action: none;
+}
+
+.story__scene {
+  position: absolute;
+  inset: 0;
+}
+.story__scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* ── Responsive: tablet portrait (520px+) ───────────────────────────────── */

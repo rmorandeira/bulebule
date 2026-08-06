@@ -317,15 +317,16 @@
 </nav>
 
 <div class="page-header">
-  <p class="label">Documentación técnica · v0.2</p>
+  <p class="label">Documentación técnica · v0.5</p>
   <h1>Bule Bule</h1>
-  <p class="subtitle">Juego multijugador online de póker de dados, con física 3D, invitaciones por push, modo bot y modo invitado.</p>
+  <p class="subtitle">Juego multijugador online de póker de dados, con física 3D, marketplace de Bules, torneos, retos 1v1, backoffice de administración y apps nativas iOS/Android.</p>
   <div class="meta-row">
-    <div class="meta-item"><strong>106</strong> commits</div>
-    <div class="meta-item"><strong>7</strong> días de desarrollo activo</div>
-    <div class="meta-item"><strong>~5.000</strong> líneas de código</div>
-    <div class="meta-item"><strong>Frontend:</strong> <span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud">Firebase</span></span></span></span> · <strong>Backend:</strong> Railway</div>
-    <div class="meta-item"><strong>Generado:</strong> 11 junio 2026</div>
+    <div class="meta-item"><strong>386</strong> commits</div>
+    <div class="meta-item"><strong>18</strong> días de desarrollo activo <span class="tip" data-tip="Días naturales con al menos un commit, entre el 5 de junio y el 30 de julio de 2026 (~8 semanas de calendario)">ⓘ</span></div>
+    <div class="meta-item"><strong>~10.600</strong> líneas de código <span class="tip" data-tip="JavaScript/JSX en backend/ y frontend/, sin contar node_modules, dist ni build">ⓘ</span></div>
+    <div class="meta-item"><strong>v1.3.37</strong> versión de app (Android)</div>
+    <div class="meta-item"><strong>Frontend:</strong> <span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud">Firebase</span> · <strong>Backend:</strong> Railway</div>
+    <div class="meta-item"><strong>Generado:</strong> 31 julio 2026</div>
   </div>
 </div>
 
@@ -345,11 +346,19 @@
   <div class="card-grid">
     <div class="card">
       <h3>Multijugador real</h3>
-      <p>Salas públicas y privadas con código de 4 caracteres. Hasta 10 jugadores. Lobby de espera con vista en tiempo real.</p>
+      <p>Salas públicas y privadas con código de 4 caracteres. Hasta 10 jugadores. Lobby de espera con vista en tiempo real, invitaciones directas y retos 1v1.</p>
     </div>
     <div class="card">
       <h3>Física 3D</h3>
-      <p>Dados renderizados con <span class="tip" data-tip="Librería JavaScript para crear y renderizar gráficos 3D en el navegador usando WebGL"><span class="tip" data-tip="Librería JavaScript para crear y renderizar gráficos 3D en el navegador usando WebGL"><span class="tip" data-tip="Librería JavaScript para crear y renderizar gráficos 3D en el navegador usando WebGL"><span class="tip" data-tip="Librería JavaScript para crear y renderizar gráficos 3D en el navegador usando WebGL">Three.js</span></span></span></span> y simulación de física real con <span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento"><span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento"><span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento"><span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento">Rapier3D</span></span></span></span>. Sombras, rebotes, colisiones deterministas (semilla por tirada) y antialiasing <span class="tip" data-tip="Fast Approximate Anti-Aliasing — técnica gráfica para suavizar los bordes dentados en escenas 3D"><span class="tip" data-tip="Fast Approximate Anti-Aliasing — técnica gráfica para suavizar los bordes dentados en escenas 3D"><span class="tip" data-tip="Fast Approximate Anti-Aliasing — técnica gráfica para suavizar los bordes dentados en escenas 3D"><span class="tip" data-tip="Fast Approximate Anti-Aliasing — técnica gráfica para suavizar los bordes dentados en escenas 3D">FXAA</span></span></span></span>.</p>
+      <p>Dados renderizados con <span class="tip" data-tip="Librería JavaScript para crear y renderizar gráficos 3D en el navegador usando WebGL">Three.js</span> y simulación de física real con <span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento">Rapier3D</span>. Sombras, rebotes, colisiones deterministas (semilla por tirada) y antialiasing <span class="tip" data-tip="Fast Approximate Anti-Aliasing — técnica gráfica para suavizar los bordes dentados en escenas 3D">FXAA</span>.</p>
+    </div>
+    <div class="card">
+      <h3>Marketplace y Bules</h3>
+      <p>Moneda virtual del juego (<strong>Bules</strong>) ganada jugando o comprada (paquete de 1.000 Bules vía Bizum). Se gasta en skins de dados (mármoles, rojo transparente) e items cosméticos de bar (cubata, churros, balón…). Economía cerrada: no canjeable por dinero real.</p>
+    </div>
+    <div class="card">
+      <h3>Torneos con acceso por item</h3>
+      <p>Torneos exclusivos a los que solo se accede poseyendo un item concreto del marketplace (p. ej. el torneo "Bar Doce" requiere el item Churros). Gestionados desde el backoffice, con rango de fechas y niveles de acceso.</p>
     </div>
     <div class="card">
       <h3>Bot IA</h3>
@@ -360,20 +369,32 @@
       <p>Palillos visuales por jugador. Capilla, liberación por Repóker de X y modo de juego limitado por rondas.</p>
     </div>
     <div class="card">
-      <h3>Push & invitaciones</h3>
-      <p>Web Push Notifications para invitar amigos aunque la app esté cerrada. Búsqueda de usuarios por nombre.</p>
+      <h3>Retos, favoritos e historial</h3>
+      <p>Reto directo 1v1 a otro jugador (online u offline vía push/FCM), favoritos con estrella en el ranking, historial de actividad unificado (partidas y compras) e indicador de estado online.</p>
+    </div>
+    <div class="card">
+      <h3>Notificaciones push nativas</h3>
+      <p>Firebase Cloud Messaging (FCM) para retos e invitaciones aunque la app esté cerrada en Android. Web Push como fallback en navegador.</p>
+    </div>
+    <div class="card">
+      <h3>Mensajería en partida</h3>
+      <p>Reacciones rápidas y burbujas de chat durante la partida (prueba de concepto), visibles para todos los jugadores en la sala, con sonido al pulsar.</p>
     </div>
     <div class="card">
       <h3>Diseño sonoro completo</h3>
       <p>Cubilete antes de lanzar, rebotes de dados, descarte, palillo roto, música de lobby y de partida. Todo sincronizado con animaciones.</p>
     </div>
     <div class="card">
-      <h3>Login opcional</h3>
-      <p>Google <span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)">OAuth</span></span></span></span> para funciones sociales (invitaciones, push). Sin login: modo invitado con nombre autogenerado tipo <em>el_pirri_042</em>, persistido en localStorage.</p>
+      <h3>Login y publicidad nativos</h3>
+      <p>Google Sign-In nativo en Android (además de <span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)">OAuth</span> web) con verificación de token en servidor. AdMob integrado (banners + UMP consent), pendiente de vincular App ID real hasta publicación en producción. Sin login: modo invitado con nombre autogenerado tipo <em>el_pirri_042</em>, persistido en localStorage.</p>
     </div>
     <div class="card">
-      <h3>Mobile-first</h3>
-      <p>Agitar el móvil para tirar, gestos táctiles para descartar dados, PWA con service worker. Zoom adaptativo al número de dados en juego.</p>
+      <h3>Mobile-first y apps nativas</h3>
+      <p>Agitar el móvil para tirar, gestos táctiles para descartar dados, PWA con service worker. App Android empaquetada con Capacitor (v1.3.37), actualización forzosa por versión mínima gestionada desde el backoffice.</p>
+    </div>
+    <div class="card">
+      <h3>Backoffice de administración</h3>
+      <p>Panel propio (React, servido desde el backend en Railway) para gestionar items del marketplace, torneos, usuarios, feedback, versiones de app publicadas y ajustes globales (límite de jugadores, feature flags).</p>
     </div>
   </div>
 
@@ -422,23 +443,25 @@
     <div class="arch-arrow">⟷ WS</div>
     <div class="arch-box">
       <h4>Servidor</h4>
-      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Node.js · Express</p>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Node.js · Express · SQLite</p>
       <ul style="font-size:.83rem;color:var(--muted)">
-        <li><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets">Socket.io</span></span></span></span> — eventos</li>
-        <li>web-push — <span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span></span></span></span></li>
-        <li>Estado en memoria</li>
-        <li>Lógica de juego pura</li>
+        <li><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets">Socket.io</span> — eventos de juego, marketplace, torneos, retos</li>
+        <li>SQLite persistida en volumen Railway (usuarios, items, torneos, ajustes)</li>
+        <li>web-push + Firebase Admin (FCM) — <span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span> y push nativo</li>
+        <li>Rate limiting por socket + limpieza automática de salas</li>
+        <li>Estado de partidas en memoria · lógica de juego pura</li>
+        <li>Backoffice (React) servido como app estática desde el propio backend</li>
       </ul>
     </div>
     <div class="arch-arrow">→</div>
     <div class="arch-box">
       <h4>Infraestructura</h4>
-      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Cloud · CI manual</p>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Cloud · CI/CD automático</p>
       <ul style="font-size:.83rem;color:var(--muted)">
-        <li><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud">Firebase</span></span></span></span> Hosting (frontend)</li>
-        <li>Railway (backend)</li>
-        <li>GitHub (main branch)</li>
-        <li>Deploy manual vía CLI</li>
+        <li><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud">Firebase</span> Hosting (frontend) — deploy automático por GitHub Actions</li>
+        <li>Railway Hobby (backend + SQLite en volumen) — deploy automático al hacer push a <code>main</code></li>
+        <li>GitHub — rama <code>main</code> (producción) + rama <code>dev</code> (trabajo en curso)</li>
+        <li>App Android empaquetada con Capacitor, publicada vía Play Console</li>
       </ul>
     </div>
   </div>
@@ -453,35 +476,50 @@
     <tr><td>Tiempo real</td><td><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets">Socket.io</span></span></span></span></td><td>4.7</td><td>Comunicación bidireccional cliente-servidor</td></tr>
     <tr><td>Auth</td><td>@react-oauth/google</td><td>0.13</td><td><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)">OAuth</span></span></span></span> 2.0 con Google (opcional)</td></tr>
     <tr><td>Backend HTTP</td><td>Express</td><td>4.18</td><td><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí">API</span></span></span></span> REST mínima + <span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span></span></span></span> endpoint</td></tr>
-    <tr><td>Push</td><td>web-push</td><td>3.6</td><td>Notificaciones push <span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span></span></span></span>/WebPush</td></tr>
-    <tr><td>Hosting frontend</td><td><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud"><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud">Firebase</span></span></span></span> Hosting</td><td>—</td><td><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario"><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario"><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario"><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario">CDN</span></span></span></span> global, HTTPS automático</td></tr>
-    <tr><td>Hosting backend</td><td>Railway</td><td>—</td><td>Contenedor Node.js, auto-SSL</td></tr>
+    <tr><td>Push</td><td>web-push</td><td>3.6</td><td>Notificaciones push <span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span>/WebPush (fallback navegador)</td></tr>
+    <tr><td>Push nativo</td><td>Firebase Admin SDK (FCM)</td><td>—</td><td>Notificaciones push nativas en Android para retos e invitaciones</td></tr>
+    <tr><td>Base de datos</td><td>SQLite (better-sqlite3)</td><td>—</td><td>Usuarios, items, torneos, feedback, ajustes — persistida en volumen Railway</td></tr>
+    <tr><td>App nativa</td><td>Capacitor</td><td>—</td><td>Empaqueta el frontend web como app Android; Google Sign-In nativo, AdMob, FCM</td></tr>
+    <tr><td>Publicidad</td><td>@capacitor-community/admob</td><td>—</td><td>Banners + UMP consent; App ID de test hasta publicación en producción</td></tr>
+    <tr><td>Backoffice</td><td>React + Vite (app separada)</td><td>—</td><td>Panel de administración servido como estático desde <code>server.js</code></td></tr>
+    <tr><td>Hosting frontend</td><td><span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud">Firebase</span> Hosting</td><td>—</td><td><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario">CDN</span> global, HTTPS automático, deploy vía GitHub Actions</td></tr>
+    <tr><td>Hosting backend</td><td>Railway (Hobby)</td><td>—</td><td>Contenedor Node.js + volumen persistente para SQLite, auto-SSL, deploy automático</td></tr>
   </table>
 
   <h3>Estructura de directorios</h3>
   <pre>bule-bule/
 ├── backend/
-│   ├── server.js          # Lógica de servidor (699 líneas)
+│   ├── server.js          # Lógica de servidor (2.241 líneas)
 │   ├── gameLogic.js       # Evaluación y comparación de manos (51 líneas)
+│   ├── data/               # SQLite (bulebule.db) persistida en volumen Railway
+│   ├── backoffice/         # App React separada — panel de administración
+│   │   └── src/pages/       # Login, Settings, Items, Tournaments, Users, Feedback
 │   ├── Dockerfile
 │   └── railway.json
 └── frontend/
+    ├── android/             # Proyecto Capacitor (build nativo Android)
     ├── public/
-    │   ├── assets/        # Imágenes, audios (.mp3), sw.js
+    │   ├── assets/          # Imágenes, audios (.mp3), items, dados, sw.js
     │   └── index.html
     └── src/
-        ├── App.jsx            # Routing, música, auth, modo invitado
-        ├── socket.js          # Singleton Socket.io
-        ├── index.css          # Todos los estilos (1.662 líneas)
+        ├── App.jsx              # Routing, música, auth, modo invitado
+        ├── socket.js            # Singleton Socket.io
+        ├── analytics.js
+        ├── version.js
+        ├── index.css            # Todos los estilos
+        ├── hooks/useSheetDrag.js
+        ├── utils/                # admob.js, push.js, imgSrc.js
         └── components/
             ├── GameBoard.jsx          # Pantalla de juego principal
             ├── DiceRollerScene.jsx    # Escena 3D Three.js + Rapier
-            ├── AnimacionNextPlayer.jsx
-            ├── AnimacionPalilloRoto.jsx
-            ├── WaitingRoom.jsx
-            ├── RoomList.jsx
-            ├── CreateRoom.jsx
-            ├── UserSettings.jsx
+            ├── Marketplace.jsx        # Tienda de Bules e items
+            ├── TournamentList.jsx / TournamentLobby.jsx
+            ├── ChallengeInvite.jsx    # Retos 1v1
+            ├── UserSection.jsx / UserDetailSheet.jsx
+            ├── RoomList.jsx / WaitingRoom.jsx / WaitingBar.jsx
+            ├── CreateRoom.jsx / CountdownButton.jsx
+            ├── AdBanner.jsx           # Banner AdMob
+            ├── AnimacionNextPlayer.jsx / AnimacionPalilloRoto.jsx
             ├── Die.jsx
             └── AlaCaidaToast.jsx</pre>
 
@@ -499,7 +537,26 @@
   │◀── room_state ──────────────────────│
   │                                    │
   │─── bot_ready ──────────────────────▶│  botAct() → siguientes tiradas
-  │◀── room_state ──────────────────────│</pre>
+  │◀── room_state ──────────────────────│
+  │                                    │
+  │─── buy_item / buy_bules_pack ──────▶│  descuenta/añade Bules en SQLite
+  │─── get_marketplace / get_user_items▶│  catálogo + inventario del usuario
+  │◀── ok / error (callback) ──────────│
+  │                                    │
+  │─── join_tournament ────────────────▶│  valida item requerido, inscribe
+  │─── challenge_user ──────────────────▶│  crea reto, envía push/FCM si offline
+  │◀── get_settings (público) ─────────│  maxPlayersLimit + featureFlags</pre>
+
+  <h3>Backoffice — panel de administración</h3>
+  <p>
+    App React independiente (<code>backend/backoffice/</code>) compilada a estático y servida desde el propio
+    backend en <code>/backoffice</code>, protegida con token de administrador. Permite gestionar items del
+    marketplace, torneos, versiones de app publicadas, feedback de usuarios, usuarios registrados y, desde
+    julio de 2026, una sección de <strong>Ajustes</strong> con el máximo de jugadores por sala y una lista de
+    <em>feature flags</em> on/off — pensada para poder aplicar reglas por país o segmento en el futuro sin
+    rehacer el modelo de datos. Los flags se guardan en la tabla <code>config</code> pero ningún flag real
+    se consume todavía en el juego.
+  </p>
 </section>
 
 <!-- ═══════════════════════════════════════════ 3. TIMELINE ═══ -->
@@ -579,6 +636,75 @@
       <div class="tl-item"><span class="tl-hash">3f0cb8d</span><span class="tl-cat cat-fix">fix</span><strong>Fix Liberado en 3+ jugadores</strong> — <code>finishTurn</code> comprueba <code>nonLiberado.length</code> (total) en lugar de <code>pending.length</code> (en-ronda), evitando que se corte el turno de jugadores pendientes.</div>
     </div>
 
+    <!-- Puente 12-22 junio -->
+    <div class="tl-group">
+      <div class="tl-date">12–22 junio 2026 — Estabilización y persistencia</div>
+      <div class="tl-item"><span class="tl-hash">b37c9ee–8c10382</span><span class="tl-cat cat-fix">fix</span><strong>Reconexión móvil</strong> — reingreso al lobby con el mismo nombre expulsando el socket antiguo; se restaura el estado de host tras una reconexión.</div>
+      <div class="tl-item"><span class="tl-hash">e27af81</span><span class="tl-cat cat-feat">feat</span><strong>Persistencia en SQLite</strong> — usuarios, email y suscripciones push sobreviven a un reinicio de Railway (hasta entonces, todo se perdía).</div>
+      <div class="tl-item"><span class="tl-hash">c463316</span><span class="tl-cat cat-feat">feat</span><strong>Scoring y pulido de UI</strong> — nombres de invitado mejorados, <code>ads.txt</code>, ajustes de layout.</div>
+    </div>
+
+    <!-- 26 junio -->
+    <div class="tl-group">
+      <div class="tl-date">26 junio 2026 — Release v0.3.0: retos, torneos y favoritos</div>
+      <div class="tl-item"><span class="tl-hash">e0be156</span><span class="tl-cat cat-feat">feat</span><strong>Release v0.3.0</strong> — sistema de retos 1v1, perfiles de usuario, banner de invitación.</div>
+      <div class="tl-item"><span class="tl-hash">88367d5</span><span class="tl-cat cat-feat">feat</span><strong>Banner de reto</strong> con opción de compartir por WhatsApp.</div>
+      <div class="tl-item"><span class="tl-hash">9dce6b6</span><span class="tl-cat cat-feat">feat</span><strong>Ficha de usuario</strong> — estadísticas, items propios y botón de reto directo.</div>
+      <div class="tl-item"><span class="tl-hash">b164f18</span><span class="tl-cat cat-feat">feat</span><strong>TournamentList / TournamentLobby</strong> — primeros componentes de torneos.</div>
+      <div class="tl-item"><span class="tl-hash">86c8bd7</span><span class="tl-cat cat-feat">feat</span><strong>Torneos por niveles</strong> — jugadores de tier superior pueden acceder a torneos de tier inferior.</div>
+      <div class="tl-item"><span class="tl-hash">4785c2c–94787e9</span><span class="tl-cat cat-feat">feat</span><strong>Favoritos + AdSense</strong> — filtros de ranking/salas, mejoras de UI, primera integración de publicidad web.</div>
+      <div class="tl-item"><span class="tl-hash">40ecdf6</span><span class="tl-cat cat-feat">feat</span><strong>Rediseño de tarjetas de reto</strong> y fix del control segmentado.</div>
+    </div>
+
+    <!-- 29 junio -->
+    <div class="tl-group">
+      <div class="tl-date">29 junio 2026 — Rename a Bules, skins de dados y hardening de seguridad</div>
+      <div class="tl-item"><span class="tl-hash">8044cd6</span><span class="tl-cat cat-ref">refactor</span><strong>Rename puntos → Bules</strong> en toda la UI. Nace el nombre definitivo de la moneda del juego.</div>
+      <div class="tl-item"><span class="tl-hash">1dbfd8e</span><span class="tl-cat cat-feat">feat</span><strong>Paquete de 1.000 Bules</strong> — primera vía de compra, pago único por Bizum.</div>
+      <div class="tl-item"><span class="tl-hash">c72e112–6370a7e</span><span class="tl-cat cat-feat">feat</span><strong>Sistema de skins de dados</strong> — texturas de mármol (azul, negro, rojo, verde) seleccionables desde el marketplace.</div>
+      <div class="tl-item"><span class="tl-hash">87523f2–43e8a0d</span><span class="tl-cat cat-feat">feat</span><strong>Dados rojos transparentes</strong> — skin plano por jugador, mayor transparencia, nuevos items de marketplace.</div>
+      <div class="tl-item"><span class="tl-hash">22f5c52</span><span class="tl-cat cat-feat">feat</span><strong>Action sheet de items</strong> — items clicables en el perfil; renombrado a "Mármol Azul".</div>
+      <div class="tl-item"><span class="tl-hash">8b72f8d</span><span class="tl-cat cat-feat">feat</span><strong>Items de bar</strong> — cubata, churros y balón añadidos al marketplace.</div>
+      <div class="tl-item"><span class="tl-hash">c77227d–fb63ed1–c31cbe4</span><span class="tl-cat cat-feat">feat</span><strong>Torneo con acceso por item</strong> — el torneo "Bar Doce" solo es accesible poseyendo el item Churros; se muestra el item requerido en la tarjeta del torneo.</div>
+      <div class="tl-item"><span class="tl-hash">38fb594</span><span class="tl-cat cat-feat">feat</span><strong>Historial de actividad unificado</strong> — timeline con partidas y compras de items en un único feed.</div>
+      <div class="tl-item"><span class="tl-hash">074110f</span><span class="tl-cat cat-feat">feat</span><strong>Rate limiting por socket</strong> — límites diferenciados por tipo de acción (juego, salas, social, compras, lecturas).</div>
+      <div class="tl-item"><span class="tl-hash">fae8ae9</span><span class="tl-cat cat-feat">feat</span><strong>CORS restringido</strong> vía variable de entorno <code>ALLOWED_ORIGIN</code>, sustituyendo el <code>origin: '*'</code> original.</div>
+      <div class="tl-item"><span class="tl-hash">b6109a0</span><span class="tl-cat cat-feat">feat</span><strong>Limpieza automática de salas</strong> — barrido cada 5 minutos de salas <code>finished</code>/inactivas.</div>
+    </div>
+
+    <!-- 30 junio -->
+    <div class="tl-group">
+      <div class="tl-date">30 junio 2026 — Backoffice, AdMob y Google Sign-In nativo</div>
+      <div class="tl-item"><span class="tl-hash">611b6ff</span><span class="tl-cat cat-feat">feat</span><strong>Panel de backoffice</strong> — primera versión, servida desde Railway junto al backend.</div>
+      <div class="tl-item"><span class="tl-hash">933c240–1eb60cf–c034f72</span><span class="tl-cat cat-fix">fix</span><strong>Endurecimiento del backoffice</strong> — token de admin persistido en SQLite, subida de imágenes en el panel de items, build pre-compilado del backoffice para simplificar el Dockerfile.</div>
+      <div class="tl-item"><span class="tl-hash">9367c09</span><span class="tl-cat cat-feat">feat</span><strong>Integración AdMob para Android</strong> + borrado por lotes en el backoffice.</div>
+      <div class="tl-item"><span class="tl-hash">01269f0</span><span class="tl-cat cat-feat">feat</span><strong>Google Sign-In nativo en Android</strong> — login nativo con verificación de token en servidor, swipe-to-dismiss en sheets.</div>
+      <div class="tl-item"><span class="tl-hash">ab0cc1b</span><span class="tl-cat cat-perf">perf</span><strong>Reutilización de objetos <code>Audio</code></strong>, constante <code>IS_MOBILE</code> extraída del render, limpieza de usuarios invitados al desconectar.</div>
+      <div class="tl-item"><span class="tl-hash">abc25e1</span><span class="tl-cat cat-feat">feat</span><strong>Estrella de favoritos</strong> en el ranking + invitar favoritos desde el hall.</div>
+    </div>
+
+    <!-- 1-2 julio -->
+    <div class="tl-group">
+      <div class="tl-date">1–2 julio 2026 — AdMob UMP consent, FCM y POC de mensajería</div>
+      <div class="tl-item"><span class="tl-hash">716f347–f6f9572</span><span class="tl-cat cat-fix">fix</span><strong>Fixes de banner AdMob</strong> — deja de recrearse cada turno, corrige condición de carrera.</div>
+      <div class="tl-item"><span class="tl-hash">63c2902</span><span class="tl-cat cat-fix">fix</span><strong>Consentimiento UMP de AdMob</strong> integrado; fix de bloqueo con jugador liberado; puntos de ronda por jugador.</div>
+      <div class="tl-item"><span class="tl-hash">78a4e4f</span><span class="tl-cat cat-fix">fix</span><strong>Fix bloqueo del formulario de consentimiento</strong> — impedía mostrar el banner indefinidamente.</div>
+      <div class="tl-item"><span class="tl-hash">fd6c25e–32b6ceb</span><span class="tl-cat cat-fix">fix</span><strong>FCM</strong> — timing de registro de token corregido; retos a usuarios offline resueltos por fallback a base de datos.</div>
+      <div class="tl-item"><span class="tl-hash">84f7ab3–9688611–f819132–7751d0a–436f8dc</span><span class="tl-cat cat-feat">feat</span><strong>POC de mensajería en partida</strong> — reacciones rápidas y burbujas de chat visibles para todos los jugadores; se revierte temporalmente por un bug y se reintroduce corregido; sonido al pulsar emoji y barra visible también antes del propio turno.</div>
+    </div>
+
+    <!-- 20-30 julio -->
+    <div class="tl-group">
+      <div class="tl-date">20–30 julio 2026 — Ajustes del backoffice, actualización forzosa y blindaje de conexión</div>
+      <div class="tl-item"><span class="tl-hash">c27d28f</span><span class="tl-cat cat-feat">feat</span><strong>Filtro de estado online</strong>, fixes de sincronización de dados y <strong>sección de Ajustes</strong> en el backoffice (límite de jugadores, feature flags).</div>
+      <div class="tl-item"><span class="tl-hash">2582fcf</span><span class="tl-cat cat-feat">feat</span><strong>Versiones de app publicadas</strong> gestionadas desde el backoffice.</div>
+      <div class="tl-item"><span class="tl-hash">bc4c175</span><span class="tl-cat cat-feat">feat</span><strong>Actualización forzosa por versión mínima</strong> — la app bloquea el acceso si la versión instalada es inferior a la mínima publicada; fix de guardado de ajustes.</div>
+      <div class="tl-item"><span class="tl-hash">f5eba29</span><span class="tl-cat cat-feat">feat</span><strong>Botón de quejas/sugerencias</strong> + fix de evaluación de repóker + ajustes de UI.</div>
+      <div class="tl-item"><span class="tl-hash">6d9b1ac</span><span class="tl-cat cat-fix">fix</span><strong>Etiquetas y valores</strong> corregidos en la ficha de crear partida.</div>
+      <div class="tl-item"><span class="tl-hash">03b3631</span><span class="tl-cat cat-fix">fix</span><strong>Feedback de conexión en partida y blindaje del backend</strong> — corrige el bug de app minimizada durante una partida (bots colgados / desconexiones fantasma) en <code>server.js</code>, <code>App.jsx</code> y <code>GameBoard.jsx</code>.</div>
+      <div class="tl-item"><span class="tl-hash">73418cf</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.37 (versionCode 62)</strong> — versión Android actual a fecha de este documento.</div>
+    </div>
+
   </div>
 </section>
 
@@ -591,11 +717,14 @@
   <div class="card">
     <h4>Estado global</h4>
     <p><code>rooms{}</code> — diccionario en memoria indexado por código de sala. Cada sala contiene la lista de jugadores, fase de juego, índice del jugador activo, timers y metadatos de ronda.</p>
-    <p><code>registeredUsers{}</code> — usuarios <span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)"><span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)">OAuth</span></span></span></span> registrados en la sesión. Mapea <code>userId → { name, email, picture, socketId, pushSubscription }</code>.</p>
-    <div class="alert alert-red">
-      <strong>⚠ Error potencial:</strong> Todo el estado vive en memoria del proceso Node.js.
-      Un reinicio de Railway destruye todas las salas activas y las suscripciones push.
-      No hay persistencia ni reconexión de partida en curso.
+    <p><code>registeredUsers{}</code> — usuarios registrados en la sesión (Google u otros). Mapea <code>userId → { name, email, picture, socketId, pushSubscription, fcmToken }</code>, cargado en memoria al arrancar desde SQLite.</p>
+    <p><code>socketToUser{}</code> — índice invertido <code>socketId → userId</code> para lookup <span class="tip" data-tip="Notación usada para indicar que una operación se resuelve en tiempo constante, independientemente del tamaño de los datos">O(1)</span> en desconexiones y broadcasts dirigidos.</p>
+    <p>Desde junio de 2026, usuarios, items del marketplace, torneos, feedback y ajustes globales se persisten en <strong>SQLite</strong> (volumen de Railway), sobreviviendo a reinicios del proceso.</p>
+    <div class="alert alert-yellow">
+      <strong>⚠ Atención:</strong> Las <em>partidas en curso</em> (<code>rooms{}</code>) siguen viviendo solo en memoria del proceso Node. Un reinicio de Railway durante una partida activa la destruye — la persistencia cubre usuarios/economía/configuración, no el estado de juego en vivo.
+    </div>
+    <div class="alert alert-red" style="margin-bottom:0">
+      <strong>⚠ Riesgo real y pendiente:</strong> el fichero SQLite no tiene backup automático. Es la prioridad técnica número uno antes de crecer en usuarios (ver Roadmap, sección 5).
     </div>
   </div>
 
@@ -605,6 +734,19 @@
     <div class="alert alert-yellow">
       <strong>⚠ Atención:</strong> <code>rollDie()</code> usa <code>Math.random()</code> en servidor. El cliente usa <code>rollSeed</code> solo para la animación visual. Si <code>report_faces</code> diverge del resultado servidor, la mano mostrada puede no coincidir con la evaluada.
     </div>
+  </div>
+
+  <div class="card">
+    <h4>Marketplace y economía de Bules</h4>
+    <p>Eventos <code>get_marketplace</code>, <code>buy_item</code>, <code>buy_bules_pack</code>, <code>get_user_items</code> y <code>get_user_history</code>. Los items tienen categoría (<code>skin</code>, <code>bar</code>, <code>pack</code>) e imagen gestionadas desde el backoffice. El paquete <code>pack-1000-bules</code> se cobra por Bizum fuera de la app; el servidor solo acredita el saldo tras confirmación manual del admin.</p>
+    <div class="alert alert-green" style="margin-bottom:0">
+      <strong>✓ Economía cerrada:</strong> los Bules se ganan jugando o se compran con dinero real, pero nunca son canjeables de vuelta a dinero. Esto mantiene la actividad fuera del ámbito de la Ley 13/2011 (ver sección 11).
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>Torneos con acceso por item</h4>
+    <p>Eventos <code>get_tournaments</code>, <code>join_tournament</code>, <code>leave_tournament</code>. Un torneo puede requerir la posesión de un item concreto (<code>requiredItemId</code>) para poder inscribirse — validado server-side contra el inventario del usuario en SQLite antes de aceptar el <code>join_tournament</code>. Gestión completa (crear, editar, fechas, item requerido) desde el backoffice.</p>
   </div>
 
   <div class="card">
@@ -643,9 +785,9 @@
 
   <div class="card">
     <h4>Desconexión de jugadores</h4>
-    <p>Al desconectarse, el jugador se elimina de la sala con un retraso de <strong>20 segundos</strong> para permitir reconexiones.</p>
-    <div class="alert alert-red" style="margin-bottom:0">
-      <strong>⚠ Error potencial:</strong> Durante esos 20s el jugador desconectado puede ser el <code>currentPlayer</code>. El turno queda bloqueado hasta que expire el <code>turnTimer</code> (hasta 30s adicionales). Total: hasta 50s de partida congelada sin notificación a los demás.
+    <p>Al desconectarse, el jugador se elimina de la sala con un retraso de <strong>20 segundos</strong> para permitir reconexiones. Desde el fix del 30 de julio (<code>03b3631</code>), la app minimizada en Android ya no deja al jugador colgado ni provoca comportamiento errático del bot: el frontend muestra feedback de conexión explícito y el backend está blindado contra las caídas de socket que este escenario provocaba.</p>
+    <div class="alert alert-yellow" style="margin-bottom:0">
+      <strong>⚠ Atención:</strong> Durante esos 20s el jugador desconectado puede seguir siendo el <code>currentPlayer</code>; el turno queda bloqueado hasta que expire el <code>turnTimer</code> (hasta 30s adicionales). El fix de julio mejora el feedback visual del resto de jugadores durante esa ventana, pero el mecanismo de espera en sí no ha cambiado.
     </div>
   </div>
 
@@ -657,17 +799,32 @@
   </div>
 
   <div class="card">
-    <h4>Push Notifications — <span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span></span></span></span></h4>
-    <div class="alert alert-red" style="margin-bottom:0">
-      <strong>⚠ Error potencial:</strong> Sin las env vars <code>VAPID_PUBLIC_KEY</code> / <code>VAPID_PRIVATE_KEY</code> fijadas en Railway, cada reinicio genera claves nuevas e invalida todas las suscripciones push existentes.
+    <h4>Notificaciones push — Web Push (<span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span>) y FCM nativo</h4>
+    <p>Web Push (VAPID) para navegador y Firebase Cloud Messaging para la app Android nativa. Los retos a usuarios offline consultan primero el token FCM y, si no está disponible, hacen fallback a la suscripción Web Push guardada en SQLite.</p>
+    <div class="alert alert-yellow" style="margin-bottom:0">
+      <strong>⚠ Atención:</strong> Sin las env vars <code>VAPID_PUBLIC_KEY</code> / <code>VAPID_PRIVATE_KEY</code> fijadas en Railway, cada reinicio generaría claves nuevas e invalidaría las suscripciones Web Push existentes. En producción están fijadas como variables de entorno.
     </div>
   </div>
 
   <div class="card">
-    <h4>Recursos no acotados</h4>
-    <div class="alert alert-red" style="margin-bottom:0">
-      <strong>⚠ Error potencial:</strong> Sin límite de salas, sin límite de usuarios registrados en memoria, sin rate limiting en eventos <span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets">Socket.io</span></span></span></span>. Un uso abusivo puede agotar la RAM del proceso.
-    </div>
+    <h4>Recursos acotados — hardening de julio 2026</h4>
+    <p>A diferencia de las primeras versiones, el servidor ahora limita explícitamente el uso de recursos:</p>
+    <ul style="margin-bottom:0">
+      <li><strong>Rate limiting por socket</strong> — límites diferenciados por tipo de acción: <code>action</code> (roll/stand/discard) 15/5s, <code>room</code> (crear/unir/salir) 5/min, <code>social</code> (retos/búsqueda) 10/min, <code>buy</code> (compras) 5/min, <code>read</code> (consultas) 30/10s.</li>
+      <li><strong>Límite de salas por usuario</strong> — máximo <code>MAX_ROOMS_PER_USER = 2</code> salas activas como host simultáneas.</li>
+      <li><strong>Limpieza automática de salas</strong> — barrido cada 5 minutos que elimina salas <code>finished</code> o inactivas; además, cada fase tiene un timeout de seguridad de 2h como red de protección ante partidas atascadas.</li>
+      <li><strong>CORS restringido</strong> — <code>ALLOWED_ORIGIN</code> reemplaza el <code>origin: '*'</code> original tanto en Express como en Socket.io.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h4>API REST de administración — <code>/api/admin/*</code></h4>
+    <p>Endpoints protegidos con middleware <code>requireAdmin</code> (token de admin persistido en SQLite), usados exclusivamente por el backoffice: <code>items</code>, <code>tournaments</code>, <code>settings</code>, <code>app-versions</code>, <code>feedback</code>, <code>users</code> y <code>upload</code> (subida de imágenes). El evento de socket público <code>get_settings</code> expone <code>maxPlayersLimit</code> y <code>featureFlags</code> sin autenticación, para que el cliente del juego los consuma en tiempo real.</p>
+  </div>
+
+  <div class="card">
+    <h4>Actualización forzosa por versión mínima</h4>
+    <p>El backoffice publica versiones de la app Android (<code>app-versions</code>) marcando cuál es la versión mínima soportada. El cliente compara su <code>versionCode</code> local contra ese mínimo al arrancar y bloquea el acceso si está desactualizado, mostrando un aviso de actualización obligatoria.</p>
   </div>
 </section>
 
@@ -677,11 +834,12 @@
 
   <div class="card">
     <h4>App.jsx — Controlador raíz</h4>
-    <p>Gestiona la pantalla activa, el estado de usuario, la música (lobby + partida), el service worker y el modo invitado.</p>
+    <p>Gestiona la pantalla activa, el estado de usuario, la música (lobby + partida), el service worker, el modo invitado y la comprobación de versión mínima al arrancar.</p>
     <ul>
-      <li><strong>Modo invitado:</strong> <code>loadGuestName()</code> genera un nombre tipo <em>el_pirri_042</em> la primera vez (pool de 32 nombres galegos/españoles) y lo persiste en localStorage.</li>
-      <li><strong>Login Google:</strong> <code>handleLogin</code> reemplaza el nombre invitado por el nombre real y registra al usuario en el backend.</li>
+      <li><strong>Modo invitado:</strong> <code>loadGuestName()</code> genera un nombre tipo <em>el_pirri_042</em> la primera vez (pool de nombres galegos/españoles) y lo persiste en localStorage.</li>
+      <li><strong>Login Google:</strong> <code>handleLogin</code> reemplaza el nombre invitado por el nombre real y registra al usuario en el backend. En Android usa Google Sign-In nativo con verificación de token en servidor; en web, <code>@react-oauth/google</code>.</li>
       <li>Singleton de socket importado de <code>socket.js</code> — una sola conexión para toda la sesión.</li>
+      <li><code>utils/admob.js</code> y <code>utils/push.js</code> encapsulan la inicialización de AdMob (banners + UMP consent) y el registro de token FCM/Web Push respectivamente.</li>
     </ul>
   </div>
 
@@ -690,22 +848,40 @@
     <p>Visible sin login. Muestra:</p>
     <ul>
       <li><strong>Sin login:</strong> botón "Iniciar sesión con Google" (encima) + tarjeta blanca de invitado con nombre autogenerado.</li>
-      <li><strong>Con login:</strong> tarjeta de usuario (foto, nombre, email, ajustes).</li>
+      <li><strong>Con login:</strong> tarjeta de usuario (foto, nombre, email, saldo de Bules, ajustes).</li>
       <li><strong>Salas privadas:</strong> icono de candado junto al nombre. Al hacer click en "Unirse", aparece una modal para introducir el código de 4 caracteres.</li>
+      <li><strong>Filtro de estado online</strong> y estrella de favoritos, con invitación directa a favoritos desde el listado.</li>
     </ul>
   </div>
 
   <div class="card">
     <h4>GameBoard.jsx — Pantalla de juego</h4>
-    <p>Componente principal durante la partida. Incluye:</p>
+    <p>Componente principal durante la partida (~1.050 líneas). Incluye:</p>
     <ul>
       <li><strong>Anti-doble click:</strong> flag <code>rolling</code> deshabilita el botón "Tirar dados" desde el click hasta que el servidor confirma (<code>socket.emit('roll', …, cb)</code>). También bloquea shake-to-roll.</li>
       <li><code>pendingDiscards[]</code>, <code>sceneValues</code>, <code>rollingIndices</code>, <code>rollSeed</code> — datos para la escena 3D.</li>
-      <li>Animación cambio de jugador, palillo roto, scoreboard con dados ordenados por valor.</li>
+      <li>Animación cambio de jugador, palillo roto, scoreboard con dados ordenados por valor, feedback visual de estado de conexión (tras el fix del 30 de julio).</li>
+      <li><strong>Mensajería POC:</strong> reacciones rápidas y burbujas de chat, visibles para todos los jugadores de la sala.</li>
+      <li>Constante <code>IS_MOBILE</code> calculada una sola vez a nivel de módulo (no en cada render).</li>
     </ul>
     <div class="alert alert-yellow" style="margin-bottom:0">
       <strong>⚠ Atención:</strong> El timer de turno (<code>turnDeadline</code>) usa <code>Date.now()</code> cliente vs timestamp servidor. Desincronización de reloj puede mostrar contador inexacto.
     </div>
+  </div>
+
+  <div class="card">
+    <h4>Marketplace.jsx — Tienda de Bules e items</h4>
+    <p>Catálogo de items (skins de dados, items de bar, paquete de Bules), inventario del usuario, historial de compras unificado con el historial de partidas. Al comprar un skin de dados, se aplica de inmediato en <code>DiceRollerScene.jsx</code> para ese jugador.</p>
+  </div>
+
+  <div class="card">
+    <h4>TournamentList.jsx / TournamentLobby.jsx — Torneos</h4>
+    <p>Listado de torneos activos con rango de fechas; si un torneo requiere un item concreto, se muestra su nombre e imagen y el botón de inscripción queda deshabilitado hasta que el usuario lo posea.</p>
+  </div>
+
+  <div class="card">
+    <h4>ChallengeInvite.jsx / UserSection.jsx / UserDetailSheet.jsx — Social</h4>
+    <p>Reto directo 1v1 a otro jugador (con notificación push si está offline), ficha de perfil con estadísticas e items, sección de usuario con historial de actividad unificado (partidas + compras) e indicador de estado online.</p>
   </div>
 
   <div class="card">
@@ -735,6 +911,12 @@
       <tr><td><code>bule-escaleira.mp3</code></td><td>Pantalla de inicio</td><td>Loop, pausa al entrar en partida</td></tr>
       <tr><td><code>dice-lemonlight.mp3</code></td><td>Durante la partida</td><td>Loop vol 0.2, para al volver al lobby</td></tr>
     </table>
+    <p style="font-size:.82rem;color:var(--muted);margin-top:.5rem;margin-bottom:0">La mayoría de objetos <code>Audio</code> se instancian una sola vez a nivel de módulo y se reutilizan entre reproducciones (perf, junio 2026), en lugar de crear un <code>new Audio()</code> en cada evento.</p>
+  </div>
+
+  <div class="card">
+    <h4>AdBanner.jsx — Publicidad AdMob</h4>
+    <p>Banner de <code>@capacitor-community/admob</code> con formulario de consentimiento UMP integrado (obligatorio en la UE). Usa IDs de test de Google mientras la app no esté publicada en producción en Play Store; el App ID real está pendiente de vincular hasta ese momento.</p>
   </div>
 </section>
 
@@ -743,19 +925,38 @@
   <h2>5. Roadmap y mejoras futuras</h2>
 
   <div class="alert alert-yellow">
-    <strong>Estado actual:</strong> <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span> funcional y jugable. Las áreas marcadas en rojo en las secciones anteriores son las prioridades inmediatas antes de cualquier crecimiento de usuarios.
+    <strong>Estado actual:</strong> producto mucho más completo que el <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span> original — marketplace, torneos, retos, backoffice y apps nativas ya en producción de desarrollo. El riesgo principal ya no es de funcionalidad sino de <strong>datos</strong>: no hay backup automático de SQLite. Esa es la prioridad número uno antes de cualquier crecimiento de usuarios.
   </div>
 
-  <h3>Deuda técnica prioritaria</h3>
+  <h3>Ya completado desde la primera versión del roadmap</h3>
+  <div class="card">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:.75rem">Estas eran "deuda técnica prioritaria" o "features pendientes" en la versión anterior de este documento y ya están implementadas — verificado directamente en el código:</p>
+    <ul style="margin-bottom:0">
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Rate limiting</strong> por socket, con límites diferenciados por tipo de evento.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>CORS restringido</strong> vía <code>ALLOWED_ORIGIN</code> en Express y Socket.io.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Limpieza automática de salas</strong> inactivas/finalizadas cada 5 minutos.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Límite de salas activas por usuario</strong> (<code>MAX_ROOMS_PER_USER</code>).</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Índice invertido <code>socketId → userId</code></strong> para lookups O(1).</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Persistencia de usuarios/economía</strong> en SQLite — sobrevive a reinicios de Railway.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Reutilización de objetos <code>Audio</code></strong> y <code>IS_MOBILE</code> extraído del render.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong><span class="tip" data-tip="Continuous Integration / Continuous Delivery — automatización de pruebas y despliegue de código">CI/CD</span> automático</strong> — GitHub Actions (frontend) + integración Railway (backend), deploy al hacer push a <code>main</code>.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>App nativa Android</strong> (Capacitor), con Google Sign-In y push nativos.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Chat en sala</strong> — POC de mensajería con reacciones y burbujas.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Ranking global / favoritos</strong> y sistema de torneos (con acceso condicionado por item).</li>
+    </ul>
+  </div>
+
+  <h3>Deuda técnica prioritaria — pendiente hoy</h3>
   <div class="card">
     <ol>
-      <li><strong>Validación serverside del código de sala privada</strong> — el servidor debe rechazar <code>join_room</code> si el código no coincide, no solo validar en cliente.</li>
-      <li><strong>Persistencia de estado</strong> — Migrar <code>rooms{}</code> y <code>registeredUsers{}</code> a Redis. Permite reiniciar sin perder partidas y escalar a múltiples instancias.</li>
-      <li><strong>Validación serverside de caras</strong> — verificar que las caras reportadas son coherentes con la semilla y los dados generados.</li>
-      <li><strong>CORS restringido</strong> — <code>origin: 'https://bulebule.web.app'</code> en Express y <span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets">Socket.io</span></span></span></span>.</li>
-      <li><strong><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web"><span class="tip" data-tip="Voluntary Application Server Identification — protocolo de autenticación para notificaciones push en la web">VAPID</span></span></span></span> keys persistidas</strong> — Configurar como env vars fijas en Railway.</li>
-      <li><strong>Rate limiting</strong> — Limitar eventos <span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets">Socket.io</span></span></span></span> por socket/IP.</li>
-      <li><strong>Notificación de desconexión</strong> — Informar a la sala cuando un jugador se desconecta.</li>
+      <li><strong style="color:var(--red)">Backups automáticos de SQLite</strong> — riesgo real y activo: el fichero único en el volumen de Railway no tiene copia de seguridad. Máxima prioridad antes de cualquier otra cosa.</li>
+      <li><strong>Lanzamiento a producción en Play Store</strong> — prerrequisito para vincular el App ID real de AdMob y empezar a monetizar con publicidad. Vídeo, capturas, mockups y feature graphic ya listos; falta subir la ficha/build.</li>
+      <li><strong>Validación serverside del código de sala privada</strong> — el código sigue viajando en el listado público (<code>sanitizeForList</code> incluye <code>code</code>); la "privacidad" es solo visual (candado + modal), no una protección real.</li>
+      <li><strong>Validación serverside de caras</strong> — <code>report_faces</code> sigue sin verificar coherencia con la semilla generada en servidor.</li>
+      <li><strong>Modularizar <code>server.js</code></strong> (2.241 líneas) en módulos por dominio (juego, marketplace, torneos, admin).</li>
+      <li><strong>Dividir <code>GameBoard.jsx</code> y <code>RoomList.jsx</code></strong> (~1.050–1.060 líneas cada uno) en subcomponentes.</li>
+      <li><strong>Limpieza de <code>registeredUsers{}</code> inactivos</strong> en memoria — hoy crece sin cota con el histórico de usuarios.</li>
+      <li><strong>Notificación de desconexión</strong> — informar a la sala cuando un jugador se desconecta, más allá del feedback visual ya añadido en julio.</li>
     </ol>
   </div>
 
@@ -764,46 +965,55 @@
     <div class="roadmap-col card">
       <h4>🎮 Juego</h4>
       <ul>
-        <li>Chat en sala</li>
         <li>Espectadores (modo solo lectura)</li>
         <li>Revancha abierta a todos (no solo host)</li>
         <li>Variantes de reglas configurables</li>
         <li>Historial de manos de la partida</li>
-        <li>Estadísticas de jugador (W/L, manos)</li>
+        <li>Estadísticas de jugador ampliadas (W/L, manos)</li>
+        <li>Consumir el primer feature flag real desde el backoffice</li>
       </ul>
     </div>
     <div class="roadmap-col card">
       <h4>👤 Social</h4>
       <ul>
-        <li>Lista de amigos persistente</li>
-        <li>Ranking global / tabla de líderes</li>
-        <li>Torneos bracket</li>
+        <li>Torneos en formato bracket (eliminación directa)</li>
         <li>Compartir resultado de partida</li>
         <li>Avatares personalizados</li>
+        <li>Más paquetes de Bules vía Stripe (además del actual por Bizum)</li>
       </ul>
     </div>
     <div class="roadmap-col card">
       <h4>🏗 Infraestructura</h4>
       <ul>
-        <li>Base de datos (PostgreSQL / PlanetScale)</li>
-        <li>Redis para estado + <span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets"><span class="tip" data-tip="Librería JavaScript de comunicación bidireccional en tiempo real entre navegador y servidor vía WebSockets">Socket.io</span></span></span></span> adapter</li>
-        <li><span class="tip" data-tip="Continuous Integration / Continuous Delivery — automatización de pruebas y despliegue de código"><span class="tip" data-tip="Continuous Integration / Continuous Delivery — automatización de pruebas y despliegue de código"><span class="tip" data-tip="Continuous Integration / Continuous Delivery — automatización de pruebas y despliegue de código"><span class="tip" data-tip="Continuous Integration / Continuous Delivery — automatización de pruebas y despliegue de código">CI/CD</span></span></span></span> automático (GitHub Actions)</li>
+        <li><strong>Backups automáticos de SQLite (urgente)</strong></li>
         <li>Monitoring y alertas (Sentry)</li>
         <li>Tests unitarios e integración</li>
         <li>Logs estructurados</li>
+        <li>Reglas de negocio por país/segmento sobre los feature flags ya existentes</li>
       </ul>
     </div>
     <div class="roadmap-col card">
       <h4>📱 Cliente</h4>
       <ul>
-        <li>App nativa iOS/Android (Capacitor)</li>
+        <li><strong>Publicación en producción en Play Store</strong></li>
+        <li>App iOS (actualmente solo Android)</li>
+        <li>App ID real de AdMob (pendiente de publicación)</li>
         <li>Haptic feedback en móvil</li>
         <li>Accesibilidad (ARIA, alto contraste)</li>
         <li>i18n (castellano / galego / inglés)</li>
-        <li>Resumen de apuestas al final de partida</li>
       </ul>
     </div>
   </div>
+
+  <h3>Escalabilidad — plan por tramos de usuarios</h3>
+  <p style="font-size:.88rem;color:var(--muted);margin-bottom:1rem">Análisis vigente a fecha de este documento. Arquitectura actual: SQLite de fichero único sin réplica, estado de partidas en memoria (no distribuible entre instancias), Socket.io sin adapter de Redis (un solo proceso Node), sin caché de rankings, servidor monolítico. Capacidad estimada sin cambios: <strong>~500–2.000 usuarios concurrentes</strong> cómodamente.</p>
+  <table>
+    <tr><th>Umbral</th><th>Qué falla primero</th><th>Cambio necesario</th></tr>
+    <tr><td><strong>~1.000 usuarios</strong></td><td>Rankings recalculados en cada consulta; riesgo de pérdida de datos sin backup</td><td>Caché de rankings + <strong>backups automáticos del volumen SQLite</strong> (urgente, no depende del nº de usuarios)</td></tr>
+    <tr><td><strong>~5.000 usuarios</strong></td><td>SQLite de fichero único no soporta la concurrencia de escritura</td><td>Migrar a PostgreSQL</td></tr>
+    <tr><td><strong>~20.000 usuarios</strong></td><td>Un solo proceso Node no reparte la carga de Socket.io</td><td>Redis adapter para Socket.io + múltiples instancias</td></tr>
+    <tr><td><strong>~100.000 usuarios</strong></td><td>Servidor monolítico, sin CDN para assets 3D</td><td>Microservicios + CDN dedicado</td></tr>
+  </table>
 
   <h3>Propuesta de arquitectura escalable</h3>
   <div class="card">
@@ -822,7 +1032,7 @@
                     │       Redis        │  (estado rooms + Socket.io adapter)
                     └─────────┬──────────┘
                     ┌─────────▼──────────┐
-                    │    PostgreSQL      │  (users, stats, historial)
+                    │    PostgreSQL      │  (users, stats, historial, reemplaza SQLite)
                     └────────────────────┘</pre>
   </div>
 </section>
@@ -831,10 +1041,19 @@
 <section id="monetizacion">
   <h2>6. Monetización — opciones y viabilidad</h2>
 
+  <div class="alert alert-green">
+    <strong>Actualización:</strong> a diferencia de versiones anteriores de este documento, el modelo de moneda virtual
+    ya <strong>no es una propuesta</strong> — está implementado y en producción de desarrollo desde finales de junio de 2026.
+    Los jugadores ganan y compran <strong>Bules</strong> (paquete de 1.000 vía Bizum), los gastan en un marketplace de items
+    cosméticos y en el acceso a torneos exclusivos, y la economía es cerrada (los Bules nunca se canjean de vuelta a dinero real).
+    El análisis legal que sigue explica por qué se descartó la apuesta de dinero real entre jugadores y por qué el modelo
+    de moneda virtual es la opción que finalmente se construyó.
+  </div>
+
   <p>
-    El modelo de negocio más natural para Bule Bule es que los jugadores apuesten entre sí un importe
-    por partida. A continuación se analizan todas las opciones técnicas y legales,
-    ordenadas de menos a más viable para un <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span> sin burocracia.
+    Inicialmente se planteó que los jugadores apostaran entre sí un importe real por partida.
+    A continuación se analizan todas las opciones técnicas y legales evaluadas en su momento,
+    ordenadas de menos a más viable para un <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span> sin burocracia.
   </p>
 
   <!-- ROJO -->
@@ -866,44 +1085,45 @@
   <h3>Opciones dudosas <span style="color:#e6a817">●</span></h3>
 
   <div class="mon-block mon-block--yellow">
-    <span class="mon-label mon-label--yellow">Dudoso</span>
+    <span class="mon-label mon-label--yellow">Descartado en favor del modelo final</span>
     <h4>Stripe con moneda virtual no canjeable</h4>
-    <p>Los jugadores compran "fichas" con Stripe (venta normal de producto digital). Las fichas se usan como apuesta dentro del juego. El ganador acumula fichas. Si las fichas <strong>no son canjeables por dinero real</strong> (ni directa ni indirectamente), la actividad queda fuera del ámbito de la <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online"><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online"><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online"><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span></span></span></span> según la interpretación mayoritaria.</p>
-    <p><strong>Por qué es dudoso:</strong> Stripe puede investigar el uso real y suspender la cuenta si considera que hay un componente de azar. La frontera legal entre "juego social" y "juego de azar" depende de si hay valor económico real. Requiere abrirse cuenta en Stripe.</p>
+    <p>Los jugadores compran "fichas" con Stripe (venta normal de producto digital). Las fichas se usan como apuesta dentro del juego. El ganador acumula fichas. Si las fichas <strong>no son canjeables por dinero real</strong> (ni directa ni indirectamente), la actividad queda fuera del ámbito de la <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span> según la interpretación mayoritaria.</p>
+    <p><strong>Por qué se descartó (de momento):</strong> requiere abrirse cuenta en Stripe e implementar webhooks. Se optó primero por un canal de pago más simple (Bizum, sin integración técnica ni comisión de pasarela) para validar la demanda de compra de Bules antes de invertir en la integración con Stripe. Es el paso siguiente natural una vez validado el modelo.</p>
   </div>
 
   <div class="mon-block mon-block--yellow">
-    <span class="mon-label mon-label--yellow">Dudoso</span>
-    <h4>Suscripción o sala premium (Stripe)</h4>
-    <p>El host paga una cuota mensual (p.ej. 2–5 €/mes) para crear salas privadas, elegir más opciones de configuración, sin que haya apuesta de dinero entre jugadores. Esto sí es legal sin licencia <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online"><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online"><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online"><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span></span></span></span> (es un <span class="tip" data-tip="Software as a Service — software que se paga como suscripción online, sin instalar nada localmente"><span class="tip" data-tip="Software as a Service — software que se paga como suscripción online, sin instalar nada localmente"><span class="tip" data-tip="Software as a Service — software que se paga como suscripción online, sin instalar nada localmente"><span class="tip" data-tip="Software as a Service — software que se paga como suscripción online, sin instalar nada localmente">SaaS</span></span></span></span>).</p>
-    <p><strong>Por qué es dudoso para el <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span>:</strong> requiere abrirse cuenta en Stripe, implementar webhooks, gestión de suscripciones. Además, al ser invitados, los jugadores no pagan — solo el host tiene incentivo de pagar.</p>
+    <span class="mon-label mon-label--yellow">Pendiente de producción</span>
+    <h4>Publicidad — AdMob</h4>
+    <p>El SDK <code>@capacitor-community/admob</code> ya está integrado en la app Android con banners y formulario de consentimiento UMP (obligatorio en la UE). Actualmente funciona con IDs de test de Google.</p>
+    <p><strong>Por qué está pendiente:</strong> vincular el App ID real de producción en AdMob requiere que la app esté publicada en <strong>producción</strong> en Play Console — no es suficiente con una pista de prueba cerrada o interna. Es decir, AdMob real depende del lanzamiento a producción en Play Store (ver sección 9).</p>
   </div>
 
   <!-- VERDE -->
-  <h3>Mejor opción para un <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span> <span style="color:var(--green)">●</span></h3>
+  <h3>Modelo implementado <span style="color:var(--green)">●</span></h3>
 
   <div class="mon-block mon-block--green">
-    <span class="mon-label mon-label--green"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span> recomendado</span>
-    <h4>Sistema de honor — pantalla de liquidación al final de la partida</h4>
+    <span class="mon-label mon-label--green">En producción desde junio 2026</span>
+    <h4>Bules — moneda virtual + marketplace + torneos con acceso por item</h4>
     <p>
-      El host configura un <strong>importe por palillo roto</strong> (p.ej. 1 €) antes de crear la sala.
-      Al terminar la partida, la app muestra una <strong>pantalla de liquidación</strong> con quién debe pagar a quién y cuánto.
-      Los jugadores se lo mandan entre sí por Bizum, efectivo o como quieran — <strong>fuera de la app</strong>.
+      Los jugadores ganan <strong>Bules</strong> jugando partidas, o compran un paquete de <strong>1.000 Bules por 1 €</strong> vía Bizum
+      (pago manual, sin pasarela integrada — el saldo se acredita tras confirmación del admin desde el backoffice).
+      Los Bules se gastan en el <strong>Marketplace</strong>: skins de dados (mármol azul/negro/rojo/verde, dados rojos transparentes)
+      e items cosméticos de bar (cubata, churros, balón…). Algunos items funcionan además como <strong>llave de entrada</strong> a
+      torneos exclusivos — por ejemplo, el torneo "Bar Doce" solo es accesible poseyendo el item Churros.
     </p>
     <ul>
-      <li>✓ La app nunca toca el dinero → no requiere licencia, no requiere cuenta de pago, no requiere registro en ningún lado.</li>
-      <li>✓ Implementación técnica mínima: añadir un campo "€ por palillo" en <code>create_room</code> y calcular las deudas en la pantalla <code>finished</code>.</li>
-      <li>✓ Compatible con el <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span> actual en una tarde de desarrollo.</li>
-      <li>✓ Los jugadores ya conocen Bizum — no necesitan aprender nada nuevo.</li>
-      <li>✗ No se puede cobrar <span class="tip" data-tip="Comisión que cobra la &quot;casa&quot; (plataforma) sobre cada apuesta; modelo típico de casinos y póker online"><span class="tip" data-tip="Comisión que cobra la &quot;casa&quot; (plataforma) sobre cada apuesta; modelo típico de casinos y póker online"><span class="tip" data-tip="Comisión que cobra la &quot;casa&quot; (plataforma) sobre cada apuesta; modelo típico de casinos y póker online"><span class="tip" data-tip="Comisión que cobra la &quot;casa&quot; (plataforma) sobre cada apuesta; modelo típico de casinos y póker online">rake</span></span></span></span> de forma automática con este modelo (habría que hacerlo manualmente, fuera del sistema).</li>
-      <li>✗ Requiere confianza entre jugadores (alguien puede no pagar).</li>
+      <li>✓ Economía cerrada: los Bules no se canjean de vuelta a dinero real → no requiere licencia <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span>, no requiere PSP licenciado.</li>
+      <li>✓ Ya implementado y en uso: rename puntos→Bules, marketplace, skins, items de bar, torneos con acceso condicionado, todo gestionable desde el backoffice.</li>
+      <li>✓ El paquete de 1.000 Bules por Bizum ya genera el primer ingreso real, aunque sea manual y de bajo volumen.</li>
+      <li>✗ El cobro por Bizum es manual (no escalable) — el siguiente paso es integrar Stripe para pagos automáticos y más paquetes.</li>
+      <li>✗ Todavía no hay AdMob en producción (pendiente de publicación en Play Store) ni suscripción premium.</li>
     </ul>
-    <p style="margin-bottom:0"><strong>Ejemplo de pantalla de liquidación:</strong></p>
-    <pre style="margin-top:.5rem;margin-bottom:0">  Roi (1 palillo)  debe  1 € → el_pirri_042
-  el_pirri_042 (2 palillos)  debe  2 € → Roi
-  ──────────────────────────────────────────
-  Resumen: el_pirri_042 debe 1 € a Roi
-           [Copiar número de Bizum de Roi]</pre>
+    <p style="margin-bottom:0"><strong>Siguientes pasos de monetización, en orden:</strong></p>
+    <ol style="margin-bottom:0">
+      <li>Lanzamiento a producción en Play Store → habilita AdMob real (banners con ingresos reales por impresión/click).</li>
+      <li>Más paquetes de Bules vía Stripe (pagos automáticos, sin intervención manual del admin).</li>
+      <li>Explorar suscripción premium o cuota <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> a bares como se planteó originalmente (ver secciones 8–9), ahora como complemento a la economía de Bules ya validada.</li>
+    </ol>
   </div>
 
   <h3>Resumen comparativo</h3>
@@ -937,25 +1157,25 @@
       <td style="color:var(--red);font-weight:700">No viable</td>
     </tr>
     <tr>
-      <td>Moneda virtual (Stripe)</td>
+      <td>Moneda virtual vía Stripe (paquetes adicionales)</td>
       <td>Sí (Stripe)</td>
       <td>Probablemente no</td>
       <td>Media</td>
-      <td style="color:var(--yellow);font-weight:700">Dudoso</td>
+      <td style="color:var(--yellow);font-weight:700">Pendiente — siguiente paso</td>
     </tr>
     <tr>
-      <td>Suscripción premium</td>
-      <td>Sí (Stripe)</td>
+      <td>AdMob en producción</td>
+      <td>Sí (Play Console)</td>
       <td>No</td>
-      <td>Media</td>
-      <td style="color:var(--yellow);font-weight:700">Dudoso</td>
+      <td>Baja (ya integrado)</td>
+      <td style="color:var(--yellow);font-weight:700">Pendiente publicación</td>
     </tr>
-    <tr>
-      <td><strong>Sistema de honor</strong></td>
+    <tr style="background:var(--green-bg)">
+      <td><strong>Bules + Marketplace + torneos por item</strong></td>
+      <td><strong>No</strong> (Bizum manual)</td>
       <td><strong>No</strong></td>
-      <td><strong>No</strong></td>
-      <td><strong>Mínima</strong></td>
-      <td style="color:var(--green);font-weight:700">✓ <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span> recomendado</td>
+      <td><strong>Ya implementado</strong></td>
+      <td style="color:var(--green);font-weight:700">✓ En producción</td>
     </tr>
   </table>
 
@@ -980,26 +1200,30 @@
 
   <div class="metric-grid">
     <div class="metric-card">
-      <div class="metric-value">~5.5 M</div>
+      <div class="metric-value">~20 M</div>
       <div class="metric-label">Tokens de entrada</div>
-      <div class="metric-sub">~1.9M no cacheados · ~3.6M cacheados</div>
+      <div class="metric-sub">~7M no cacheados · ~13M cacheados</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value">~750 k</div>
+      <div class="metric-value">~2.7 M</div>
       <div class="metric-label">Tokens de salida</div>
       <div class="metric-sub">Código generado, análisis, respuestas</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value">~30</div>
-      <div class="metric-label">Sesiones de trabajo</div>
-      <div class="metric-sub">7 jun + historial previo del proyecto</div>
+      <div class="metric-value">~386</div>
+      <div class="metric-label">Commits</div>
+      <div class="metric-sub">18 días activos entre el 5 jun y el 30 jul 2026</div>
     </div>
     <div class="metric-card--accent metric-card">
-      <div class="metric-value">≈ $23</div>
-      <div class="metric-label">Coste total en <span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí">API</span></span></span></span></div>
-      <div class="metric-sub">≈ €21 · rango real: $15–$30</div>
+      <div class="metric-value">≈ $65</div>
+      <div class="metric-label">Coste total en <span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí">API</span></div>
+      <div class="metric-sub">≈ €60 · rango real: $45–$90</div>
     </div>
   </div>
+  <p style="font-size:.8rem;color:var(--muted);margin-top:.5rem">
+    Estimación proporcional al crecimiento del proyecto (×3,6 commits) desde la cifra de referencia calculada el 26 de junio de 2026
+    (~5,5M tokens de entrada, ~750k de salida, ≈$23). No se ha vuelto a analizar el historial completo de sesiones para este documento.
+  </p>
 
   <h3>7.2 Coste equivalente sin Claude — equipo de desarrollo humano</h3>
   <p style="font-size:.88rem;color:var(--muted);margin-bottom:1rem">
@@ -1055,38 +1279,116 @@
       <td>€1,560</td>
       <td>HTML + PDF con histórico, arquitectura, roadmap</td>
     </tr>
-    <tr style="font-weight:700">
-      <td>TOTAL</td>
+    <tr style="font-weight:700;background:var(--tag-bg)">
+      <td>Subtotal MVP (26 jun 2026)</td>
       <td>400 h</td>
       <td>€26,000</td>
+      <td>Estado del documento anterior</td>
+    </tr>
+    <tr>
+      <td>Marketplace + economía de Bules</td>
+      <td>60 h</td>
+      <td>€3,900</td>
+      <td>Rename, catálogo, compras, paquete Bizum, inventario</td>
+    </tr>
+    <tr>
+      <td>Skins de dados + items de bar</td>
+      <td>30 h</td>
+      <td>€1,950</td>
+      <td>Texturas de mármol, dados transparentes, action sheet</td>
+    </tr>
+    <tr>
+      <td>Sistema de torneos + acceso por item</td>
+      <td>40 h</td>
+      <td>€2,600</td>
+      <td>Listado, lobby, inscripción, validación server-side</td>
+    </tr>
+    <tr>
+      <td>Backoffice de administración</td>
+      <td>100 h</td>
+      <td>€6,500</td>
+      <td>App React separada, CRUD items/torneos/usuarios/versiones/ajustes, auth de admin</td>
+    </tr>
+    <tr>
+      <td>App nativa Android + AdMob + push nativo</td>
+      <td>90 h</td>
+      <td>€5,850</td>
+      <td>Capacitor, Google Sign-In nativo, UMP consent, FCM</td>
+    </tr>
+    <tr>
+      <td>Retos, favoritos, historial, estado online</td>
+      <td>50 h</td>
+      <td>€3,250</td>
+      <td>1v1, push offline, timeline unificado</td>
+    </tr>
+    <tr>
+      <td>Mensajería en partida (POC)</td>
+      <td>20 h</td>
+      <td>€1,300</td>
+      <td>Reacciones y burbujas de chat en tiempo real</td>
+    </tr>
+    <tr>
+      <td>Hardening de seguridad del backend</td>
+      <td>25 h</td>
+      <td>€1,625</td>
+      <td>Rate limiting, limpieza de salas, CORS, índice invertido</td>
+    </tr>
+    <tr>
+      <td>Migración a persistencia SQLite</td>
+      <td>30 h</td>
+      <td>€1,950</td>
+      <td>Usuarios, items, torneos, feedback, ajustes</td>
+    </tr>
+    <tr>
+      <td>Testing + debugging adicional</td>
+      <td>45 h</td>
+      <td>€2,925</td>
+      <td>Multiplataforma (web + Android), edge cases de economía</td>
+    </tr>
+    <tr>
+      <td>Actualización de documentación técnica</td>
+      <td>8 h</td>
+      <td>€520</td>
+      <td>Esta regeneración (v0.5)</td>
+    </tr>
+    <tr style="font-weight:700">
+      <td>TOTAL a fecha de este documento</td>
+      <td>~898 h</td>
+      <td>≈€58,370</td>
       <td>Sin overhead ni herramientas</td>
     </tr>
   </table>
 
   <div class="roi-callout">
-    <div class="roi-number">× 1.200</div>
+    <div class="roi-number">× 900</div>
     <div class="roi-desc">
       <strong>Factor de eficiencia económica.</strong><br>
-      €21 en tokens de Claude producen el equivalente a €26,000 en tiempo de desarrollo senior.<br>
-      El mismo proyecto habría requerido <strong>3–5 meses de trabajo</strong> de un desarrollador senior.
-      Con Claude Code se completó en <strong>7 días naturales</strong>.
+      ≈€60 en tokens de Claude producen el equivalente a ≈€58.400 en tiempo de desarrollo senior.<br>
+      El mismo proyecto habría requerido <strong>5–7 meses de trabajo</strong> de un desarrollador senior (o 3–4 meses con un equipo de 2).
+      Con Claude Code se completó en <strong>18 días naturales de desarrollo activo</strong>, repartidos en ~8 semanas de calendario.
     </div>
   </div>
 
   <h3>7.3 Escenarios de escalado</h3>
-  <p>¿Qué coste implicaría llevar Bule Bule a una producción robusta y escalable?</p>
+  <div class="alert alert-green">
+    <strong>Actualización:</strong> las Fases 1 y 2 de este plan (planteadas en la versión anterior del documento) están,
+    en la práctica, <strong>ya completadas</strong>: base de datos persistente (SQLite), rate limiting, hardening de seguridad,
+    marketplace, torneos y backoffice. Lo que queda pendiente de la Fase 2 es sobre todo <strong>backups automáticos</strong>
+    (no implementados) y tests formales. La Fase 3 (Redis, CDN dedicado, anti-cheat, escalado multi-instancia) sigue sin empezar.
+  </div>
+  <p>¿Qué coste implicaría llevar Bule Bule a una producción robusta y escalable a partir de aquí?</p>
 
   <div class="scenario-grid">
     <div class="scenario-card scenario-card--claude">
       <h4 style="color:var(--green)">✓ Escenario A — Continuar con Claude</h4>
       <ul>
-        <li><strong>Fase 1 — <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad"><span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span></span></span></span> mejorado</strong> (1–2 semanas): pantalla de liquidación, historial de partidas, modo espectador → <em>$30–60 en tokens</em></li>
-        <li><strong>Fase 2 — Backend robusto</strong> (1 mes): base de datos persistente (Supabase/PlanetScale), autenticación de sesiones multi-dispositivo, rate limiting, tests → <em>$80–150 en tokens</em></li>
-        <li><strong>Fase 3 — Escalado real</strong> (2 meses): <span class="tip" data-tip="Protocolo de comunicación bidireccional y persistente entre cliente y servidor, esencial para aplicaciones en tiempo real"><span class="tip" data-tip="Protocolo de comunicación bidireccional y persistente entre cliente y servidor, esencial para aplicaciones en tiempo real"><span class="tip" data-tip="Protocolo de comunicación bidireccional y persistente entre cliente y servidor, esencial para aplicaciones en tiempo real"><span class="tip" data-tip="Protocolo de comunicación bidireccional y persistente entre cliente y servidor, esencial para aplicaciones en tiempo real">WebSockets</span></span></span></span> en infraestructura escalable (Railway / Fly.io), <span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario"><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario"><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario"><span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario">CDN</span></span></span></span> para assets 3D, anti-cheat, analytics → <em>$150–300 en tokens</em></li>
+        <li><strong>Fase 1 — <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span> mejorado</strong> — <span style="color:var(--green);font-weight:700">✓ completado</span>: marketplace, torneos, retos, historial.</li>
+        <li><strong>Fase 2 — Backend robusto</strong> — <span style="color:var(--green);font-weight:700">✓ mayormente completado</span>: SQLite, rate limiting, CORS, limpieza de salas. Pendiente: <strong>backups automáticos (urgente)</strong> y tests formales → <em>$20–40 en tokens</em></li>
+        <li><strong>Fase 3 — Escalado real</strong> (2 meses, sin empezar): PostgreSQL, Redis + Socket.io adapter, <span class="tip" data-tip="Content Delivery Network — red de servidores distribuidos que sirven contenido más rápido según la ubicación del usuario">CDN</span> para assets 3D, monitoring → <em>$150–300 en tokens</em></li>
         <li><strong>Hosting en producción</strong>: €15–50/mes (100 partidas simultáneas), €80–200/mes (1.000 partidas)</li>
       </ul>
       <p style="margin-top:.75rem;margin-bottom:0;font-size:.85rem">
-        <strong>Coste total para llegar a producción robusta: $260–510 en <span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí"><span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí">API</span></span></span></span> + €200–600 en hosting/año</strong>
+        <strong>Coste restante hasta escalado real: $170–340 en <span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí">API</span> + €200–600 en hosting/año</strong>
       </p>
     </div>
 
@@ -1113,15 +1415,15 @@
       <th>Ratio</th>
     </tr>
     <tr>
-      <td>Desarrollo inicial (estado actual)</td>
-      <td><strong>≈ $23 / 7 días</strong></td>
-      <td>≈ €26,000 / 3–5 meses</td>
-      <td style="color:var(--green);font-weight:700">1.200×</td>
+      <td>Desarrollo hasta hoy (estado actual)</td>
+      <td><strong>≈ $65 / 18 días activos</strong></td>
+      <td>≈ €58,400 / 5–7 meses</td>
+      <td style="color:var(--green);font-weight:700">~900×</td>
     </tr>
     <tr>
-      <td>Hasta producción robusta</td>
-      <td><strong>$300–500 total</strong></td>
-      <td>€50,000–70,000</td>
+      <td>Hasta escalado real (Fase 3 restante)</td>
+      <td><strong>$170–340 adicionales</strong></td>
+      <td>€28,000–40,000</td>
       <td style="color:var(--green);font-weight:700">~100–200×</td>
     </tr>
     <tr>
@@ -1149,6 +1451,14 @@
 <!-- ═══════════════════════════════════════════════════════════ SECCIÓN 8 -->
 <section id="mercado">
   <h2>8. Análisis de mercado — A Coruña</h2>
+
+  <div class="alert alert-yellow">
+    <strong>Nota de vigencia:</strong> este análisis es <strong>estratégico e hipotético</strong>, no una descripción de lo construido.
+    Modela un escenario de ingresos basado en suscripción de usuario + cuota <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> a bares, que sigue sin implementarse.
+    Lo que realmente se construyó es la economía de <strong>Bules + marketplace</strong> (sección 6), más cercana en espíritu a la
+    "moneda virtual no canjeable" descrita aquí como opción dudosa que a una suscripción de pago. Los números de tamaño de mercado
+    (<span class="tip" data-tip="Total Addressable Market — mercado total al que podría llegar el producto si capturara el 100%">TAM</span>/<span class="tip" data-tip="Serviceable Addressable Market — parte del TAM a la que realmente se puede llegar con el modelo actual">SAM</span>/<span class="tip" data-tip="Serviceable Obtainable Market — cuota realista de mercado a capturar a corto plazo">SOM</span>) y el diagnóstico de efecto red siguen siendo relevantes; las proyecciones de ingresos concretas deben leerse como escenario, no como plan ejecutado. La app sigue sin publicarse en producción en Play Store, así que ningún número de usuarios reales existe todavía.
+  </div>
 
   <p>
     Escenario de comercialización: <strong>ciudad de A Coruña</strong> como mercado inicial.
@@ -1678,8 +1988,19 @@
 <section id="plan">
   <h2>9. Plan de acción — equipo de 2 personas</h2>
 
+  <div class="alert alert-yellow">
+    <strong>Estado real a 31 de julio de 2026:</strong> el desarrollo de producto ha avanzado muy por delante del plan comercial
+    de esta sección. Ya están <strong>hechos</strong>: marketplace + Bules, sistema de torneos con acceso por item, retos 1v1,
+    backoffice de administración completo (items, torneos, usuarios, feedback, versiones de app, ajustes/feature flags), app
+    nativa Android con Google Sign-In y AdMob integrado. Siguen <strong>pendientes</strong> los tres bloqueantes reales:
+    <strong>backups automáticos de SQLite</strong> (riesgo de datos, cero coste técnico para resolverlo), el
+    <strong>lanzamiento a producción en Play Store</strong> (prerrequisito para todo lo demás: AdMob real, visibilidad pública,
+    reseñas) y, por tanto, el <strong>App ID real de AdMob</strong>. El plan comercial de bares/suscripción que sigue no se ha
+    ejecutado — sigue siendo la hoja de ruta de negocio propuesta, no un hecho consumado.
+  </div>
+
   <p>
-    Escenario elegido: <strong><span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)"><span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)"><span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span></span></span> bares + suscripción de usuario · expansión Galicia en año 2</strong>.
+    Escenario elegido: <strong><span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> bares + suscripción de usuario · expansión Galicia en año 2</strong>.
     Es el camino de menor riesgo, menor inversión y mayor probabilidad de generar ingresos reales
     en un plazo razonable. No requiere licencias, inversión externa ni equipo adicional.
   </p>
@@ -1750,13 +2071,15 @@
     <p class="phase-meta">Semanas 1–2 · Sin ingresos · Inversión: €0 en tecnología</p>
     <p class="phase-goal">Objetivo: tener un producto demostrable y un pitch listo para el primer bar.</p>
     <ul class="task-list">
-      <li><span class="role role--dev">Dev</span> Implementar pantalla de liquidación: campo "€ por palillo" en crear sala, cálculo de deudas al final — <em>~1 día con Claude</em></li>
-      <li><span class="role role--dev">Dev</span> Analytics básico (Umami o Plausible, autoalojado, gratuito): partidas/día, <span class="tip" data-tip="Monthly Active Users — usuarios activos en un mes natural"><span class="tip" data-tip="Monthly Active Users — usuarios activos en un mes natural"><span class="tip" data-tip="Monthly Active Users — usuarios activos en un mes natural">MAU</span></span></span>, sesiones</li>
-      <li><span class="role role--dev">Dev</span> Landing page atractiva con captura de email y demo en vivo embebida</li>
-      <li><span class="role role--com">Comercial</span> Identificar los 20 bares target en A Coruña (zona Juan Flórez, Orzán, zona vella)</li>
-      <li><span class="role role--com">Comercial</span> Crear pitch de 1 página: propuesta de valor, precio, qué gana el bar</li>
-      <li><span class="role role--both">Ambos</span> Definir precio <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)"><span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)"><span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span></span></span> (propuesta: 30 días gratis → €20/mes sin permanencia)</li>
-      <li><span class="role role--com">Comercial</span> Crear perfil de Instagram y grupo de WhatsApp "Bule Bule A Coruña"</li>
+      <li><span class="role role--dev">Dev</span> <span style="color:var(--muted);text-decoration:line-through">Pantalla de liquidación (€ por palillo)</span> — <strong>superado:</strong> en su lugar se construyó la economía de Bules + marketplace, un modelo distinto pero que cumple el mismo objetivo de monetización sin tocar dinero real entre jugadores.</li>
+      <li><span class="role role--dev">Dev</span> <span style="color:var(--muted);text-decoration:line-through">Analytics básico</span> — <code>frontend/src/analytics.js</code> ya trackea eventos clave (creación de sala, compras, etc.).</li>
+      <li><span class="role role--dev">Dev</span> Landing page atractiva con captura de email y demo en vivo embebida — <em>pendiente</em></li>
+      <li><span class="role role--dev">Dev</span> <strong style="color:var(--red)">Backups automáticos de SQLite</strong> — <em>pendiente, prioridad técnica real número uno</em></li>
+      <li><span class="role role--dev">Dev</span> <strong>Publicar ficha y build en producción en Play Console</strong> — <em>pendiente; assets (vídeo, capturas, feature graphic, mockups) ya están listos</em></li>
+      <li><span class="role role--com">Comercial</span> Identificar los 20 bares target en A Coruña (zona Juan Flórez, Orzán, zona vella) — <em>pendiente</em></li>
+      <li><span class="role role--com">Comercial</span> Crear pitch de 1 página: propuesta de valor, precio, qué gana el bar — <em>pendiente</em></li>
+      <li><span class="role role--both">Ambos</span> Definir precio <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> (propuesta: 30 días gratis → €20/mes sin permanencia) — <em>pendiente</em></li>
+      <li><span class="role role--com">Comercial</span> Crear perfil de Instagram y grupo de WhatsApp "Bule Bule A Coruña" — <em>pendiente</em></li>
     </ul>
     <div class="milestone-row"><span>🏁</span> <strong>Criterio de salida:</strong> hacer la primera demo en un bar real y que el dueño diga "esto tiene buena pinta".</div>
   </div>
@@ -2373,6 +2696,48 @@
       <p class="gitem-def">Estado en el que un jugador ha perdido todos sus palillos (vidas) y está en la última ronda antes de ser eliminado. Si vuelve a perder la ronda estando en capilla, queda eliminado de la partida. El término es parte del argot tradicional del juego de cubilete español.</p>
     </div>
 
+    <div class="gitem" data-cat="producto" data-terms="bules moneda virtual economia interna monetizacion">
+      <div class="gitem-head">
+        <span class="gitem-term">Bules</span>
+        <span class="gitem-cat gcat--producto">Producto</span>
+      </div>
+      <p class="gitem-def">Moneda virtual del juego (llamada "puntos" hasta el rename de junio de 2026). Se gana jugando partidas o se compra con dinero real (paquete de 1.000 Bules por 1 € vía Bizum). Se gasta en el Marketplace en items cosméticos y acceso a torneos exclusivos. Es una <strong>economía cerrada</strong>: los Bules nunca se canjean de vuelta a dinero real, lo que mantiene la actividad fuera del ámbito de la Ley 13/2011 de regulación del juego.</p>
+    </div>
+
+    <div class="gitem" data-cat="producto" data-terms="torneo item acceso llave exclusivo inscripcion requisito">
+      <div class="gitem-head">
+        <span class="gitem-term">Torneo con acceso por item</span>
+        <span class="gitem-cat gcat--producto">Producto</span>
+      </div>
+      <p class="gitem-def">Torneo del que solo puede participar quien posea un item concreto del marketplace, comprado con Bules. El item funciona como "llave de entrada". Ejemplo: el torneo "Bar Doce" solo es accesible poseyendo el item Churros. La validación de que el usuario posee el item se hace en el servidor al recibir <code>join_tournament</code>, no solo en el cliente.</p>
+    </div>
+
+    <div class="gitem" data-cat="tech" data-terms="backoffice panel administracion admin gestion">
+      <div class="gitem-head">
+        <span class="gitem-term">Backoffice</span>
+        <span class="gitem-cat gcat--tech">Tecnología</span>
+      </div>
+      <p class="gitem-def">Panel de administración interno, no visible para jugadores, usado para gestionar el contenido y la configuración del juego: items del marketplace, torneos, usuarios, feedback, versiones de app publicadas y ajustes globales (feature flags, límite de jugadores). En Bule Bule es una app React independiente (<code>backend/backoffice/</code>) servida como estático desde el propio backend, protegida por token de administrador.</p>
+    </div>
+
+    <div class="gitem" data-cat="tech" data-terms="feature flag bandera funcionalidad activar desactivar remoto">
+      <div class="gitem-head">
+        <span class="gitem-term">Feature flag</span>
+        <span class="gitem-short">Bandera de funcionalidad</span>
+        <span class="gitem-cat gcat--tech">Tecnología</span>
+      </div>
+      <p class="gitem-def">Interruptor remoto que activa o desactiva una funcionalidad sin necesidad de publicar una nueva versión de la app. En Bule Bule se gestionan desde la sección Ajustes del backoffice y se guardan en la tabla <code>config</code> de SQLite; el evento de socket público <code>get_settings</code> los expone al cliente. A fecha de este documento, el mecanismo existe pero ningún flag real se consume todavía en el juego — está listo para cuando se necesite aplicar reglas distintas por país o segmento de usuarios.</p>
+    </div>
+
+    <div class="gitem" data-cat="tech" data-terms="ump user messaging platform consentimiento gdpr admob publicidad">
+      <div class="gitem-head">
+        <span class="gitem-term">UMP consent</span>
+        <span class="gitem-short">User Messaging Platform</span>
+        <span class="gitem-cat gcat--tech">Tecnología</span>
+      </div>
+      <p class="gitem-def">Formulario de consentimiento de publicidad personalizada de Google (User Messaging Platform), obligatorio en la Unión Europea antes de mostrar anuncios de AdMob que usen datos personales. Bule Bule lo integra en <code>AdBanner.jsx</code>; hasta que la app se publique en producción en Play Store, se prueba con IDs de AdMob de test.</p>
+    </div>
+
   </div>
   <p class="glosario-empty" id="glosario-empty">No se encontraron términos para esa búsqueda.</p>
 
@@ -2403,6 +2768,14 @@
 <section id="regulacion">
   <h2>11. Marco legal — Ley 13/2011 de Regulación del Juego</h2>
   <p>Análisis del coste y viabilidad de operar Bule Bule como juego regulado bajo la normativa española de juego online, gestionada por la <strong><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span></strong> (Dirección General de Ordenación del Juego).</p>
+
+  <div class="alert alert-green">
+    <strong>Estado actual — sigue aplicando sin cambios:</strong> el sistema de Bules implementado en producción (sección 6) es
+    exactamente el escenario "juego social sin dinero real" descrito en la sección 11.4: moneda virtual ganada jugando o
+    comprada con dinero real, gastada en items y acceso a torneos, <strong>nunca canjeable de vuelta a dinero</strong>.
+    Todo el análisis de esta sección — y en particular la conclusión de que el modelo regulado con apuestas reales es
+    inviable para un equipo pequeño — sigue vigente sin ninguna modificación.
+  </div>
 
   <h3>11.1 Clasificación del juego</h3>
   <p>El póker de dados combina azar (tirada de dados) y estrategia (elección de descartes). Bajo la Ley 13/2011, la componente aleatoria dominante lo clasifica como <strong>juego de azar</strong>, lo que activa los requisitos más exigentes de licencia.</p>
@@ -2528,7 +2901,7 @@
 </div><!-- /container -->
 
 <footer>
-  Bule Bule · Documentación v0.4 · generada el 15 junio 2026 · <a href="https://bulebule.web.app" target="_blank">bulebule.web.app</a>
+  Bule Bule · Documentación v0.5 · generada el 31 julio 2026 · <a href="https://bulebule.web.app" target="_blank">bulebule.web.app</a>
 </footer>
 
 </body>

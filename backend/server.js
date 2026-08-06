@@ -149,6 +149,16 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(user_id)
   );
 
+  CREATE TABLE IF NOT EXISTS story_progress (
+    user_id      TEXT PRIMARY KEY,
+    current_node INTEGER NOT NULL DEFAULT 1,
+    lives        INTEGER NOT NULL DEFAULT 5,
+    last_life_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    map_seed     INTEGER NOT NULL,
+    updated_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+  );
+
   CREATE TABLE IF NOT EXISTS hand_stats (
     user_id   TEXT    NOT NULL,
     hand_desc TEXT    NOT NULL,
@@ -229,6 +239,19 @@ db.exec(`
     email      TEXT,
     message    TEXT NOT NULL,
     created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+`);
+
+// Reportes de lenguaje ofensivo o acoso en el chat de partida. No guardamos el
+// chat en general (es efímero, solo en memoria) — únicamente los mensajes que
+// alguien reporta, con fin exclusivo de moderación. Se purgan a los 90 días.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reported_messages (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    reporter_name    TEXT,
+    reported_player  TEXT,
+    message_text     TEXT NOT NULL,
+    created_at       INTEGER NOT NULL DEFAULT (unixepoch())
   );
 `);
 
@@ -455,6 +478,9 @@ const stmts = {
   getUserItems:   db.prepare(`SELECT item_id FROM user_items WHERE user_id = ?`),
   insertUserItem: db.prepare(`INSERT OR IGNORE INTO user_items (user_id, item_id) VALUES (?, ?)`),
   deductScore:    db.prepare(`UPDATE player_stats SET score = score - ? WHERE user_id = ? AND score >= ?`),
+  getStoryProgress:    db.prepare(`SELECT * FROM story_progress WHERE user_id = ?`),
+  ensureStoryProgress: db.prepare(`INSERT OR IGNORE INTO story_progress (user_id, map_seed) VALUES (?, ?)`),
+  updateStoryProgress: db.prepare(`UPDATE story_progress SET current_node=?, lives=?, last_life_at=?, updated_at=unixepoch() WHERE user_id=?`),
 };
 
 // ── Seed marketplace items ─────────────────────────────────────────────────────
@@ -559,6 +585,63 @@ function awardGamePoints(room, gameWinnerId, gameLoserId) {
   room.pendingScores = {};
 }
 
+// ── Modo Historia ─────────────────────────────────────────────────────────────
+
+// Regeneración perezosa de vidas: no hay cron, se recalcula en cada lectura/consumo.
+// Solo se avanza last_life_at por los intervalos realmente consumidos (no se
+// resetea a "ahora") para no perder el progreso parcial hacia la siguiente vida.
+function regenStoryLives(row, now = Math.floor(Date.now() / 1000)) {
+  if (row.lives >= STORY_MAX_LIVES) return { lives: STORY_MAX_LIVES, lastLifeAt: row.last_life_at };
+  const elapsed = now - row.last_life_at;
+  const regen = Math.floor(elapsed / STORY_LIFE_REGEN_SECONDS);
+  if (regen <= 0) return { lives: row.lives, lastLifeAt: row.last_life_at };
+  const lives = Math.min(STORY_MAX_LIVES, row.lives + regen);
+  const consumedIntervals = lives - row.lives;
+  const lastLifeAt = row.last_life_at + consumedIntervals * STORY_LIFE_REGEN_SECONDS;
+  return { lives, lastLifeAt };
+}
+
+function getOrCreateStoryProgress(userId) {
+  stmts.ensureStoryProgress.run(userId, Math.floor(Math.random() * 0xFFFFFFFF));
+  return stmts.getStoryProgress.get(userId);
+}
+
+function storyIsBoss(nodeIndex) {
+  return nodeIndex % STORY_BOSS_INTERVAL === 0;
+}
+
+function storyOpponentCount(nodeIndex) {
+  if (!storyIsBoss(nodeIndex)) return 1;
+  const bossNumber = Math.floor(nodeIndex / STORY_BOSS_INTERVAL);
+  return Math.min(gameSettings.maxPlayersLimit - 1, 2 + Math.floor(bossNumber / 2));
+}
+
+// Se llama junto a cada awardGamePoints(): si la sala es de Modo Historia,
+// avanza el nodo (victoria) o consume una vida (derrota) del jugador humano.
+function handleStoryGameEnd(room, winnerId, loserId) {
+  if (!room.storyNode) return;
+  const human = room.players.find(p => !p.isBot);
+  if (!human) return;
+  const userId = getUserIdForPlayer(human);
+  if (!userId) return;
+
+  const row = stmts.getStoryProgress.get(userId);
+  if (!row || row.current_node !== room.storyNode) return; // ya avanzado por otra vía, no tocar
+
+  const { lives, lastLifeAt } = regenStoryLives(row);
+  if (human.id === winnerId) {
+    stmts.updateStoryProgress.run(row.current_node + 1, lives, lastLifeAt, userId);
+  } else if (human.id === loserId) {
+    // Si las vidas ya estaban al máximo, la cuenta atrás para la próxima
+    // empieza de cero ahora; si ya venía regenerándose, se conserva el
+    // progreso parcial ya calculado en lastLifeAt.
+    const wasFull = lives >= STORY_MAX_LIVES;
+    const newLastLifeAt = wasFull ? Math.floor(Date.now() / 1000) : lastLifeAt;
+    stmts.updateStoryProgress.run(row.current_node, Math.max(0, lives - 1), newLastLifeAt, userId);
+  }
+  // Ni winnerId ni loserId (empate degenerado, ej. varios liberados a la vez): no se toca el progreso.
+}
+
 function buildRankings() {
   return stmts.rankings.all().map((row, i) => {
     const registered = registeredUsers[row.user_id];
@@ -625,6 +708,11 @@ const TIEBREAK_TIMEOUT  = 30_000;
 const BOT_ID = '__bot__';
 const BOT_NAME = 'Bot';
 
+// ── Modo Historia ─────────────────────────────────────────────────────────────
+const STORY_MAX_LIVES         = 5;
+const STORY_LIFE_REGEN_SECONDS = 20 * 60; // 1 vida cada 20 min
+const STORY_BOSS_INTERVAL     = 5;        // cada 5 nodos, un boss
+
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -648,6 +736,29 @@ function makePlayer(id, name) {
 
 function makeBotPlayer(n = 0) {
   return { ...makePlayer(`${BOT_ID}_${n}`, n === 0 ? BOT_NAME : `${BOT_NAME} ${n + 1}`), isBot: true };
+}
+
+// Nombres de los rivales de Modo Historia — mismo tono koruño que el resto del
+// juego (guest names del frontend, items del marketplace: Torre de Hércules,
+// Bar El Polvorín, Bar El Olímpico, Maria Pita...).
+const STORY_OPPONENT_NAMES = [
+  'El Pirri', 'El Chiri', 'Platanito', 'Murdoc', 'La Rebekita', 'El Manolo',
+  'La Choni', 'El Fiti', 'Perico', 'El Chupi', 'La Niña', 'El Ratón', 'Churri',
+  'El Gordo', 'La Flaca', 'Pepito', 'La Rubia', 'Cachopo', 'El Tarchi',
+  'El Beni', 'La Puri', 'Xan o Bravo', 'La Turra', 'El Mago', 'Maricarmen',
+  'El Cabra', 'Kiko el Raro', 'La Petra', 'Tío Crispín',
+];
+const STORY_BOSS_NAMES = [
+  'El Bonilla', 'Maria Pita', 'El Rei do Polvorín', 'A Señora do Olímpico',
+  'O Mestre do Doce', 'Capitán Hércules', 'A Bruxa da Torre', 'El Terror de Monte Alto',
+];
+
+function makeStoryBotPlayer(n, nodeIndex) {
+  const isBoss = storyIsBoss(nodeIndex);
+  const name = (isBoss && n === 0)
+    ? STORY_BOSS_NAMES[Math.floor(nodeIndex / STORY_BOSS_INTERVAL) % STORY_BOSS_NAMES.length]
+    : STORY_OPPONENT_NAMES[(nodeIndex * 31 + n * 7) % STORY_OPPONENT_NAMES.length];
+  return { ...makePlayer(`${BOT_ID}_${n}`, name), isBot: true };
 }
 
 // POC de mensajería: los bots que no están jugando reaccionan de vez en cuando,
@@ -922,6 +1033,7 @@ function sanitize(room) {
     continueDeadline: room.continueDeadline ?? null,
     maxRounds: room.maxRounds ?? 0,
     desempate: room.desempate ?? false,
+    storyNode: room.storyNode ?? null,
     players: room.players.map(p => {
       const uid = getUserIdForPlayer(p);
       return {
@@ -1011,6 +1123,15 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// ── Reported message purge (runs daily) ────────────────────────────────────────
+// Solo conservamos los mensajes reportados el tiempo necesario para revisarlos.
+const REPORTED_MESSAGE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+setInterval(() => {
+  const cutoff = Math.floor((Date.now() - REPORTED_MESSAGE_TTL_MS) / 1000);
+  const { changes } = db.prepare('DELETE FROM reported_messages WHERE created_at < ?').run(cutoff);
+  if (changes > 0) console.log(`[cleanup] Purged ${changes} reported message(s) older than 90 days`);
+}, 24 * 60 * 60 * 1000);
+
 function startRound(room) {
   room.phase = 'playing';
   // El perdedor de la ronda anterior abre la siguiente
@@ -1059,6 +1180,7 @@ function applyRoundLoss(room, loser) {
     if (gameWinner) gameWinner.wins += 1;
     awardRoundPoints(room);
     awardGamePoints(room, room.roundWinnerId, loser.id);
+    handleStoryGameEnd(room, room.roundWinnerId, loser.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'capilla', rounds: room.roundNumber, playerCount: room.players.length });
     return;
@@ -1073,6 +1195,7 @@ function applyRoundLoss(room, loser) {
     if (gameWinner) gameWinner.wins += 1;
     awardRoundPoints(room);
     awardGamePoints(room, gameWinner?.id ?? null, worst.id);
+    handleStoryGameEnd(room, gameWinner?.id ?? null, worst.id);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: 'rounds', rounds: room.roundNumber, playerCount: room.players.length });
   } else {
@@ -1141,6 +1264,7 @@ function endRound(room) {
       room.endReason = 'liberado';
     }
     awardGamePoints(room, liberadoWinner.id, nonLiberado[0]?.id ?? null);
+    handleStoryGameEnd(room, liberadoWinner.id, nonLiberado[0]?.id ?? null);
     room.phase = 'finished';
     trackEvent('game_end', { endReason: room.endReason ?? 'liberado', rounds: room.roundNumber, playerCount: room.players.length });
     return;
@@ -1203,6 +1327,24 @@ app.post('/api/feedback', (req, res) => {
   const cleanName  = typeof name  === 'string' ? name.trim().slice(0, 100)  || null : null;
   const cleanEmail = typeof email === 'string' ? email.trim().slice(0, 200) || null : null;
   db.prepare('INSERT INTO feedback (name, email, message) VALUES (?, ?, ?)').run(cleanName, cleanEmail, msg);
+  res.json({ ok: true });
+});
+
+// Reportar lenguaje ofensivo o acoso (opción en Ajustes → Usuario)
+const reportMessageLimiters = new Map(); // ip -> rate limiter
+app.post('/api/report-message', (req, res) => {
+  const ip = (req.headers['x-forwarded-for']?.split(',')[0] ?? req.socket.remoteAddress ?? 'unknown').trim();
+  if (!reportMessageLimiters.has(ip)) reportMessageLimiters.set(ip, makeRateLimiter(5, 10 * 60_000));
+  if (!reportMessageLimiters.get(ip)()) return res.status(429).json({ error: 'Demasiados reportes, inténtalo más tarde' });
+
+  const { reporterName, reportedPlayer, messageText } = req.body ?? {};
+  const msg = typeof messageText === 'string' ? messageText.trim() : '';
+  if (!msg) return res.status(400).json({ error: 'Falta el mensaje reportado' });
+  if (msg.length > 500) return res.status(400).json({ error: 'Mensaje demasiado largo' });
+
+  const cleanReporter = typeof reporterName === 'string' ? reporterName.trim().slice(0, 100) || null : null;
+  const cleanReported = typeof reportedPlayer === 'string' ? reportedPlayer.trim().slice(0, 100) || null : null;
+  db.prepare('INSERT INTO reported_messages (reporter_name, reported_player, message_text) VALUES (?, ?, ?)').run(cleanReporter, cleanReported, msg);
   res.json({ ok: true });
 });
 
@@ -1413,6 +1555,19 @@ app.delete('/api/admin/feedback/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// Mensajes reportados por lenguaje ofensivo o acoso
+app.get('/api/admin/reported-messages', requireAdmin, (req, res) => {
+  const { limit = 50, offset = 0 } = req.query;
+  const items = db.prepare('SELECT * FROM reported_messages ORDER BY created_at DESC LIMIT ? OFFSET ?').all(+limit, +offset);
+  const total = db.prepare('SELECT COUNT(*) as c FROM reported_messages').get().c;
+  res.json({ items, total });
+});
+
+app.delete('/api/admin/reported-messages/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM reported_messages WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 app.delete('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM tournaments WHERE id=?').run(req.params.id);
   delete tournamentPlayers[req.params.id];
@@ -1515,6 +1670,32 @@ io.on('connection', (socket) => {
       rollStats  = stmts.getRollStats.all(uid);
     }
     cb?.({ ok: true, stats, rankings, myRank, total: rankings.length, handStats, rollStats });
+  });
+
+  socket.on('get_story_progress', (cb) => {
+    if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const uid = socket.data.userId;
+    if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión para jugar Modo Historia' });
+
+    const row = getOrCreateStoryProgress(uid);
+    const { lives, lastLifeAt } = regenStoryLives(row);
+    if (lives !== row.lives || lastLifeAt !== row.last_life_at) {
+      stmts.updateStoryProgress.run(row.current_node, lives, lastLifeAt, uid);
+    }
+    const nextLifeInSeconds = lives >= STORY_MAX_LIVES
+      ? 0
+      : Math.max(0, STORY_LIFE_REGEN_SECONDS - (Math.floor(Date.now() / 1000) - lastLifeAt));
+
+    cb?.({
+      ok: true,
+      currentNode: row.current_node,
+      isBoss: storyIsBoss(row.current_node),
+      opponentCount: storyOpponentCount(row.current_node),
+      lives,
+      maxLives: STORY_MAX_LIVES,
+      nextLifeInSeconds,
+      mapSeed: row.map_seed,
+    });
   });
 
   socket.on('get_settings', (cb) => {
@@ -1665,7 +1846,7 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null, diceSkin = null }, cb) => {
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null, diceSkin = null, storyNode = null }, cb) => {
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
     if (isUserBanned(socket.data.userId)) return cb?.({ ok: false, error: 'Tu cuenta está inactiva' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
@@ -1675,6 +1856,21 @@ io.on('connection', (socket) => {
     const activeRooms = Object.values(rooms).filter(r => r.hostId === socket.id).length;
     if (activeRooms >= MAX_ROOMS_PER_USER) {
       return cb?.({ ok: false, error: 'Ya tienes demasiadas salas abiertas' });
+    }
+
+    if (storyNode) {
+      // Nunca confiar en el maxPlayers/vsBot del cliente: se derivan del
+      // progreso persistido en servidor.
+      const uid = socket.data.userId;
+      if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión para jugar Modo Historia' });
+      const row = getOrCreateStoryProgress(uid);
+      if (row.current_node !== storyNode) return cb?.({ ok: false, error: 'Ese nodo ya no está disponible' });
+      const { lives } = regenStoryLives(row);
+      if (lives <= 0) return cb?.({ ok: false, error: 'No te quedan vidas, espera a que se regeneren' });
+      vsBot      = true;
+      maxRounds  = 0;
+      isPrivate  = false;
+      maxPlayers = 1 + storyOpponentCount(storyNode);
     }
 
     if (tournamentId) {
@@ -1713,12 +1909,15 @@ io.on('connection', (socket) => {
       roundWinnerId: null,
       turnDeadline: null,
       tournamentId: tournamentId ?? null,
+      storyNode: storyNode ?? null,
       players: [{ ...makePlayer(socket.id, playerName.trim()), diceSkin: diceSkin ?? null }],
     };
 
     if (vsBot) {
       const numBots = room.maxPlayers - 1;
-      for (let i = 0; i < numBots; i++) room.players.push(makeBotPlayer(i));
+      for (let i = 0; i < numBots; i++) {
+        room.players.push(storyNode ? makeStoryBotPlayer(i, storyNode) : makeBotPlayer(i));
+      }
       startRound(room);
     }
 

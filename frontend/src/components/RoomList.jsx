@@ -170,10 +170,10 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
 
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
-function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit }) {
+function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit, onSelectStory }) {
   const { sheetRef, handleProps } = useSheetDrag(onClose)
   const maxPlayersOptions = MAX_PLAYERS_OPTIONS.filter(n => n <= maxPlayersLimit)
-  const [mode, setMode]             = useState('multi') // 'multi' | 'solo'
+  const [mode, setMode]             = useState('multi') // 'multi' | 'solo' | 'story'
   const [guestName, setGuestName]   = useState(playerName || '')
   const [roomName, setRoomName]     = useState('')
   const [maxPlayers, setMaxPlayers] = useState(Math.min(6, maxPlayersLimit))
@@ -192,6 +192,11 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
   const activeName = user ? playerName : guestName
 
   function create() {
+    if (mode === 'story') {
+      if (!user) return setError('Debes iniciar sesión para jugar Modo Historia')
+      onSelectStory()
+      return
+    }
     const name = activeName?.trim()
     if (!name) return setError('Introduce tu nombre primero')
     if (!user) onNameChange?.(name)
@@ -261,6 +266,10 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
             onClick={() => { setMode('solo'); setError('') }}>
             Solo Play
           </button>
+          <button className={`bs__mode-btn${mode === 'story' ? ' bs__mode-btn--active' : ''}`}
+            onClick={() => { setMode('story'); setError('') }}>
+            Modo Historia
+          </button>
         </div>
 
         {/* Ambos paneles ocupan la misma celda de grid: la altura de la ficha
@@ -291,7 +300,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
             </div>
           </div>
 
-          {/* Solo play fields — siempre montado, oculto en modo multi */}
+          {/* Solo play fields — siempre montado, oculto en otros modos */}
           <div className={`bs__collapse${mode === 'solo' ? ' bs__collapse--open' : ''}`}>
             <div className="bs__collapse-inner">
               <p className="bs__label">Número de bots</p>
@@ -303,11 +312,22 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
               </div>
             </div>
           </div>
+
+          {/* Modo Historia — sin campos, solo un aviso; el mapa se ve en su propia pantalla */}
+          <div className={`bs__collapse${mode === 'story' ? ' bs__collapse--open' : ''}`}>
+            <div className="bs__collapse-inner">
+              <p className="bs__feedback-intro">
+                Recorre el mapa y libra un combate en cada punto. Cada varios puntos te espera un
+                boss con más de un rival a la vez. Si pierdes, gastas una vida — se regeneran solas
+                con el tiempo.
+              </p>
+            </div>
+          </div>
         </div>
 
         {error && <p className="bs__error">{error}</p>}
         <button className="bs__submit" onClick={create} disabled={loading}>
-          {loading ? 'Creando...' : 'Jugar'}
+          {loading ? 'Creando...' : mode === 'story' ? 'Ver mapa' : 'Jugar'}
         </button>
       </div>
     </>
@@ -395,7 +415,7 @@ function FeedbackSheet({ closing, onClose, onSent, user }) {
 
 export default function RoomList({
   user, playerName, onNameChange, onLogin, onUpdate, onLogout, onDeleteAccount,
-  musicOn, onToggleMusic,
+  musicOn, onToggleMusic, onEnterStory,
 }) {
   const { t, lang } = useTranslation()
   const PAGES = PAGE_META.map(p => ({ ...p, label: t(`pages.${p.id}Label`), desc: t(`pages.${p.id}Desc`) }))
@@ -1069,7 +1089,8 @@ export default function RoomList({
       {/* Create / Solo play sheet */}
       {createSheet && (
         <CreateSheet user={user} playerName={playerName} onNameChange={onNameChange}
-          closing={createClosing} onClose={closeCreate} maxPlayersLimit={maxPlayersLimit} />
+          closing={createClosing} onClose={closeCreate} maxPlayersLimit={maxPlayersLimit}
+          onSelectStory={() => { closeCreate(); onEnterStory() }} />
       )}
 
       {/* Quejas / sugerencias sheet */}
