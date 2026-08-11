@@ -1712,6 +1712,7 @@ io.on('connection', (socket) => {
 
   socket.on('get_marketplace', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    if (!isFeatureEnabled('marketplace')) return cb?.({ ok: false, error: 'Tienda desactivada temporalmente' });
     const uid       = socket.data.userId;
     const userItems = uid ? stmts.getUserItems.all(uid).map(r => r.item_id) : [];
     const items     = stmts.getItems.all();
@@ -1728,6 +1729,7 @@ io.on('connection', (socket) => {
 
   socket.on('buy_item', ({ itemId } = {}, cb) => {
     if (!rl.buy()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    if (!isFeatureEnabled('marketplace')) return cb?.({ ok: false, error: 'Tienda desactivada temporalmente' });
     const uid  = socket.data.userId;
     if (!uid)    return cb?.({ ok: false, error: 'Debes iniciar sesión' });
     const item = stmts.getItemById.get(itemId);
@@ -1742,6 +1744,7 @@ io.on('connection', (socket) => {
 
   socket.on('buy_bules_pack', ({ packId } = {}, cb) => {
     if (!rl.buy()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    if (!isFeatureEnabled('marketplace')) return cb?.({ ok: false, error: 'Tienda desactivada temporalmente' });
     const uid = socket.data.userId;
     if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión' });
     const pack = stmts.getItemById.get(packId);
@@ -1783,6 +1786,7 @@ io.on('connection', (socket) => {
 
   socket.on('get_tournaments', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    if (!isFeatureEnabled('tournaments')) return cb?.({ ok: false, error: 'Campeonatos desactivados temporalmente' });
     const now = Math.floor(Date.now() / 1000);
     const result = TOURNAMENT_DEFS.filter(t =>
       t.visible &&
@@ -1806,6 +1810,7 @@ io.on('connection', (socket) => {
 
   socket.on('join_tournament', ({ tournamentId, userId, name, picture }, cb) => {
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    if (!isFeatureEnabled('tournaments')) return cb?.({ ok: false, error: 'Campeonatos desactivados temporalmente' });
     const def = getTournamentDef(tournamentId);
     if (!def || !def.visible) return cb?.({ ok: false, error: 'Torneo no encontrado' });
 
@@ -1883,6 +1888,7 @@ io.on('connection', (socket) => {
     }
 
     if (tournamentId) {
+      if (!isFeatureEnabled('tournaments')) return cb?.({ ok: false, error: 'Campeonatos desactivados temporalmente' });
       const def = getTournamentDef(tournamentId);
       if (!def || !def.visible) return cb?.({ ok: false, error: 'Torneo no encontrado' });
       if (!def.active) return cb?.({ ok: false, error: 'Torneo no disponible' });

@@ -61,10 +61,13 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
   const [reportSending, setReportSending] = useState(false)
   const [reportSent, setReportSent]       = useState(false)
   const [commentsEnabled, setCommentsEnabled] = useState(true)
+  const [marketplaceEnabled, setMarketplaceEnabled] = useState(true)
 
   useEffect(() => {
     socket.emit('get_settings', (res) => {
-      if (res?.ok) setCommentsEnabled(res.settings?.featureFlags?.comments !== false)
+      if (!res?.ok) return
+      setCommentsEnabled(res.settings?.featureFlags?.comments !== false)
+      setMarketplaceEnabled(res.settings?.featureFlags?.marketplace !== false)
     })
   }, [])
 
@@ -97,7 +100,7 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
   const TABS = [
     { id: 'stats',     label: t('user.tabs.stats') },
     { id: 'historial', label: t('user.tabs.historial') },
-    { id: 'items',     label: t('user.tabs.items') },
+    ...(marketplaceEnabled ? [{ id: 'items', label: t('user.tabs.items') }] : []),
     { id: 'ajustes',   label: t('user.tabs.ajustes') },
   ]
 

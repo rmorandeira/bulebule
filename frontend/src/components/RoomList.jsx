@@ -421,7 +421,6 @@ export default function RoomList({
   musicOn, onToggleMusic, onEnterStory,
 }) {
   const { t, lang } = useTranslation()
-  const PAGES = PAGE_META.map(p => ({ ...p, label: t(`pages.${p.id}Label`), desc: t(`pages.${p.id}Desc`) }))
   const [consentChecked, setConsentChecked] = useState(false)
   const [activeTab, setActiveTab]           = useState(DEFAULT_PAGE)
   const [rooms, setRooms]                   = useState([])
@@ -449,6 +448,10 @@ export default function RoomList({
   const [viewingUser, setViewingUser]           = useState(null) // { userId, name, picture }
   const [maxPlayersLimit, setMaxPlayersLimit]   = useState(Math.max(...MAX_PLAYERS_OPTIONS))
   const [featureFlags, setFeatureFlags]         = useState({})
+  const PAGES = PAGE_META
+    .filter(p => p.id !== 'challenge' || featureFlags.tournaments !== false)
+    .filter(p => p.id !== 'tienda'    || featureFlags.marketplace !== false)
+    .map(p => ({ ...p, label: t(`pages.${p.id}Label`), desc: t(`pages.${p.id}Desc`) }))
   const [feedbackSheet, setFeedbackSheet]     = useState(false)
   const [feedbackClosing, setFeedbackClosing] = useState(false)
   const [helpSheet, setHelpSheet]     = useState(false)
@@ -470,6 +473,11 @@ export default function RoomList({
   useEffect(() => {
     if (!user && activeTab === 'user') setActiveTab(DEFAULT_PAGE)
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (activeTab === 'challenge' && featureFlags.tournaments === false) setActiveTab(DEFAULT_PAGE)
+    if (activeTab === 'tienda'    && featureFlags.marketplace === false) setActiveTab(DEFAULT_PAGE)
+  }, [activeTab, featureFlags])
 
   // When returning from the user tab, snap the carousel to the active page
   useEffect(() => {
@@ -1016,17 +1024,19 @@ export default function RoomList({
         </button>
 
         {/* Challenge */}
-        <button className={`rl__nav-btn${activeTab === 'challenge' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => goToPage('challenge')} aria-label={t('navbar.challenge')}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2h12v8c0 3.3-2.7 6-6 6s-6-2.7-6-6V2z"/>
-            <path d="M6 4 Q2 7 6 10"/>
-            <path d="M18 4 Q22 7 18 10"/>
-            <line x1="12" y1="16" x2="12" y2="18"/>
-            <rect x="8" y="18" width="8" height="2"/>
-            <rect x="4" y="20" width="16" height="2"/>
-          </svg>
-        </button>
+        {featureFlags.tournaments !== false && (
+          <button className={`rl__nav-btn${activeTab === 'challenge' ? ' rl__nav-btn--active' : ''}`}
+            onClick={() => goToPage('challenge')} aria-label={t('navbar.challenge')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2h12v8c0 3.3-2.7 6-6 6s-6-2.7-6-6V2z"/>
+              <path d="M6 4 Q2 7 6 10"/>
+              <path d="M18 4 Q22 7 18 10"/>
+              <line x1="12" y1="16" x2="12" y2="18"/>
+              <rect x="8" y="18" width="8" height="2"/>
+              <rect x="4" y="20" width="16" height="2"/>
+            </svg>
+          </button>
+        )}
 
         {/* Home — dado */}
         <button className={`rl__nav-btn${activeTab === 'online' ? ' rl__nav-btn--active' : ''}`}
@@ -1041,14 +1051,16 @@ export default function RoomList({
         </button>
 
         {/* Shop */}
-        <button className={`rl__nav-btn${activeTab === 'tienda' ? ' rl__nav-btn--active' : ''}`}
-          onClick={() => goToPage('tienda')} aria-label={t('navbar.shop')}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
-          </svg>
-        </button>
+        {featureFlags.marketplace !== false && (
+          <button className={`rl__nav-btn${activeTab === 'tienda' ? ' rl__nav-btn--active' : ''}`}
+            onClick={() => goToPage('tienda')} aria-label={t('navbar.shop')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </button>
+        )}
 
         {/* User */}
         <button className={`rl__nav-btn${activeTab === 'user' ? ' rl__nav-btn--active' : ''}`}

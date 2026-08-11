@@ -120,7 +120,7 @@ export default function Settings() {
 
   if (loading) return <div className="loading">Cargando…</div>;
 
-  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis'];
+  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis', 'marketplace', 'tournaments'];
   const flagEntries = Object.entries(flags).filter(([key]) => !RESERVED_FLAGS.includes(key));
 
   return (
@@ -276,6 +276,22 @@ export default function Settings() {
             <label style={{ flex: 1 }}>Emoticonos (reacciones rápidas en sala)</label>
             <Switch checked={flagOn('emojis')} onChange={() => setFlag('emojis', !flagOn('emojis'))} />
           </div>
+
+          <div className="toggle-row" style={{ justifyContent: 'space-between', marginTop: 16 }}>
+            <label style={{ flex: 1 }}>Marketplace (tienda)</label>
+            <Switch checked={flagOn('marketplace')} onChange={() => setFlag('marketplace', !flagOn('marketplace'))} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
+            Si se desactiva, se oculta la pestaña Tienda y también la sección de items comprados en el perfil de usuario.
+          </p>
+
+          <div className="toggle-row" style={{ justifyContent: 'space-between', marginTop: 16 }}>
+            <label style={{ flex: 1 }}>Campeonatos</label>
+            <Switch checked={flagOn('tournaments')} onChange={() => setFlag('tournaments', !flagOn('tournaments'))} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
+            Si se desactiva, se oculta la pestaña Campeonatos y no se puede entrar ni crear salas de torneo.
+          </p>
         </div>
 
         <div className="panel-section">
