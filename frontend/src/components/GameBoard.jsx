@@ -8,6 +8,7 @@ import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 import DiceRollerScene from './DiceRollerScene'
 import CountdownButton from './CountdownButton'
 import WaitingBar from './WaitingBar'
+import { pushBackHandler } from '../utils/backHandler'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
 
@@ -344,6 +345,11 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     }
     scoreAnimFrameRef.current = requestAnimationFrame(tick)
   }
+
+  useEffect(() => pushBackHandler(() => {
+    setLeaveIntent(intent => intent ? null : 'exit')
+    return true
+  }), []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function confirmLeave() {
     allowUnloadRef.current = true

@@ -6,6 +6,7 @@ import { setTheme, getTheme } from '../theme'
 import { imgSrc } from '../utils/imgSrc'
 import { APP_VERSION_NAME } from '../version'
 import { useTranslation, setLanguage } from '../i18n'
+import { pushBackHandler } from '../utils/backHandler'
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || ''
 
@@ -54,48 +55,24 @@ export default function UserSection({ user, onBack, onUpdate, onLogout, onDelete
   const [rankTotal, setRankTotal] = useState(0)
   const [handStats, setHandStats] = useState(null)
   const [rollStats, setRollStats] = useState(null)
-  const [reportOpen, setReportOpen]       = useState(false)
-  const [reportedPlayer, setReportedPlayer] = useState('')
-  const [reportText, setReportText]       = useState('')
-  const [reportError, setReportError]     = useState('')
-  const [reportSending, setReportSending] = useState(false)
-  const [reportSent, setReportSent]       = useState(false)
-  const [commentsEnabled, setCommentsEnabled] = useState(true)
   const [marketplaceEnabled, setMarketplaceEnabled] = useState(true)
 
   useEffect(() => {
     socket.emit('get_settings', (res) => {
       if (!res?.ok) return
-      setCommentsEnabled(res.settings?.featureFlags?.comments !== false)
       setMarketplaceEnabled(res.settings?.featureFlags?.marketplace !== false)
     })
   }, [])
 
-  async function submitReport() {
-    if (!reportText.trim()) return setReportError(t('user.settings.reportErrorEmpty'))
-    setReportSending(true)
-    setReportError('')
-    try {
-      const res = await fetch(`${BACKEND}/api/report-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reporterName: user?.name ?? null,
-          reportedPlayer: reportedPlayer.trim(),
-          messageText: reportText.trim(),
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || !data.ok) throw new Error(data.error || t('user.settings.reportErrorGeneric'))
-      setReportSent(true)
-      setReportedPlayer('')
-      setReportText('')
-    } catch (e) {
-      setReportError(e.message || t('user.settings.reportErrorGeneric'))
-    } finally {
-      setReportSending(false)
-    }
-  }
+  // Atrás: primero vuelve a la pestaña por defecto; si ya estamos ahí y esto
+  // es una pantalla propia (no incrustada en RoomList), sale al listado.
+  // Incrustada y ya en la pestaña por defecto: no hay nada que hacer aquí,
+  // que lo resuelva quien la contiene (RoomList).
+  useEffect(() => pushBackHandler(() => {
+    if (activeTab !== 'stats') { setActiveTab('stats'); return true }
+    if (!embedded) { onBack?.(); return true }
+    return false
+  }), [activeTab, embedded, onBack])
 
   const TABS = [
     { id: 'stats',     label: t('user.tabs.stats') },
@@ -314,6 +291,12 @@ function ItemsTab({ user }) {
     setSelected(item)
   }
 
+  useEffect(() => pushBackHandler(() => {
+    if (!selected) return false
+    closeItem()
+    return true
+  }), [selected]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function closeItem() {
     setClosing(true)
     closeRef.current = setTimeout(() => { setSelected(null); setClosing(false) }, CLOSE_DURATION)
@@ -512,7 +495,46 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
   const [notifications, setNotifications] = useState(user?.notifications ?? false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [theme, setThemeState]        = useState(getTheme)
+  const [commentsEnabled, setCommentsEnabled] = useState(true)
+  const [reportOpen, setReportOpen]       = useState(false)
+  const [reportedPlayer, setReportedPlayer] = useState('')
+  const [reportText, setReportText]       = useState('')
+  const [reportError, setReportError]     = useState('')
+  const [reportSending, setReportSending] = useState(false)
+  const [reportSent, setReportSent]       = useState(false)
   const fileInputRef = useRef()
+
+  useEffect(() => {
+    socket.emit('get_settings', (res) => {
+      if (res?.ok) setCommentsEnabled(res.settings?.featureFlags?.comments !== false)
+    })
+  }, [])
+
+  async function submitReport() {
+    if (!reportText.trim()) return setReportError(t('user.settings.reportErrorEmpty'))
+    setReportSending(true)
+    setReportError('')
+    try {
+      const res = await fetch(`${BACKEND}/api/report-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reporterName: user?.name ?? null,
+          reportedPlayer: reportedPlayer.trim(),
+          messageText: reportText.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) throw new Error(data.error || t('user.settings.reportErrorGeneric'))
+      setReportSent(true)
+      setReportedPlayer('')
+      setReportText('')
+    } catch (e) {
+      setReportError(e.message || t('user.settings.reportErrorGeneric'))
+    } finally {
+      setReportSending(false)
+    }
+  }
 
   const THEME_OPTIONS = [
     { value: 'light',  label: t('user.settings.themeLight') },

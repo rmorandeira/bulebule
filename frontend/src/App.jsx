@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import socket from './socket'
+import { handleBackPress } from './utils/backHandler'
 import { initAdMob } from './utils/admob'
 import { dismissRoomNotification } from './utils/push'
 import { track } from './analytics'
@@ -159,6 +161,19 @@ export default function App() {
   const gameMusicRef  = useRef(null)
   const musicOnRef    = useRef(musicOn)
   musicOnRef.current  = musicOn
+
+  // ── Gesto/botón físico de "atrás" en Android ──────────────────────────────────
+  // Sin esto, Capacitor cierra la app en cuanto no hay historial del navegador
+  // que recorrer — y esta app no usa rutas, así que siempre pasaba. Cada
+  // pantalla/ficha se registra en backHandler cuando tiene algo que cerrar;
+  // solo si nadie responde salimos de verdad de la aplicación.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    const sub = CapacitorApp.addListener('backButton', () => {
+      if (!handleBackPress()) CapacitorApp.exitApp()
+    })
+    return () => { sub.remove() }
+  }, [])
 
   // ── Música de lobby ──────────────────────────────────────────────────────────
   useEffect(() => {

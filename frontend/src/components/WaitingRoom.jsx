@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import socket from '../socket'
 import UserDetailSheet from './UserDetailSheet'
+import { pushBackHandler } from '../utils/backHandler'
 
 function getFavorites() {
   try { return JSON.parse(localStorage.getItem('bule_favorites') ?? '{}') } catch { return {} }
@@ -69,6 +70,12 @@ export default function WaitingRoom({ room, myId, onLeave, user, playerName }) {
       socket.emit('leave_room', () => onLeave())
     }
   }
+
+  useEffect(() => pushBackHandler(() => {
+    if (viewingUser) { setViewingUser(null); return true }
+    leave()
+    return true
+  }), [viewingUser]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="screen waiting-room">

@@ -6,6 +6,7 @@ import socket from '../socket'
 import { track } from '../analytics'
 import { useTranslation } from '../i18n'
 import { dismissRoomNotification } from '../utils/push'
+import { pushBackHandler } from '../utils/backHandler'
 import UserSection from './UserSection'
 import TournamentList from './TournamentList'
 import Marketplace from './Marketplace'
@@ -478,6 +479,22 @@ export default function RoomList({
     if (activeTab === 'challenge' && featureFlags.tournaments === false) setActiveTab(DEFAULT_PAGE)
     if (activeTab === 'tienda'    && featureFlags.marketplace === false) setActiveTab(DEFAULT_PAGE)
   }, [activeTab, featureFlags])
+
+  // Handler base del gesto de "atrás": cierra lo que haya abierto (ficha,
+  // modal, torneo activo) o vuelve a la pestaña por defecto; si ya estamos
+  // en la pantalla principal sin nada abierto, deja que se salga de la app.
+  useEffect(() => pushBackHandler(() => {
+    if (codeModal)        { setCodeModal(null); return true }
+    if (viewingUser)      { setViewingUser(null); return true }
+    if (createSheet)      { closeCreate(); return true }
+    if (filterSheet)      { closeFilter(); return true }
+    if (roomFilterSheet)  { closeRoomFilter(); return true }
+    if (feedbackSheet)    { closeFeedback(); return true }
+    if (helpSheet)        { closeHelp(); return true }
+    if (activeTournament) { setActiveTournament(null); return true }
+    if (activeTab !== DEFAULT_PAGE) { setActiveTab(DEFAULT_PAGE); return true }
+    return false
+  }), [codeModal, viewingUser, createSheet, filterSheet, roomFilterSheet, feedbackSheet, helpSheet, activeTournament, activeTab])
 
   // When returning from the user tab, snap the carousel to the active page
   useEffect(() => {

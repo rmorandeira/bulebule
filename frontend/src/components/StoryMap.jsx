@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import socket from '../socket'
+import { pushBackHandler } from '../utils/backHandler'
 
 const StoryMapScene = lazy(() => import('./StoryMapScene'))
 
@@ -46,6 +47,8 @@ export default function StoryMap({ user, playerName, onBack }) {
   const [creating, setCreating] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const tickRef = useRef(null)
+
+  useEffect(() => pushBackHandler(() => { onBack?.(); return true }), [onBack])
 
   useEffect(() => {
     socket.emit('get_story_progress', (res) => {
