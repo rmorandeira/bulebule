@@ -1365,7 +1365,7 @@ const ADMIN_TOKEN = (() => {
 })();
 
 // ── Ajustes del juego (parámetros + feature flags, persistidos en `config`) ──
-const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {}, minVersionCode: 0, forceLatestVersion: false };
+const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {}, minVersionCode: 0, forceLatestVersion: false, introMusicUrl: null, gameMusicUrl: null };
 function loadSettings() {
   const row = db.prepare('SELECT value FROM config WHERE key=?').get('game_settings');
   if (!row) return { ...DEFAULT_SETTINGS, featureFlags: {} };
@@ -1401,16 +1401,20 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Image upload (base64 JSON → saved to data/uploads/)
+// Image/audio upload (base64 JSON → saved to data/uploads/)
+const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+const AUDIO_EXTS = ['.mp3', '.ogg', '.wav', '.m4a'];
 app.post('/api/admin/upload', requireAdmin, (req, res) => {
   const { data, filename } = req.body;
   if (!data || !filename) return res.status(400).json({ error: 'Faltan datos' });
   const ext = path.extname(filename).toLowerCase();
-  if (!['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'].includes(ext))
+  const isAudio = AUDIO_EXTS.includes(ext);
+  if (!isAudio && !IMAGE_EXTS.includes(ext))
     return res.status(400).json({ error: 'Formato no permitido' });
   const name = `${Date.now()}-${path.basename(filename, ext).replace(/[^a-z0-9_-]/gi, '_')}${ext}`;
   const buffer = Buffer.from(data, 'base64');
-  if (buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Imagen demasiado grande (máx 5 MB)' });
+  const maxSize = isAudio ? 8 * 1024 * 1024 : 5 * 1024 * 1024;
+  if (buffer.length > maxSize) return res.status(400).json({ error: `Archivo demasiado grande (máx ${maxSize / (1024 * 1024)} MB)` });
   fs.writeFileSync(path.join(UPLOADS_DIR, name), buffer);
   const proto = req.headers['x-forwarded-proto'] || req.protocol;
   const base  = `${proto}://${req.get('host')}`;
@@ -1488,8 +1492,15 @@ function latestAppVersionCode() {
   return row?.maxCode ?? 0;
 }
 
+function cleanMusicUrl(v, current) {
+  if (v === undefined) return current ?? null;
+  if (v === null || v === '') return null;
+  if (typeof v !== 'string' || v.length > 500) return undefined; // señal de valor inválido
+  return v;
+}
+
 app.put('/api/admin/settings', requireAdmin, (req, res) => {
-  const { maxPlayersLimit, featureFlags, minVersionCode, forceLatestVersion } = req.body;
+  const { maxPlayersLimit, featureFlags, minVersionCode, forceLatestVersion, introMusicUrl, gameMusicUrl } = req.body;
   const limit = parseInt(maxPlayersLimit);
   if (!Number.isFinite(limit) || limit < 2 || limit > 10)
     return res.status(400).json({ error: 'maxPlayersLimit debe estar entre 2 y 10' });
@@ -1515,7 +1526,15 @@ app.put('/api/admin/settings', requireAdmin, (req, res) => {
       if (typeof k === 'string' && k.trim()) flags[k.trim()] = !!v;
     }
   }
-  saveSettings({ maxPlayersLimit: limit, featureFlags: flags, minVersionCode: minVer, forceLatestVersion: forceLatest });
+  const introUrl = cleanMusicUrl(introMusicUrl, gameSettings.introMusicUrl);
+  const gameUrl  = cleanMusicUrl(gameMusicUrl, gameSettings.gameMusicUrl);
+  if (introUrl === undefined || gameUrl === undefined)
+    return res.status(400).json({ error: 'URL de música no válida' });
+
+  saveSettings({
+    maxPlayersLimit: limit, featureFlags: flags, minVersionCode: minVer, forceLatestVersion: forceLatest,
+    introMusicUrl: introUrl, gameMusicUrl: gameUrl,
+  });
 
   res.json({ ok: true, settings: gameSettings });
 });

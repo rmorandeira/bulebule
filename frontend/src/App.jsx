@@ -148,6 +148,8 @@ export default function App() {
     setTimeout(() => setScreen('list'), 500)
   }
   const [musicOn, setMusicOn] = useState(() => localStorage.getItem('bule_music') !== 'off')
+  const [musicUrls, setMusicUrls] = useState({ intro: null, game: null })
+  const [musicGloballyEnabled, setMusicGloballyEnabled] = useState(true)
   const [abandonedBy, setAbandonedBy] = useState(null)
   const [connectionLostNotice, setConnectionLostNotice] = useState(false)
   const [updateRequired, setUpdateRequired] = useState(false)
@@ -161,6 +163,8 @@ export default function App() {
   const gameMusicRef  = useRef(null)
   const musicOnRef    = useRef(musicOn)
   musicOnRef.current  = musicOn
+  const musicGloballyEnabledRef = useRef(musicGloballyEnabled)
+  musicGloballyEnabledRef.current = musicGloballyEnabled
 
   // ── Gesto/botón físico de "atrás" en Android ──────────────────────────────────
   // Sin esto, Capacitor cierra la app en cuanto no hay historial del navegador
@@ -176,14 +180,16 @@ export default function App() {
   }, [])
 
   // ── Música de lobby ──────────────────────────────────────────────────────────
+  // La URL puede venir personalizada desde el backoffice (settings.introMusicUrl);
+  // hasta que se resuelve el fetch usa la pista por defecto y se recrea si cambia.
   useEffect(() => {
-    const audio = new Audio('/assets/bule-escaleira.mp3')
+    const audio = new Audio(musicUrls.intro || '/assets/bule-escaleira.mp3')
     audio.loop   = true
     audio.volume = 0.55
     musicRef.current = audio
 
     function tryPlay() {
-      if (musicOnRef.current) audio.play().catch(() => {})
+      if (musicOnRef.current && musicGloballyEnabledRef.current) audio.play().catch(() => {})
     }
     document.addEventListener('click',      tryPlay, { once: true })
     document.addEventListener('touchstart', tryPlay, { once: true })
@@ -193,16 +199,16 @@ export default function App() {
       document.removeEventListener('click',      tryPlay)
       document.removeEventListener('touchstart', tryPlay)
     }
-  }, [])
+  }, [musicUrls.intro])
 
   // ── Música de partida ────────────────────────────────────────────────────────
   useEffect(() => {
-    const audio = new Audio('/assets/dice-lemonlight.mp3')
+    const audio = new Audio(musicUrls.game || '/assets/dice-lemonlight.mp3')
     audio.loop   = true
     audio.volume = 0.2
     gameMusicRef.current = audio
     return () => { audio.pause() }
-  }, [])
+  }, [musicUrls.game])
 
   // ── Lobby: para en partida o al silenciar; partida: para en lobby o al silenciar
   const inGame = !!(room && room.phase !== 'lobby')
@@ -210,11 +216,12 @@ export default function App() {
     const lobby = musicRef.current
     const game  = gameMusicRef.current
     if (!lobby || !game) return
-    if (inGame || !musicOn) lobby.pause()
-    else                    lobby.play().catch(() => {})
-    if (!inGame || !musicOn) game.pause()
-    else                     game.play().catch(() => {})
-  }, [inGame, musicOn])
+    const on = musicOn && musicGloballyEnabled
+    if (inGame || !on) lobby.pause()
+    else                lobby.play().catch(() => {})
+    if (!inGame || !on) game.pause()
+    else                 game.play().catch(() => {})
+  }, [inGame, musicOn, musicGloballyEnabled])
 
   function toggleMusic() {
     // Ref actualizado en síncrono: el listener global tryPlay del primer
@@ -276,9 +283,17 @@ export default function App() {
         if (res?.ok && (res.settings?.minVersionCode ?? 0) > APP_VERSION_CODE) setUpdateRequired(true)
       })
     }
+    function fetchMusicSettings() {
+      socket.emit('get_settings', (res) => {
+        if (!res?.ok) return
+        setMusicUrls({ intro: res.settings?.introMusicUrl || null, game: res.settings?.gameMusicUrl || null })
+        setMusicGloballyEnabled(res.settings?.featureFlags?.music !== false)
+      })
+    }
     socket.on('connect', () => {
       setMyId(socket.id)
       checkForceUpdate()
+      fetchMusicSettings()
       // Rejoin after mobile app-switch reconnect — works mid-game too (not
       // just from the lobby), the server has a grace period before it drops
       // a disconnected player. If it fails (grace period already expired),

@@ -1,7 +1,41 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../api.js';
 import Switch from '../components/Switch.jsx';
 import { useToast } from '../components/Toast.jsx';
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function MusicPicker({ label, url, onChange, uploading, onUpload }) {
+  const ref = useRef(null);
+  return (
+    <div className="form-group">
+      <label>{label}</label>
+      {url
+        ? <audio controls src={url} style={{ width: '100%', marginBottom: 8 }} />
+        : <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', margin: '4px 0 8px' }}>Usando la canción por defecto de la app.</p>}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className="btn btn-secondary" onClick={() => !uploading && ref.current?.click()} disabled={uploading}>
+          {uploading ? 'Subiendo…' : url ? 'Cambiar canción' : 'Subir canción'}
+        </button>
+        {url && <button className="btn btn-ghost" onClick={() => onChange(null)}>Restaurar por defecto</button>}
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="audio/*"
+        style={{ display: 'none' }}
+        onChange={e => { if (e.target.files[0]) onUpload(e.target.files[0]); e.target.value = ''; }}
+      />
+    </div>
+  );
+}
 
 export default function Settings() {
   const toast = useToast();
@@ -16,6 +50,9 @@ export default function Settings() {
   const [newVersionCode, setNewVersionCode] = useState('');
   const [newVersionName, setNewVersionName] = useState('');
   const [addingVersion, setAddingVersion]   = useState(false);
+  const [introMusicUrl, setIntroMusicUrl] = useState(null);
+  const [gameMusicUrl, setGameMusicUrl]   = useState(null);
+  const [uploadingMusic, setUploadingMusic] = useState(null); // null | 'intro' | 'game'
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -28,6 +65,8 @@ export default function Settings() {
       setMinVersionCode(settings.minVersionCode ?? 0);
       setForceLatestVersion(settings.forceLatestVersion ?? false);
       setFlags(settings.featureFlags ?? {});
+      setIntroMusicUrl(settings.introMusicUrl ?? null);
+      setGameMusicUrl(settings.gameMusicUrl ?? null);
       setVersions(appVersions ?? []);
     } catch (e) {
       toast(e.message, 'error');
@@ -100,6 +139,19 @@ export default function Settings() {
     setNewFlagKey('');
   }
 
+  async function uploadMusic(which, file) {
+    setUploadingMusic(which);
+    try {
+      const base64 = await readFileAsBase64(file);
+      const { url } = await api.upload(base64, file.name);
+      if (which === 'intro') setIntroMusicUrl(url); else setGameMusicUrl(url);
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setUploadingMusic(null);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -108,6 +160,8 @@ export default function Settings() {
         featureFlags: flags,
         minVersionCode: Number(minVersionCode),
         forceLatestVersion,
+        introMusicUrl,
+        gameMusicUrl,
       });
       setMinVersionCode(settings.minVersionCode ?? 0);
       toast('Ajustes guardados', 'success');
@@ -120,7 +174,7 @@ export default function Settings() {
 
   if (loading) return <div className="loading">Cargando…</div>;
 
-  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis', 'marketplace', 'tournaments'];
+  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis', 'marketplace', 'tournaments', 'music'];
   const flagEntries = Object.entries(flags).filter(([key]) => !RESERVED_FLAGS.includes(key));
 
   return (
@@ -291,6 +345,38 @@ export default function Settings() {
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
             Si se desactiva, se oculta la pestaña Campeonatos y no se puede entrar ni crear salas de torneo.
+          </p>
+        </div>
+
+        <div className="panel-section">
+          <h3>Música</h3>
+
+          <div className="toggle-row" style={{ justifyContent: 'space-between' }}>
+            <label style={{ flex: 1 }}>Música activada</label>
+            <Switch checked={flagOn('music')} onChange={() => setFlag('music', !flagOn('music'))} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4, marginBottom: 16 }}>
+            Interruptor general: si se desactiva, no suena música en la app pase lo que pase (el jugador
+            puede seguir silenciando/activando el sonido de efectos por su cuenta).
+          </p>
+
+          <MusicPicker
+            label="Canción de la intro / lobby"
+            url={introMusicUrl}
+            uploading={uploadingMusic === 'intro'}
+            onChange={setIntroMusicUrl}
+            onUpload={file => uploadMusic('intro', file)}
+          />
+          <MusicPicker
+            label="Canción de la partida"
+            url={gameMusicUrl}
+            uploading={uploadingMusic === 'game'}
+            onChange={setGameMusicUrl}
+            onUpload={file => uploadMusic('game', file)}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
+            Formatos admitidos: MP3, OGG, WAV, M4A — máximo 8 MB. Los cambios no se aplican hasta pulsar
+            "Guardar cambios".
           </p>
         </div>
 
