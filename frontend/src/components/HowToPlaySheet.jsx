@@ -1,18 +1,12 @@
 import { useSheetDrag } from '../hooks/useSheetDrag'
+import { useTranslation } from '../i18n'
 
-const HANDS = [
-  { rank: 7, name: 'Repóker',       desc: 'Los 5 dados iguales' },
-  { rank: 6, name: 'Póker',         desc: '4 dados iguales' },
-  { rank: 5, name: 'Full',          desc: 'Un trío + una pareja' },
-  { rank: 4, name: 'Escalera',      desc: '5 valores seguidos: As-K-Q-J-8 o K-Q-J-8-7' },
-  { rank: 3, name: 'Trío',          desc: '3 dados iguales' },
-  { rank: 2, name: 'Dobles parejas', desc: 'Dos parejas distintas' },
-  { rank: 1, name: 'Pareja',        desc: '2 dados iguales' },
-  { rank: 0, name: 'Carta alta',    desc: 'El dado más alto cuando no hay jugada' },
-]
+const HAND_KEYS = ['repoker', 'poker', 'full', 'escalera', 'trio', 'dobles', 'pareja', 'alta']
 
 export default function HowToPlaySheet({ closing, onClose }) {
   const { sheetRef, handleProps } = useSheetDrag(onClose)
+  const { t } = useTranslation()
+  const hands = HAND_KEYS.map((key, i) => ({ rank: HAND_KEYS.length - 1 - i, ...t(`rules.hands.${key}`) }))
 
   return (
     <>
@@ -20,37 +14,27 @@ export default function HowToPlaySheet({ closing, onClose }) {
       <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
         <div className="bs__handle" {...handleProps} />
 
-        <p className="rules__heading">Cómo se juega a Bule Bule</p>
+        <p className="rules__heading">{t('rules.heading')}</p>
 
         <div className="rules__section">
-          <p className="rules__section-title">OBJETIVO</p>
-          <p className="rules__text">
-            Sé el último jugador en pie. La partida se juega a rondas: quien pierde una ronda rompe
-            un palillo, y al tercer palillo roto pierdes la partida ("haces capilla").
-          </p>
+          <p className="rules__section-title">{t('rules.objectiveTitle')}</p>
+          <p className="rules__text">{t('rules.objectiveText')}</p>
         </div>
 
         <div className="rules__section">
-          <p className="rules__section-title">LOS DADOS</p>
-          <p className="rules__text">
-            Tiras 5 dados especiales con las caras As, Rey (K), Reina (Q), Jota (J), Ocho y Siete,
-            como una baraja de cartas.
-          </p>
+          <p className="rules__section-title">{t('rules.diceTitle')}</p>
+          <p className="rules__text">{t('rules.diceText')}</p>
         </div>
 
         <div className="rules__section">
-          <p className="rules__section-title">TU TURNO</p>
-          <p className="rules__text">
-            Tienes hasta 3 tiradas. Después de cada una eliges qué dados conservas y cuáles vuelves
-            a tirar. El primer jugador de la ronda marca el ritmo: si para en 2 tiradas, el resto
-            de jugadores de esa ronda también tiene como máximo 2.
-          </p>
+          <p className="rules__section-title">{t('rules.turnTitle')}</p>
+          <p className="rules__text">{t('rules.turnText')}</p>
         </div>
 
         <div className="rules__section">
-          <p className="rules__section-title">JUGADAS (de mayor a menor)</p>
+          <p className="rules__section-title">{t('rules.handsTitle')}</p>
           <div className="rules__hands">
-            {HANDS.map(h => (
+            {hands.map(h => (
               <div key={h.rank} className="rules__hand">
                 <span className="rules__hand-rank">{h.rank}</span>
                 <div className="rules__hand-info">
@@ -63,31 +47,21 @@ export default function HowToPlaySheet({ closing, onClose }) {
         </div>
 
         <div className="rules__section">
-          <p className="rules__section-title">GANAR Y PERDER LA RONDA</p>
-          <p className="rules__text">
-            Gana la ronda quien se quede con la mejor jugada. Quien pierde rompe un palillo y abre
-            la siguiente ronda. Si hay empate entre los mejores, se juega un desempate a la caída:
-            una tirada extra solo entre los empatados.
-          </p>
+          <p className="rules__section-title">{t('rules.winLoseTitle')}</p>
+          <p className="rules__text">{t('rules.winLoseText')}</p>
         </div>
 
         <div className="rules__section">
-          <p className="rules__section-title">LIBERARTE</p>
-          <p className="rules__text">
-            Si sacas Repóker (los 5 dados iguales) quedas liberado: no vuelves a jugar en esa
-            partida y esperas a que el resto se dispute quién pierde la ronda.
-          </p>
+          <p className="rules__section-title">{t('rules.freeingTitle')}</p>
+          <p className="rules__text">{t('rules.freeingText')}</p>
         </div>
 
         <div className="rules__section">
-          <p className="rules__section-title">BULES</p>
-          <p className="rules__text">
-            Jugando partidas online ganas Bules: cuanto mejor sea la jugada con la que cierras la
-            ronda, más puntos consigues.
-          </p>
+          <p className="rules__section-title">{t('rules.bulesTitle')}</p>
+          <p className="rules__text">{t('rules.bulesText')}</p>
         </div>
 
-        <button className="bs__submit" onClick={onClose}>Entendido</button>
+        <button className="bs__submit" onClick={onClose}>{t('rules.understood')}</button>
       </div>
     </>
   )

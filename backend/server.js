@@ -1734,16 +1734,12 @@ io.on('connection', (socket) => {
     if (!isFeatureEnabled('marketplace')) return cb?.({ ok: false, error: 'Tienda desactivada temporalmente' });
     const uid       = socket.data.userId;
     const userItems = uid ? stmts.getUserItems.all(uid).map(r => r.item_id) : [];
+    // Solo lo que sigue en venta — un item oculto desaparece de la tienda
+    // aunque el usuario ya lo posea; sigue gestionable (equipar/desequipar)
+    // desde su inventario en el perfil, que no filtra por `visible`.
     const items     = stmts.getItems.all();
-    // Los items ocultos no deben verse en la tienda, pero si el usuario ya
-    // los posee (comprados antes de ocultarse) siguen visibles en su inventario
-    const shownIds  = new Set(items.map(i => i.id));
-    const ownedHidden = userItems
-      .filter(id => !shownIds.has(id))
-      .map(id => stmts.getItemById.get(id))
-      .filter(Boolean);
     const credits   = uid ? (stmts.getStats.get(uid)?.score ?? 0) : 0;
-    cb?.({ ok: true, items: [...items, ...ownedHidden], userItems, credits });
+    cb?.({ ok: true, items, userItems, credits });
   });
 
   socket.on('buy_item', ({ itemId } = {}, cb) => {
@@ -2281,6 +2277,20 @@ io.on('connection', (socket) => {
         stmts.deletePendingChallenge.run(p.room_code);
       }
     }
+  });
+
+  // El cliente sigue conectado al cerrar sesión (vuelve a modo invitado en
+  // la misma pestaña/app) — sin esto, socket.data.userId se queda con el id
+  // antiguo y get_stats/etc. siguen devolviendo el rango de la cuenta previa.
+  socket.on('logout', (cb) => {
+    const uid = socket.data.userId;
+    if (uid) {
+      const ru = registeredUsers[uid];
+      if (ru && ru.socketId === socket.id) ru.socketId = null;
+      delete socketToUser[socket.id];
+    }
+    socket.data.userId = null;
+    cb?.({ ok: true });
   });
 
   socket.on('subscribe_push', ({ userId, subscription }) => {

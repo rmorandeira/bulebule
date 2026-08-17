@@ -2,20 +2,22 @@ import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
 import { imgSrc } from '../utils/imgSrc'
 import { useSheetDrag } from '../hooks/useSheetDrag'
+import { useTranslation } from '../i18n'
 
 const CLOSE_DURATION = 260
 
 const CATEGORIES = [
-  { id: 'all',         label: 'Todo',           emoji: '🛍️' },
-  { id: 'pack',        label: 'Bules',          emoji: '💰' },
-  { id: 'dice',        label: 'Dados',          emoji: '🎲' },
-  { id: 'collectible', label: 'Coleccionables',  emoji: '🎰' },
-  { id: 'landmark',    label: 'Monumentos',      emoji: '🏛️' },
-  { id: 'figure',      label: 'Personajes',      emoji: '🧑‍🎨' },
+  { id: 'all',         labelKey: 'categoryAll',         emoji: '🛍️' },
+  { id: 'pack',        labelKey: 'categoryPack',        emoji: '💰' },
+  { id: 'dice',        labelKey: 'categoryDice',        emoji: '🎲' },
+  { id: 'collectible', labelKey: 'categoryCollectible', emoji: '🎰' },
+  { id: 'landmark',    labelKey: 'categoryLandmark',    emoji: '🏛️' },
+  { id: 'figure',      labelKey: 'categoryFigure',      emoji: '🧑‍🎨' },
 ]
 
 
 export default function Marketplace({ user }) {
+  const { t } = useTranslation()
   const { sheetRef, handleProps } = useSheetDrag(() => closeItem())
   const [items, setItems]         = useState([])
   const [userItems, setUserItems] = useState([])
@@ -58,7 +60,7 @@ export default function Marketplace({ user }) {
     setError('')
     socket.emit('buy_item', { itemId: selected.id }, (res) => {
       setBuying(false)
-      if (!res?.ok) { setError(res?.error ?? 'Error al comprar'); return }
+      if (!res?.ok) { setError(res?.error ?? t('shop.buyErrorGeneric')); return }
       setUserItems(prev => [...prev, selected.id])
       setCredits(res.credits)
       closeItem()
@@ -71,7 +73,7 @@ export default function Marketplace({ user }) {
     setError('')
     socket.emit('buy_bules_pack', { packId: selected.id }, (res) => {
       setBuying(false)
-      if (!res?.ok) { setError(res?.error ?? 'Error al procesar'); return }
+      if (!res?.ok) { setError(res?.error ?? t('shop.packErrorGeneric')); return }
       setCredits(res.score)
       closeItem()
     })
@@ -110,7 +112,7 @@ export default function Marketplace({ user }) {
             onClick={() => setActiveCategory(cat.id)}
           >
             <span className="mkt__tab-emoji">{cat.emoji}</span>
-            <span>{cat.label}</span>
+            <span>{t(`shop.${cat.labelKey}`)}</span>
           </button>
         ))}
       </div>
@@ -130,13 +132,13 @@ export default function Marketplace({ user }) {
                 alt={item.name}
                 onError={e => { e.currentTarget.style.display = 'none' }}
               />
-              {!item.active && <span className="mkt__inactive-badge">NO DISPONIBLE</span>}
-              {item.active && activeSkin === item.id && <span className="mkt__active-badge">Activo</span>}
-              {owned(item.id) && <span className="mkt__owned-badge">Tuyo</span>}
+              {!item.active && <span className="mkt__inactive-badge">{t('shop.unavailable')}</span>}
+              {item.active && activeSkin === item.id && <span className="mkt__active-badge">{t('shop.active')}</span>}
+              {owned(item.id) && <span className="mkt__owned-badge">{t('shop.owned')}</span>}
             </div>
             <p className="mkt__card-name">{item.name}</p>
             <p className="mkt__card-price">
-              {item.category === 'pack' ? '1 €' : item.price === 0 ? 'Gratis' : `${item.price.toLocaleString()} Bules`}
+              {item.category === 'pack' ? '1 €' : item.price === 0 ? t('shop.free') : t('shop.bules', { n: item.price.toLocaleString() })}
             </p>
           </div>
         ))}
@@ -169,38 +171,38 @@ export default function Marketplace({ user }) {
               {selected.category === 'pack' ? (
                 <>
                   <div className="mkt__bizum">
-                    <p className="mkt__bizum-label">Envía <strong>1 €</strong> por Bizum y confirma el pago.</p>
+                    <p className="mkt__bizum-label">{t('shop.bizumHint')}</p>
                   </div>
                   <button className="bs__submit" disabled>
-                    Comprar Bules
+                    {t('shop.buyPack')}
                   </button>
                 </>
               ) : (
                 <>
                   <p className="mkt__sheet-price">
-                    {selected.price === 0 ? 'Gratis' : `${selected.price.toLocaleString()} Bules`}
+                    {selected.price === 0 ? t('shop.free') : t('shop.bules', { n: selected.price.toLocaleString() })}
                   </p>
                   {selected.category === 'dice' && (selected.price === 0 || owned(selected.id)) ? (
                     activeSkin === selected.id ? (
                       <button className="bs__submit bs__submit--secondary" onClick={handleUnequip}>
-                        Desactivar skin
+                        {t('user.items.unequip')}
                       </button>
                     ) : (
                       <button className="bs__submit" onClick={() => handleEquip(selected.id)}>
-                        Activar skin
+                        {t('user.items.equip')}
                       </button>
                     )
                   ) : owned(selected.id) ? (
-                    <button className="bs__submit" disabled>Ya lo tienes ✓</button>
+                    <button className="bs__submit" disabled>{t('shop.alreadyOwned')}</button>
                   ) : !selected.active ? (
-                    <button className="bs__submit" disabled>No disponible</button>
+                    <button className="bs__submit" disabled>{t('shop.notAvailable')}</button>
                   ) : !user ? (
-                    <p className="mkt__sheet-hint">Inicia sesión para comprar</p>
+                    <p className="mkt__sheet-hint">{t('shop.loginToBuy')}</p>
                   ) : credits < selected.price ? (
-                    <button className="bs__submit" disabled>Bules insuficientes</button>
+                    <button className="bs__submit" disabled>{t('shop.notEnoughBules')}</button>
                   ) : (
                     <button className="bs__submit" onClick={handleBuy} disabled={buying}>
-                      {buying ? 'Comprando...' : `Comprar · ${selected.price.toLocaleString()} Bules`}
+                      {buying ? t('shop.buying') : t('shop.buy', { n: selected.price.toLocaleString() })}
                     </button>
                   )}
                 </>

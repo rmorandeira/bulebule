@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import socket from '../socket'
 import { useSheetDrag } from '../hooks/useSheetDrag'
+import { useTranslation } from '../i18n'
 
 const TIER_COLOR  = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 const CLOSE_DURATION = 260
 
 export default function TournamentLobby({ tournament, user, playerName, onBack, onViewUser }) {
+  const { t } = useTranslation()
   const { sheetRef: createSheetRef, handleProps: createHandleProps } = useSheetDrag(() => closeCreate())
   const [lobbyState, setLobbyState]   = useState({ players: [], rooms: [] })
   const [canPlay, setCanPlay]         = useState(false)
@@ -59,7 +61,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
   }
 
   function handleCreate() {
-    if (!roomName.trim()) return setCreateError('Ponle un nombre a la sala')
+    if (!roomName.trim()) return setCreateError(t('create.roomNameRequiredError'))
     setCreating(true)
     socket.emit('create_room', {
       playerName: user?.name ?? playerName,
@@ -73,7 +75,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
       diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
     }, (res) => {
       setCreating(false)
-      if (!res?.ok) return setCreateError(res?.error ?? 'Error al crear la sala')
+      if (!res?.ok) return setCreateError(res?.error ?? t('create.createRoomError'))
       closeCreate()
     })
   }
@@ -84,7 +86,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
     setJoiningCode(room.code)
     socket.emit('join_room', { code: room.code, playerName: name, diceSkin: localStorage.getItem('bule_dice_skin') ?? null }, (res) => {
       setJoiningCode(null)
-      if (!res?.ok) setError(res?.error ?? 'No se pudo unir a la sala')
+      if (!res?.ok) setError(res?.error ?? t('online.joinError'))
     })
   }
 
@@ -95,7 +97,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
     <div className="tlob">
       {/* Header */}
       <div className="tlob__header">
-        <button className="tlob__back" onClick={onBack} aria-label="Volver">
+        <button className="tlob__back" onClick={onBack} aria-label={t('user.back')}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
@@ -106,7 +108,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
         </div>
         {joined && (
           <span className={`tlob__access ${canPlay ? 'tlob__access--ok' : 'tlob__access--no'}`}>
-            {canPlay ? 'Puedes jugar' : 'Solo espectador'}
+            {canPlay ? t('tournaments.canPlay') : t('tournaments.spectatorOnly')}
           </span>
         )}
       </div>
@@ -115,9 +117,9 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
 
       {/* Players in lobby */}
       <div className="tlob__section">
-        <p className="tlob__section-title">EN SALA ({lobbyState.players.length})</p>
+        <p className="tlob__section-title">{t('tournaments.inRoomTitle', { n: lobbyState.players.length })}</p>
         {lobbyState.players.length === 0 ? (
-          <p className="tlob__empty">No hay nadie en el lobby todavía</p>
+          <p className="tlob__empty">{t('tournaments.emptyLobby')}</p>
         ) : (
           <div className="tlob__players">
             {lobbyState.players.map(p => (
@@ -148,21 +150,21 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
 
       {/* Open rooms */}
       <div className="tlob__section">
-        <p className="tlob__section-title">PARTIDAS ABIERTAS</p>
+        <p className="tlob__section-title">{t('tournaments.openRoomsTitle')}</p>
         {lobbyState.rooms.filter(r => r.phase === 'lobby').length === 0 ? (
-          <p className="tlob__empty">No hay partidas abiertas</p>
+          <p className="tlob__empty">{t('tournaments.emptyOpenRooms')}</p>
         ) : (
           lobbyState.rooms.filter(r => r.phase === 'lobby').map(room => (
             <div key={room.code} className="tlob__room">
               <div className="tlob__room-info">
                 <span className="tlob__room-name">{room.name}</span>
-                <span className="tlob__room-meta">{room.playerCount} / {room.maxPlayers} jugadores</span>
+                <span className="tlob__room-meta">{t('tournaments.playersCount', { count: room.playerCount, max: room.maxPlayers })}</span>
               </div>
               <button
                 className="rl__join-btn"
                 onClick={() => handleJoin(room)}
                 disabled={joiningCode !== null || room.playerCount >= room.maxPlayers}>
-                {joiningCode === room.code ? '...' : 'Unirse'}
+                {joiningCode === room.code ? '...' : t('online.join')}
               </button>
             </div>
           ))
@@ -172,12 +174,12 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
       {/* Active games */}
       {lobbyState.rooms.filter(r => r.phase !== 'lobby').length > 0 && (
         <div className="tlob__section">
-          <p className="tlob__section-title">EN CURSO</p>
+          <p className="tlob__section-title">{t('tournaments.inProgressTitle')}</p>
           {lobbyState.rooms.filter(r => r.phase !== 'lobby').map(room => (
             <div key={room.code} className="tlob__room tlob__room--active">
               <div className="tlob__room-info">
                 <span className="tlob__room-name">{room.name}</span>
-                <span className="tlob__room-meta">{room.playerCount} jugadores · en curso</span>
+                <span className="tlob__room-meta">{t('tournaments.playersInProgress', { n: room.playerCount })}</span>
               </div>
             </div>
           ))}
@@ -190,7 +192,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
           className="rl__create-bar-btn"
           onClick={openCreate}
           disabled={!canPlay}>
-          {canPlay ? 'Jugar' : !tournament.active ? 'Torneo no disponible' : `Necesitas nivel ${tournament.tier}`}
+          {canPlay ? t('createBar.play') : !tournament.active ? t('tournaments.tournamentUnavailable') : t('tournaments.needsTier', { tier: tournament.tier })}
         </button>
       </div>
 
@@ -200,17 +202,17 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
           <div className={`bs-overlay${createClosing ? ' bs-overlay--closing' : ''}`} onClick={closeCreate} />
           <div className={`bs${createClosing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={createSheetRef}>
             <div className="bs__handle" {...createHandleProps} />
-            <p className="bs__label">NOMBRE DE LA SALA</p>
+            <p className="bs__label">{t('create.roomNameLabel')}</p>
             <input
               className="bs__input"
-              placeholder="Ej: Sala de Roi"
+              placeholder={t('create.roomNamePlaceholder')}
               value={roomName}
               maxLength={20}
               autoFocus
               onChange={e => { setRoomName(e.target.value); setCreateError('') }}
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
             />
-            <p className="bs__label">JUGADORES MÁXIMOS</p>
+            <p className="bs__label">{t('tournaments.maxPlayersLabel')}</p>
             <div className="bs__pills">
               {MAX_PLAYERS_OPTIONS.map(n => (
                 <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
@@ -219,7 +221,7 @@ export default function TournamentLobby({ tournament, user, playerName, onBack, 
             </div>
             {createError && <p className="bs__error">{createError}</p>}
             <button className="bs__submit" onClick={handleCreate} disabled={creating}>
-              {creating ? 'Creando...' : 'Jugar'}
+              {creating ? t('create.creating') : t('createBar.play')}
             </button>
           </div>
         </>

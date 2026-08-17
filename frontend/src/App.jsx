@@ -386,6 +386,7 @@ export default function App() {
   }
 
   function handleLogout() {
+    socket.emit('logout')
     localStorage.removeItem('bule_user')
     setUser(null)
     setPlayerName(loadGuestName())
@@ -401,6 +402,7 @@ export default function App() {
   }
 
   function handleDeleteAccount() {
+    socket.emit('logout')
     localStorage.removeItem('bule_user')
     setUser(null)
     setPlayerName(loadGuestName())

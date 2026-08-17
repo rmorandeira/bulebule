@@ -7,6 +7,7 @@ import { imgSrc } from '../utils/imgSrc'
 import { APP_VERSION_NAME } from '../version'
 import { useTranslation, setLanguage } from '../i18n'
 import { pushBackHandler } from '../utils/backHandler'
+import { openExternal } from '../utils/openExternal'
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || ''
 
@@ -494,6 +495,7 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
   const [nameSaved, setNameSaved]     = useState(false)
   const [notifications, setNotifications] = useState(user?.notifications ?? false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmLogout, setConfirmLogout] = useState(false)
   const [theme, setThemeState]        = useState(getTheme)
   const [commentsEnabled, setCommentsEnabled] = useState(true)
   const [reportOpen, setReportOpen]       = useState(false)
@@ -663,10 +665,10 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
 
       <div className="usec__settings-section">
         <p className="usec__settings-label">{t('user.settings.legal')}</p>
-        <a className="us__privacy-link" href="/privacidad.html" target="_blank" rel="noopener noreferrer">
+        <a className="us__privacy-link" href="/privacidad.html" onClick={e => { e.preventDefault(); openExternal('/privacidad.html') }}>
           {t('user.settings.privacyLink')}
         </a>
-        <a className="us__privacy-link" href="/terminos.html" target="_blank" rel="noopener noreferrer">
+        <a className="us__privacy-link" href="/terminos.html" onClick={e => { e.preventDefault(); openExternal('/terminos.html') }}>
           {t('user.settings.termsLink')}
         </a>
         <p className="us__version-text" style={{ marginTop: 6 }}>{t('user.settings.rgpdText')}</p>
@@ -726,9 +728,19 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
       <div className="usec__settings-section">
         <p className="us__version-text">{t('user.settings.version', { v: APP_VERSION_NAME })}</p>
 
-        <button className="bs__submit bs__submit--secondary" onClick={handleLogout}>
-          {t('user.settings.logout')}
-        </button>
+        {!confirmLogout ? (
+          <button className="bs__submit bs__submit--secondary" onClick={() => setConfirmLogout(true)}>
+            {t('user.settings.logout')}
+          </button>
+        ) : (
+          <>
+            <p className="us__confirm-text">{t('user.settings.logoutConfirm')}</p>
+            <div className="us__confirm-row">
+              <button className="bs__submit bs__submit--secondary" style={{ flex: 1 }} onClick={() => setConfirmLogout(false)}>{t('common.cancel')}</button>
+              <button className="bs__submit bs__submit--danger"    style={{ flex: 1 }} onClick={handleLogout}>{t('user.settings.logout')}</button>
+            </div>
+          </>
+        )}
 
         {!confirmDelete ? (
           <button className="bs__submit bs__submit--danger" onClick={() => setConfirmDelete(true)}>

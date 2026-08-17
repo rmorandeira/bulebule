@@ -7,6 +7,7 @@ import { track } from '../analytics'
 import { useTranslation } from '../i18n'
 import { dismissRoomNotification } from '../utils/push'
 import { pushBackHandler } from '../utils/backHandler'
+import { openExternal } from '../utils/openExternal'
 import UserSection from './UserSection'
 import TournamentList from './TournamentList'
 import Marketplace from './Marketplace'
@@ -44,18 +45,19 @@ const PAGE_META = [
 const DEFAULT_PAGE = 'online'
 
 const ROOM_STATUS_OPTIONS = [
-  { id: 'all',     label: 'Todas' },
-  { id: 'lobby',   label: 'Por empezar' },
-  { id: 'playing', label: 'En curso' },
+  { id: 'all',     labelKey: 'statusAll' },
+  { id: 'lobby',   labelKey: 'statusLobby' },
+  { id: 'playing', labelKey: 'statusPlaying' },
 ]
 const ROOM_SORT_OPTIONS = [
-  { id: 'default', label: 'Por defecto' },
-  { id: 'name',    label: 'Nombre' },
-  { id: 'players', label: 'Jugadores' },
+  { id: 'default', labelKey: 'sortDefault' },
+  { id: 'name',    labelKey: 'sortName' },
+  { id: 'players', labelKey: 'sortPlayers' },
 ]
 const DEFAULT_ROOM_FILTER = { sort: 'default', status: 'all', favoritesOnly: false }
 
 function RoomFilterSheet({ filter, onApply, closing, onClose }) {
+  const { t } = useTranslation()
   const [local, setLocal] = useState(filter)
   const { sheetRef, handleProps } = useSheetDrag(onClose)
 
@@ -65,40 +67,40 @@ function RoomFilterSheet({ filter, onApply, closing, onClose }) {
       <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
         <div className="bs__handle" {...handleProps} />
 
-        <p className="bs__label">ESTADO</p>
+        <p className="bs__label">{t('filters.statusLabel')}</p>
         <div className="bs__pills">
           {ROOM_STATUS_OPTIONS.map(opt => (
             <button key={opt.id}
               className={`bs__pill${local.status === opt.id ? ' bs__pill--active' : ''}`}
               onClick={() => setLocal(v => ({ ...v, status: opt.id }))}>
-              {opt.label}
+              {t(`filters.${opt.labelKey}`)}
             </button>
           ))}
         </div>
 
-        <p className="bs__label">ORDENAR POR</p>
+        <p className="bs__label">{t('filters.sortByLabel')}</p>
         <div className="bs__pills">
           {ROOM_SORT_OPTIONS.map(opt => (
             <button key={opt.id}
               className={`bs__pill${local.sort === opt.id ? ' bs__pill--active' : ''}`}
               onClick={() => setLocal(v => ({ ...v, sort: opt.id }))}>
-              {opt.label}
+              {t(`filters.${opt.labelKey}`)}
             </button>
           ))}
         </div>
 
         <div className="bs__private-row">
-          <span className="bs__label" style={{ margin: 0 }}>CON FAVORITOS</span>
+          <span className="bs__label" style={{ margin: 0 }}>{t('filters.favoritesOnlyLabel')}</span>
           <button type="button" role="switch" aria-checked={local.favoritesOnly}
             className={`bs__toggle${local.favoritesOnly ? ' bs__toggle--on' : ''}`}
             onClick={() => setLocal(v => ({ ...v, favoritesOnly: !v.favoritesOnly }))} />
         </div>
 
         <button className="bs__submit" onClick={() => { onApply(local); onClose() }}>
-          Aplicar filtros
+          {t('filters.apply')}
         </button>
         <button className="bs__reset" onClick={() => setLocal(DEFAULT_ROOM_FILTER)}>
-          Resetear filtros
+          {t('filters.reset')}
         </button>
       </div>
     </>
@@ -106,13 +108,16 @@ function RoomFilterSheet({ filter, onApply, closing, onClose }) {
 }
 
 const RANK_SORT_OPTIONS = [
-  { id: 'score', label: 'Puntuación' },
-  { id: 'name',  label: 'Nombre' },
+  { id: 'score', labelKey: 'sortScore' },
+  { id: 'name',  labelKey: 'sortName' },
 ]
+// Los tiers (Diamante/Oro/Plata/Bronce) son valores de dominio, no texto de
+// UI — se muestran igual en ambos idiomas, como el nombre "Bules".
 const TIER_OPTIONS = ['Todos', 'Diamante', 'Oro', 'Plata', 'Bronce']
 const DEFAULT_RANK_FILTER = { sort: 'score', favoritesOnly: false, tier: 'Todos', onlineOnly: false }
 
 function FilterSheet({ filter, onApply, closing, onClose }) {
+  const { t } = useTranslation()
   const [local, setLocal] = useState(filter)
   const { sheetRef, handleProps } = useSheetDrag(onClose)
 
@@ -122,47 +127,47 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
       <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
         <div className="bs__handle" {...handleProps} />
 
-        <p className="bs__label">ORDENAR POR</p>
+        <p className="bs__label">{t('filters.sortByLabel')}</p>
         <div className="bs__pills">
           {RANK_SORT_OPTIONS.map(opt => (
             <button key={opt.id}
               className={`bs__pill${local.sort === opt.id ? ' bs__pill--active' : ''}`}
               onClick={() => setLocal(v => ({ ...v, sort: opt.id }))}>
-              {opt.label}
+              {t(`filters.${opt.labelKey}`)}
             </button>
           ))}
         </div>
 
-        <p className="bs__label">CATEGORÍA</p>
+        <p className="bs__label">{t('filters.categoryLabel')}</p>
         <div className="bs__pills">
-          {TIER_OPTIONS.map(t => (
-            <button key={t}
-              className={`bs__pill${local.tier === t ? ' bs__pill--active' : ''}`}
-              onClick={() => setLocal(v => ({ ...v, tier: t }))}>
-              {t}
+          {TIER_OPTIONS.map(tier => (
+            <button key={tier}
+              className={`bs__pill${local.tier === tier ? ' bs__pill--active' : ''}`}
+              onClick={() => setLocal(v => ({ ...v, tier }))}>
+              {tier === 'Todos' ? t('filters.tierAll') : tier}
             </button>
           ))}
         </div>
 
         <div className="bs__private-row">
-          <span className="bs__label" style={{ margin: 0 }}>SOLO FAVORITOS</span>
+          <span className="bs__label" style={{ margin: 0 }}>{t('filters.rankFavoritesOnlyLabel')}</span>
           <button type="button" role="switch" aria-checked={local.favoritesOnly}
             className={`bs__toggle${local.favoritesOnly ? ' bs__toggle--on' : ''}`}
             onClick={() => setLocal(v => ({ ...v, favoritesOnly: !v.favoritesOnly }))} />
         </div>
 
         <div className="bs__private-row">
-          <span className="bs__label" style={{ margin: 0 }}>SOLO JUGADORES ONLINE</span>
+          <span className="bs__label" style={{ margin: 0 }}>{t('filters.onlineOnlyLabel')}</span>
           <button type="button" role="switch" aria-checked={local.onlineOnly}
             className={`bs__toggle${local.onlineOnly ? ' bs__toggle--on' : ''}`}
             onClick={() => setLocal(v => ({ ...v, onlineOnly: !v.onlineOnly }))} />
         </div>
 
         <button className="bs__submit" onClick={() => { onApply(local); onClose() }}>
-          Aplicar filtros
+          {t('filters.apply')}
         </button>
         <button className="bs__reset" onClick={() => setLocal(DEFAULT_RANK_FILTER)}>
-          Resetear filtros
+          {t('filters.reset')}
         </button>
       </div>
     </>
@@ -172,6 +177,7 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
 function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit, storyModeEnabled = true, onSelectStory }) {
+  const { t } = useTranslation()
   const { sheetRef, handleProps } = useSheetDrag(onClose)
   const maxPlayersOptions = MAX_PLAYERS_OPTIONS.filter(n => n <= maxPlayersLimit)
   const [mode, setMode]             = useState('multi') // 'multi' | 'solo' | 'story'
@@ -194,15 +200,15 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
 
   function create() {
     if (mode === 'story') {
-      if (!storyModeEnabled) return setError('Modo Historia desactivado temporalmente')
-      if (!user) return setError('Debes iniciar sesión para jugar Modo Historia')
+      if (!storyModeEnabled) return setError(t('create.storyDisabledError'))
+      if (!user) return setError(t('create.loginRequiredError'))
       onSelectStory()
       return
     }
     const name = activeName?.trim()
-    if (!name) return setError('Introduce tu nombre primero')
+    if (!name) return setError(t('create.nameRequiredError'))
     if (!user) onNameChange?.(name)
-    if (mode === 'multi' && !roomName.trim()) return setError('Ponle un nombre a la sala')
+    if (mode === 'multi' && !roomName.trim()) return setError(t('create.roomNameRequiredError'))
     setLoading(true)
     if (mode === 'solo') {
       socket.emit('create_room', {
@@ -215,7 +221,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
         diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
       }, (res) => {
         setLoading(false)
-        if (!res?.ok) return setError(res?.error || 'Error al crear la partida')
+        if (!res?.ok) return setError(res?.error || t('create.createGameError'))
         track('room_create', { vsBot: true })
         onClose()
       })
@@ -230,7 +236,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
         diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
       }, (res) => {
         setLoading(false)
-        if (!res?.ok) return setError(res?.error || 'Error al crear la sala')
+        if (!res?.ok) return setError(res?.error || t('create.createRoomError'))
         track('room_create', { isPrivate })
         onClose()
       })
@@ -246,10 +252,10 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
         {/* Guest name input */}
         {!user && (
           <div className="bs__field">
-            <p className="bs__label">TU NOMBRE</p>
+            <p className="bs__label">{t('create.yourName')}</p>
             <input
               className="bs__input"
-              placeholder="Tu nombre de jugador"
+              placeholder={t('create.namePlaceholder')}
               value={guestName}
               maxLength={20}
               onChange={e => { setGuestName(e.target.value); setError('') }}
@@ -262,16 +268,16 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
         <div className="bs__mode-row">
           <button className={`bs__mode-btn${mode === 'multi' ? ' bs__mode-btn--active' : ''}`}
             onClick={() => { setMode('multi'); setError('') }}>
-            Multijugador
+            {t('create.multiplayer')}
           </button>
           <button className={`bs__mode-btn${mode === 'solo' ? ' bs__mode-btn--active' : ''}`}
             onClick={() => { setMode('solo'); setError('') }}>
-            Solo Play
+            {t('create.soloPlay')}
           </button>
           {storyModeEnabled && (
             <button className={`bs__mode-btn${mode === 'story' ? ' bs__mode-btn--active' : ''}`}
               onClick={() => { setMode('story'); setError('') }}>
-              Modo Historia
+              {t('create.storyMode')}
             </button>
           )}
         </div>
@@ -283,18 +289,18 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
           {/* Multijugador fields — siempre montado, oculto en modo solo */}
           <div className={`bs__collapse${mode === 'multi' ? ' bs__collapse--open' : ''}`}>
             <div className="bs__collapse-inner">
-              <p className="bs__label">NOMBRE DE LA SALA</p>
-              <input ref={inputRef} className="bs__input" placeholder="Ej: Sala de Roi"
+              <p className="bs__label">{t('create.roomNameLabel')}</p>
+              <input ref={inputRef} className="bs__input" placeholder={t('create.roomNamePlaceholder')}
                 value={roomName} maxLength={20}
                 onChange={e => { setRoomName(e.target.value); setError('') }}
                 onKeyDown={e => e.key === 'Enter' && create()} />
               <div className="bs__private-row">
-                <span className="bs__label" style={{ margin: 0 }}>SALA PRIVADA</span>
+                <span className="bs__label" style={{ margin: 0 }}>{t('create.privateRoom')}</span>
                 <button type="button" role="switch" aria-checked={isPrivate}
                   className={`bs__toggle${isPrivate ? ' bs__toggle--on' : ''}`}
                   onClick={() => setIsPrivate(v => !v)} />
               </div>
-              <p className="bs__label">Número máximo de jugadores</p>
+              <p className="bs__label">{t('create.maxPlayersLabel')}</p>
               <div className="bs__pills">
                 {maxPlayersOptions.map(n => (
                   <button key={n} className={`bs__pill${maxPlayers === n ? ' bs__pill--active' : ''}`}
@@ -307,7 +313,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
           {/* Solo play fields — siempre montado, oculto en otros modos */}
           <div className={`bs__collapse${mode === 'solo' ? ' bs__collapse--open' : ''}`}>
             <div className="bs__collapse-inner">
-              <p className="bs__label">Número de bots</p>
+              <p className="bs__label">{t('create.botsLabel')}</p>
               <div className="bs__pills">
                 {maxPlayersOptions.map(n => (
                   <button key={n} className={`bs__pill${soloPlayers === n ? ' bs__pill--active' : ''}`}
@@ -320,18 +326,14 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
           {/* Modo Historia — sin campos, solo un aviso; el mapa se ve en su propia pantalla */}
           <div className={`bs__collapse${mode === 'story' ? ' bs__collapse--open' : ''}`}>
             <div className="bs__collapse-inner">
-              <p className="bs__feedback-intro">
-                Recorre el mapa y libra un combate en cada punto. Cada varios puntos te espera un
-                boss con más de un rival a la vez. Si pierdes, gastas una vida — se regeneran solas
-                con el tiempo.
-              </p>
+              <p className="bs__feedback-intro">{t('create.storyIntro')}</p>
             </div>
           </div>
         </div>
 
         {error && <p className="bs__error">{error}</p>}
         <button className="bs__submit" onClick={create} disabled={loading}>
-          {loading ? 'Creando...' : mode === 'story' ? 'Ver mapa' : 'Jugar'}
+          {loading ? t('create.creating') : mode === 'story' ? t('create.viewMap') : t('createBar.play')}
         </button>
       </div>
     </>
@@ -341,6 +343,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
 // ── Sheet: quejas / sugerencias ───────────────────────────────────────────────
 
 function FeedbackSheet({ closing, onClose, onSent, user }) {
+  const { t } = useTranslation()
   const { sheetRef, handleProps } = useSheetDrag(onClose)
   const [name, setName]       = useState('')
   const [email, setEmail]     = useState('')
@@ -349,7 +352,7 @@ function FeedbackSheet({ closing, onClose, onSent, user }) {
   const [loading, setLoading] = useState(false)
 
   async function send() {
-    if (!message.trim()) return setError('Escribe tu mensaje')
+    if (!message.trim()) return setError(t('feedback.emptyError'))
     setLoading(true)
     setError('')
     try {
@@ -363,10 +366,10 @@ function FeedbackSheet({ closing, onClose, onSent, user }) {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok || !data.ok) throw new Error(data.error || 'No se pudo enviar el mensaje')
+      if (!res.ok || !data.ok) throw new Error(data.error || t('feedback.sendErrorGeneric'))
       onSent()
     } catch (e) {
-      setError(e.message || 'No se pudo enviar el mensaje')
+      setError(e.message || t('feedback.sendErrorGeneric'))
     } finally {
       setLoading(false)
     }
@@ -378,21 +381,18 @@ function FeedbackSheet({ closing, onClose, onSent, user }) {
       <div className={`bs${closing ? ' bs--closing' : ''}`} role="dialog" aria-modal="true" ref={sheetRef}>
         <div className="bs__handle" {...handleProps} />
 
-        <p className="bs__feedback-intro">
-          ¿Algo no funciona bien o se te ocurre cómo mejorar Bule Bule? Cuéntanoslo — este
-          mensaje llega directo a los creadores del juego.
-        </p>
+        <p className="bs__feedback-intro">{t('feedback.intro')}</p>
 
         {!user && (
           <>
             <div className="bs__field">
-              <p className="bs__label">NOMBRE (OPCIONAL)</p>
-              <input className="bs__input" placeholder="Tu nombre" maxLength={100}
+              <p className="bs__label">{t('feedback.nameLabel')}</p>
+              <input className="bs__input" placeholder={t('feedback.namePlaceholder')} maxLength={100}
                 value={name} onChange={e => setName(e.target.value)} />
             </div>
 
             <div className="bs__field">
-              <p className="bs__label">EMAIL (OPCIONAL)</p>
+              <p className="bs__label">{t('feedback.emailLabel')}</p>
               <input className="bs__input" type="email" placeholder="tu@email.com" maxLength={200}
                 value={email} onChange={e => setEmail(e.target.value)} />
             </div>
@@ -400,15 +400,15 @@ function FeedbackSheet({ closing, onClose, onSent, user }) {
         )}
 
         <div className="bs__field">
-          <p className="bs__label">MENSAJE</p>
-          <textarea className="bs__input bs__textarea" placeholder="Queja, sugerencia, lo que sea..."
+          <p className="bs__label">{t('feedback.messageLabel')}</p>
+          <textarea className="bs__input bs__textarea" placeholder={t('feedback.messagePlaceholder')}
             maxLength={2000} rows={5}
             value={message} onChange={e => { setMessage(e.target.value); setError('') }} />
         </div>
 
         {error && <p className="bs__error">{error}</p>}
         <button className="bs__submit" onClick={send} disabled={loading}>
-          {loading ? 'Enviando...' : 'Enviar'}
+          {loading ? t('feedback.sending') : t('feedback.send')}
         </button>
       </div>
     </>
@@ -473,6 +473,14 @@ export default function RoomList({
 
   useEffect(() => {
     if (!user && activeTab === 'user') setActiveTab(DEFAULT_PAGE)
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Al cerrar sesión (o cambiar de cuenta) el rango/medalla de la cuenta
+  // anterior no debe quedarse pegado en el header — sin esto se veía el
+  // rango de invitado mostrando el del usuario que acaba de salir.
+  useEffect(() => {
+    if (!user) { setMyStats(null); setMyRank(null); return }
+    fetchStats()
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -691,7 +699,12 @@ export default function RoomList({
       setError('')
     } catch (e) {
       console.error('[GoogleAuth] signIn error:', e)
-      setError('Error: ' + (e?.message || e?.error || JSON.stringify(e) || 'desconocido'))
+      const msg = e?.message || e?.error || ''
+      if (e?.code === '12501' || /cancel/i.test(msg)) {
+        setError(t('login.signInCancelled'))
+      } else {
+        setError('Error: ' + (msg || JSON.stringify(e) || 'desconocido'))
+      }
     }
   }
 
@@ -882,11 +895,11 @@ export default function RoomList({
                   />
                   <span>
                     {t('login.consentPrefix')}{' '}
-                    <a href="/privacidad.html" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                    <a href="/privacidad.html" onClick={e => { e.stopPropagation(); e.preventDefault(); openExternal('/privacidad.html') }}>
                       {t('login.privacyLink')}
                     </a>{' '}
                     {t('login.and')}{' '}
-                    <a href="/terminos.html" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                    <a href="/terminos.html" onClick={e => { e.stopPropagation(); e.preventDefault(); openExternal('/terminos.html') }}>
                       {t('login.termsLink')}
                     </a>
                   </span>
