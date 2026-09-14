@@ -167,7 +167,7 @@ const _eliminarAudio = new Audio('/assets/eliminar_dados.mp3')
 
 export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
-  interactive, onDieClick, onSettled, keyframes, frameIntervalMs = 50, rollId, sorted = false,
+  interactive, onDieClick, onSettled, keyframes, frameIntervalMs = 50, cornerSide = null, rollId, sorted = false,
   skin = undefined,
 }) {
   const mountRef = useRef(null)
@@ -348,7 +348,7 @@ export default function DiceRollerScene({
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx || !values?.length || !rollingIndices?.length || !keyframes?.length) return
-    rollWithSounds(ctx, [...values], [...rollingIndices], keyframes, frameIntervalMs)
+    rollWithSounds(ctx, [...values], [...rollingIndices], keyframes, frameIntervalMs, cornerSide)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollId])
 
@@ -645,7 +645,7 @@ function beginPlace(ctx, now) {
   })
 }
 
-function rollWithSounds(ctx, values, rollingIndices, keyframes, frameIntervalMs) {
+function rollWithSounds(ctx, values, rollingIndices, keyframes, frameIntervalMs, cornerSide) {
   ctx.rollId = (ctx.rollId ?? 0) + 1
   const myId = ctx.rollId
   ctx.camTween = {
@@ -683,8 +683,10 @@ function rollWithSounds(ctx, values, rollingIndices, keyframes, frameIntervalMs)
   )
   if (keptDice.length > 0 && needExit.length > 0) {
     const now = performance.now()
-    // side: +1 = right wall, -1 = left wall. Random each roll.
-    const side = Math.random() < 0.5 ? 1 : -1
+    // side: +1 = right wall, -1 = left wall. Lo decide el servidor (mismo lado
+    // que usó como obstáculo físico al simular la tirada) para que los dados
+    // que caen realmente choquen con los guardados en vez de atravesarlos.
+    const side = cornerSide === 1 || cornerSide === -1 ? cornerSide : (Math.random() < 0.5 ? 1 : -1)
     const anchorX = side * (WX - 0.8)   // ±3.4 — just inside the wall
     const cornerZ = -(WZ - 0.8)          // -2.6 — just inside the back wall
     keptDice.forEach((dieIdx, slot) => {

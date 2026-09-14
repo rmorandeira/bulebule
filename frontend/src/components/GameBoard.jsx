@@ -56,6 +56,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [sceneValues, setSceneValues] = useState(null)
   const [rollKeyframes, setRollKeyframes] = useState(null)
   const [frameIntervalMs, setFrameIntervalMs] = useState(50)
+  const [rollCornerSide, setRollCornerSide] = useState(null)
   const [rollId, setRollId] = useState(0)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
@@ -268,12 +269,13 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   // (ver [[project_dice_sync_bug]] en memoria). El evento es autocontenido
   // (trae los valores finales), no depende de la llegada de room_state.
   useEffect(() => {
-    function onDiceKeyframes({ rollingIndices: ri, keyframes, values, frameIntervalMs: fi }) {
+    function onDiceKeyframes({ rollingIndices: ri, keyframes, values, frameIntervalMs: fi, cornerSide }) {
       if (!Array.isArray(ri) || !Array.isArray(keyframes) || !Array.isArray(values)) return
       setSceneValues(values)
       setRollingIndices(ri)
       setRollKeyframes(keyframes)
       setFrameIntervalMs(fi ?? 50)
+      setRollCornerSide(cornerSide ?? null)
       setRollId(id => id + 1)
     }
     socket.on('dice_keyframes', onDiceKeyframes)
@@ -874,6 +876,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     onDieClick={toggleDiscard}
                     keyframes={rollKeyframes}
                     frameIntervalMs={frameIntervalMs}
+                    cornerSide={rollCornerSide}
                     rollId={rollId}
                     sorted={!!displayPlayer?.done}
                     skin={isMyTurn ? undefined : (currentPlayer?.diceSkin ?? null)}

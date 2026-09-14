@@ -26,21 +26,39 @@ function diceSortedKey(values) {
 // resultado exacto. Se corre UNA vez en el servidor — el mismo keyframes se
 // difunde a todos los jugadores, así la animación es idéntica en cualquier
 // dispositivo (ver [[project_dice_sync_bug]] en memoria).
-async function performDiceRoll(rollingIndices) {
+//
+// Si hay dados ya guardados (keptCount > 0), se aparcan en una esquina en el
+// cliente mientras se tira — se añaden como obstáculo físico aquí para que
+// los dados que se tiran choquen con ellos en vez de atravesarlos. El banco
+// de semillas se generó SIN ese obstáculo, así que se revalida el resultado
+// y se reintenta con otra semilla del bucket si el choque lo desvía (raro).
+async function performDiceRoll(rollingIndices, keptCount = 0) {
   const targetValues = rollingIndices.map(() => rollDie());
   const key = diceSortedKey(targetValues);
   const bucket = diceSeedBank[rollingIndices.length]?.[key];
-  let seeds;
+  const cornerSide = keptCount > 0 ? (Math.random() < 0.5 ? 1 : -1) : null;
+  const keptCorner = keptCount > 0 ? { side: cornerSide, count: keptCount } : null;
+
+  let result;
   if (bucket && bucket.length) {
-    seeds = bucket[Math.floor(Math.random() * bucket.length)];
+    const MAX_RETRY = 5;
+    for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
+      const seeds = bucket[Math.floor(Math.random() * bucket.length)];
+      result = await simulateRoll(seeds, { keptCorner });
+      if (diceSortedKey(result.faces) === key) break;
+      if (attempt === MAX_RETRY - 1) {
+        console.warn(`dice seed bank: el obstáculo de esquina desvió el resultado tras ${MAX_RETRY} intentos (count=${rollingIndices.length} key=${key}) — se acepta el resultado físico`);
+      }
+    }
   } else {
     console.warn(`dice seed bank: sin semillas para count=${rollingIndices.length} key=${key} — física libre como fallback`);
-    seeds = rollingIndices.map(() => Math.floor(Math.random() * 0xFFFFFFFF));
+    const seeds = rollingIndices.map(() => Math.floor(Math.random() * 0xFFFFFFFF));
+    result = await simulateRoll(seeds, { keptCorner });
   }
-  const { faces, keyframes } = await simulateRoll(seeds);
+
   // faces[p] es el valor final del game-slot rollingIndices[p] — mismo orden
   // posicional que ya usaba el cliente para su física local.
-  return { faces, keyframes };
+  return { faces: result.faces, keyframes: result.keyframes, cornerSide };
 }
 
 // Última red de seguridad: un error asíncrono sin capturar (p.ej. dentro de
@@ -894,7 +912,7 @@ async function botAct(code) {
     bot.rollHistory.push([...bot.currentDice]);
     bot.rollDiscardHistory.push(rollingIndices);
 
-    const result = await performDiceRoll(rollingIndices);
+    const result = await performDiceRoll(rollingIndices, keptIndices.length);
     if (rooms[code] !== room || room.phase !== 'playing' || room.players[room.currentPlayerIndex] !== bot) return;
 
     rollingIndices.forEach((slot, p) => { bot.currentDice[slot] = result.faces[p]; });
@@ -904,7 +922,7 @@ async function botAct(code) {
     room.botPhase = 'rolled';
     room.botKeptIndices = [];
     io.to(code).emit('dice_keyframes', {
-      playerId: bot.id, rollingIndices, keyframes: result.keyframes,
+      playerId: bot.id, rollingIndices, keyframes: result.keyframes, cornerSide: result.cornerSide,
       values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
     });
     broadcast(code);
@@ -938,7 +956,7 @@ async function botAct(code) {
   room.botPhase = 'rolled';
   room.botKeptIndices = [];
   io.to(code).emit('dice_keyframes', {
-    playerId: bot.id, rollingIndices, keyframes: result.keyframes,
+    playerId: bot.id, rollingIndices, keyframes: result.keyframes, cornerSide: result.cornerSide,
     values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
   });
   broadcast(code);
@@ -2156,7 +2174,7 @@ io.on('connection', (socket) => {
     player.rollInFlight = true;
     let result;
     try {
-      result = await performDiceRoll(rollingIndices);
+      result = await performDiceRoll(rollingIndices, diceCount - rollingIndices.length);
     } finally {
       player.rollInFlight = false;
     }
@@ -2177,7 +2195,7 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true });
     io.to(room.code).emit('dice_keyframes', {
-      playerId: player.id, rollingIndices, keyframes: result.keyframes,
+      playerId: player.id, rollingIndices, keyframes: result.keyframes, cornerSide: result.cornerSide,
       values: player.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
     });
     broadcast(room.code);

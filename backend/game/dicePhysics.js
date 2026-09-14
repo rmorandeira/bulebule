@@ -116,19 +116,41 @@ function makeWorld(R) {
 
 const round = n => Math.round(n * 1000) / 1000;
 
+// Posición de aparcado en esquina para dados ya guardados — misma fórmula
+// que el tween cosmético del cliente (rollWithSounds en DiceRollerScene.jsx),
+// para que el obstáculo físico coincida exactamente con lo que se ve.
+function cornerPos(side, slot) {
+  const anchorX = side * (WX - 0.8);
+  return { x: anchorX - side * slot * 1.65, y: REST_Y, z: -(WZ - 0.8) };
+}
+
 /**
- * Simula el lanzamiento de `seeds.length` dados a la vez, en una tanda de
- * lanzamiento estandarizada (sin obstáculos de dados ya guardados — esos se
- * apartan a una esquina en el cliente antes de tirar, ver GameBoard/DiceRollerScene).
+ * Simula el lanzamiento de `seeds.length` dados a la vez.
  *
  * @param {number[]} seeds - una semilla independiente por dado, en orden de "posición de tirada"
  * @param {boolean} sampleKeyframes - si false, solo calcula el resultado final (usado por el harvester offline)
+ * @param {{side: 1|-1, count: number}|null} keptCorner - si hay dados ya
+ *   guardados aparcados en una esquina (ver cornerPos), se añaden como
+ *   obstáculos fijos para que los dados que se tiran choquen con ellos en
+ *   vez de atravesarlos. El banco de semillas se generó SIN este obstáculo,
+ *   así que el resultado hay que revalidarlo (ver performDiceRoll en server.js).
  * @returns {{ faces: string[], keyframes: number[][][], steps: number }}
  */
-async function simulateRoll(seeds, { sampleKeyframes = true } = {}) {
+async function simulateRoll(seeds, { sampleKeyframes = true, keptCorner = null } = {}) {
   const R = await getRapier();
   const world = makeWorld(R);
   const count = seeds.length;
+
+  if (keptCorner) {
+    for (let slot = 0; slot < keptCorner.count; slot++) {
+      const p = cornerPos(keptCorner.side, slot);
+      const body = world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(p.x, p.y, p.z));
+      world.createCollider(
+        R.ColliderDesc.cuboid(DIE / 2, DIE / 2, DIE / 2).setRestitution(0.1).setFriction(0.9),
+        body
+      );
+    }
+  }
 
   const dice = seeds.map((seed, position) => {
     const p = launchParams(seed, position, count);
@@ -191,4 +213,4 @@ async function simulateRoll(seeds, { sampleKeyframes = true } = {}) {
   return { faces, keyframes, steps: step };
 }
 
-module.exports = { simulateRoll, getRapier, FACE_VALUES, getTopFace, mulberry32, KEYFRAME_INTERVAL_MS };
+module.exports = { simulateRoll, getRapier, FACE_VALUES, getTopFace, mulberry32, KEYFRAME_INTERVAL_MS, cornerPos };
