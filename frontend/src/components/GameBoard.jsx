@@ -54,7 +54,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [continueSecondsLeft, setContinueSecondsLeft] = useState(null)
   const [rollingIndices, setRollingIndices] = useState([])
   const [sceneValues, setSceneValues] = useState(null)
-  const [rollSeed, setRollSeed] = useState(null)
+  const [rollKeyframes, setRollKeyframes] = useState(null)
+  const [frameIntervalMs, setFrameIntervalMs] = useState(50)
+  const [rollId, setRollId] = useState(0)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
   const [rolling, setRolling] = useState(false)
@@ -165,7 +167,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const botReadyTimerRef = useRef(null)
   const botReadySentRef = useRef(false)
   const prevBotPhaseRef = useRef(null)
-  const prevRollCountRef = useRef({})
 
   // Confirmado por ack en vez de marcar "enviado" al emitir: si el paquete se
   // pierde por un corte de conexión (app minimizada), el ack nunca llega y el
@@ -254,7 +255,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     setPendingDiscards([])
     setRollingIndices([])
     setSceneValues(null)
-    setRollSeed(null)
+    setRollKeyframes(null)
   }, [room.roundNumber, room.currentPlayerIndex])
 
   // Reset dados del marcador al empezar nueva ronda
@@ -262,24 +263,22 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     setScoreboardDice({})
   }, [room.roundNumber])
 
-  // Detectar nueva tirada (cualquier jugador) → disparar animación 3D con semilla
+  // El servidor ya corrió la física de la tirada una vez y manda la
+  // trayectoria completa — misma animación en todos los dispositivos
+  // (ver [[project_dice_sync_bug]] en memoria). El evento es autocontenido
+  // (trae los valores finales), no depende de la llegada de room_state.
   useEffect(() => {
-    const cp = room.players[room.currentPlayerIndex]
-    if (!cp) return
-    const prev = prevRollCountRef.current[cp.id] ?? 0
-    const curr = cp.rollCount ?? 0
-    if (curr > prev && cp.currentDice?.length) {
-      const history = cp.rollDiscardHistory ?? []
-      const newRolling = history.length === 0
-        ? [0, 1, 2, 3, 4]
-        : history[history.length - 1]
-      setSceneValues([...cp.currentDice])
-      setRollingIndices([...newRolling])
-      setRollSeed(cp.rollSeed ?? Date.now())
+    function onDiceKeyframes({ rollingIndices: ri, keyframes, values, frameIntervalMs: fi }) {
+      if (!Array.isArray(ri) || !Array.isArray(keyframes) || !Array.isArray(values)) return
+      setSceneValues(values)
+      setRollingIndices(ri)
+      setRollKeyframes(keyframes)
+      setFrameIntervalMs(fi ?? 50)
+      setRollId(id => id + 1)
     }
-    prevRollCountRef.current[cp.id] = curr
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.currentPlayerIndex, room.players[room.currentPlayerIndex]?.rollCount])
+    socket.on('dice_keyframes', onDiceKeyframes)
+    return () => socket.off('dice_keyframes', onDiceKeyframes)
+  }, [])
 
   function toggleDiscard(index) {
     setPendingDiscards(prev => {
@@ -873,7 +872,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     }
                     interactive={isMyTurn && !me?.done && !mustPass && rollNum > 0}
                     onDieClick={toggleDiscard}
-                    seed={rollSeed}
+                    keyframes={rollKeyframes}
+                    frameIntervalMs={frameIntervalMs}
+                    rollId={rollId}
                     sorted={!!displayPlayer?.done}
                     skin={isMyTurn ? undefined : (currentPlayer?.diceSkin ?? null)}
                     onSettled={(faces) => {
@@ -882,9 +883,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                         lastFacesRef.current = faces
                         setScoreboardDice(prev => ({ ...prev, [currentPlayer?.id]: faces }))
                       }
-                      if (isMyTurn && faces?.length === 5) socket.emit('report_faces', { faces })
                       if (currentPlayer?.isBot && room.botPhase === 'rolled') {
-                        if (faces?.length === 5) socket.emit('report_faces', { faces })
                         clearTimeout(botReadyTimerRef.current)
                         emitBotReady()
                       }

@@ -7,6 +7,41 @@ const webpush = require('web-push');
 const fs = require('fs');
 const path = require('path');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
+const { simulateRoll, KEYFRAME_INTERVAL_MS } = require('./game/dicePhysics');
+
+let diceSeedBank = {};
+try {
+  diceSeedBank = require('./game/diceSeedBank.json');
+} catch (e) {
+  console.warn('diceSeedBank.json no encontrado — las tiradas usarán física libre como fallback (ver scripts/generateDiceSeedBank.js)');
+}
+const DICE_CANON_ORDER = ['AS', 'K', 'Q', 'J', '8', '7'];
+function diceSortedKey(values) {
+  return [...values].sort((a, b) => DICE_CANON_ORDER.indexOf(a) - DICE_CANON_ORDER.indexOf(b)).join(',');
+}
+
+// Lanza rollingIndices.length dados: rollDie() (RNG justo, uniforme) decide el
+// valor objetivo de cada uno, y se busca en el banco de semillas verificadas
+// (scripts/generateDiceSeedBank.js) una tirada física que garantice ese
+// resultado exacto. Se corre UNA vez en el servidor — el mismo keyframes se
+// difunde a todos los jugadores, así la animación es idéntica en cualquier
+// dispositivo (ver [[project_dice_sync_bug]] en memoria).
+async function performDiceRoll(rollingIndices) {
+  const targetValues = rollingIndices.map(() => rollDie());
+  const key = diceSortedKey(targetValues);
+  const bucket = diceSeedBank[rollingIndices.length]?.[key];
+  let seeds;
+  if (bucket && bucket.length) {
+    seeds = bucket[Math.floor(Math.random() * bucket.length)];
+  } else {
+    console.warn(`dice seed bank: sin semillas para count=${rollingIndices.length} key=${key} — física libre como fallback`);
+    seeds = rollingIndices.map(() => Math.floor(Math.random() * 0xFFFFFFFF));
+  }
+  const { faces, keyframes } = await simulateRoll(seeds);
+  // faces[p] es el valor final del game-slot rollingIndices[p] — mismo orden
+  // posicional que ya usaba el cliente para su física local.
+  return { faces, keyframes };
+}
 
 // Última red de seguridad: un error asíncrono sin capturar (p.ej. dentro de
 // un setTimeout de un temporizador de turno/bot) tumba el proceso de Node
@@ -844,7 +879,7 @@ function botShouldStand(hand, rollCount, maxRolls) {
 // 'picking' – bot decided to keep some dice, frontend shows selection then emits bot_ready
 // null      – bot not waiting
 
-function botAct(code) {
+async function botAct(code) {
   const room = rooms[code];
   if (!room || room.phase !== 'playing') return;
   const bot = room.players[room.currentPlayerIndex];
@@ -855,14 +890,23 @@ function botAct(code) {
   if (room.botPhase === 'picking') {
     // Frontend finished showing selection — do the re-roll now
     const keptIndices = room.botKeptIndices || [];
-    const discarded = bot.currentDice.map((_, i) => i).filter(i => !keptIndices.includes(i));
+    const rollingIndices = bot.currentDice.map((_, i) => i).filter(i => !keptIndices.includes(i));
     bot.rollHistory.push([...bot.currentDice]);
-    bot.rollDiscardHistory.push(discarded);
-    bot.currentDice = bot.currentDice.map((d, i) => keptIndices.includes(i) ? d : rollDie());
+    bot.rollDiscardHistory.push(rollingIndices);
+
+    const result = await performDiceRoll(rollingIndices);
+    if (rooms[code] !== room || room.phase !== 'playing' || room.players[room.currentPlayerIndex] !== bot) return;
+
+    rollingIndices.forEach((slot, p) => { bot.currentDice[slot] = result.faces[p]; });
+    bot.hand = evaluateHand(bot.currentDice);
     bot.rollCount++;
     bot.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
     room.botPhase = 'rolled';
     room.botKeptIndices = [];
+    io.to(code).emit('dice_keyframes', {
+      playerId: bot.id, rollingIndices, keyframes: result.keyframes,
+      values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
+    });
     broadcast(code);
     return;
   }
@@ -884,11 +928,19 @@ function botAct(code) {
   }
 
   // First roll
-  bot.currentDice = Array.from({ length: 5 }, rollDie);
+  const rollingIndices = [0, 1, 2, 3, 4];
+  const result = await performDiceRoll(rollingIndices);
+  if (rooms[code] !== room || room.phase !== 'playing' || room.players[room.currentPlayerIndex] !== bot) return;
+  bot.currentDice = rollingIndices.map((_, p) => result.faces[p]);
+  bot.hand = evaluateHand(bot.currentDice);
   bot.rollCount = 1;
   bot.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
   room.botPhase = 'rolled';
   room.botKeptIndices = [];
+  io.to(code).emit('dice_keyframes', {
+    playerId: bot.id, rollingIndices, keyframes: result.keyframes,
+    values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
+  });
   broadcast(code);
 }
 
@@ -2081,71 +2133,85 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
-  socket.on('roll', ({ keptIndices = [] }, cb) => {
+  socket.on('roll', async ({ keptIndices = [] }, cb) => {
     if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
     if (player.id !== socket.id || player.done) return cb?.({ ok: false });
+    if (player.rollInFlight) return cb?.({ ok: false });
     const maxAllowed = room.maxRolls ?? 3;
     if (player.rollCount >= maxAllowed) return cb?.({ ok: false, error: 'No puedes tirar más' });
 
+    const diceCount = player.currentDice.length;
+    const rollingIndices = player.rollCount > 0
+      ? Array.from({ length: diceCount }, (_, i) => i).filter(i => !keptIndices.includes(i))
+      : [0, 1, 2, 3, 4];
+
     if (player.rollCount > 0) {
-      const diceCount = player.currentDice.length;
-      const discarded = Array.from({ length: diceCount }, (_, i) => i).filter(i => !keptIndices.includes(i));
       player.rollHistory.push([...player.currentDice]);
-      player.rollDiscardHistory.push(discarded);
-      player.currentDice = player.currentDice.map((die, i) =>
-        keptIndices.includes(i) ? die : rollDie()
-      );
-    } else {
-      player.currentDice = Array.from({ length: 5 }, rollDie);
+      player.rollDiscardHistory.push(rollingIndices);
     }
+
+    player.rollInFlight = true;
+    let result;
+    try {
+      result = await performDiceRoll(rollingIndices);
+    } finally {
+      player.rollInFlight = false;
+    }
+
+    // La sala pudo cerrarse o el turno avanzar mientras se simulaba la física
+    if (rooms[socket.data.roomCode] !== room || room.phase !== 'playing' ||
+        room.players[room.currentPlayerIndex] !== player || player.done) {
+      return cb?.({ ok: false });
+    }
+
+    rollingIndices.forEach((slot, p) => { player.currentDice[slot] = result.faces[p]; });
+    player.hand = evaluateHand(player.currentDice);
     player.rollCount += 1;
     player.rollSeed = Math.floor(Math.random() * 0xFFFFFFFF);
     player.pendingDiscards = [];
-    // El contador de 30s se reinicia cuando los dados se paran (report_faces),
-    // no al lanzar — así no cuenta el tiempo de animación con los botones disabled
     clearTurnTimer(room);
     room.turnDeadline = null;
 
     cb?.({ ok: true });
+    io.to(room.code).emit('dice_keyframes', {
+      playerId: player.id, rollingIndices, keyframes: result.keyframes,
+      values: player.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
+    });
     broadcast(room.code);
     maybeBotChatter(room, player);
+
+    // El contador de 30s empieza cuando termina de reproducirse la animación
+    // en pantalla, no al lanzar — igual que antes (ver KEYFRAME_INTERVAL_MS)
+    const animMs = result.keyframes.length * KEYFRAME_INTERVAL_MS + 500;
+    setTimeout(() => {
+      if (rooms[socket.data.roomCode] !== room || room.phase !== 'playing' ||
+          room.players[room.currentPlayerIndex] !== player || player.done) return;
+      startTurnTimer(room);
+      broadcast(room.code);
+    }, animMs);
   });
 
+  // Legacy: apps ya instaladas de versiones anteriores todavía pueden emitir
+  // esto tras animar su física local. Ya no es la fuente de verdad — el
+  // servidor decide el resultado y lo difunde por 'dice_keyframes' antes de
+  // que esto llegue. Se mantiene como no-op para no romper esas apps mientras
+  // se actualizan (ver [[project_dice_sync_bug]] en memoria).
   socket.on('report_faces', (data, rawCb) => {
     const cb = typeof rawCb === 'function' ? rawCb : null;
-    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
-    const { faces } = (data && typeof data === 'object') ? data : {};
-    const room = rooms[socket.data.roomCode];
-    if (!room || room.phase !== 'playing') return cb?.({ ok: false });
-    const player = room.players[room.currentPlayerIndex];
-    // En salas vsBot el cliente del humano reporta también las caras físicas del bot
-    const canReport = player.id === socket.id || (room.vsBot && player.isBot);
-    if (!canReport || player.done || player.rollCount === 0) return cb?.({ ok: false });
-    const VALID = new Set(['AS', 'K', 'Q', 'J', '8', '7']);
-    if (!Array.isArray(faces) || faces.length !== 5 || !faces.every(f => VALID.has(f))) return cb?.({ ok: false });
-    player.currentDice = faces;
-    player.hand = evaluateHand(faces);
-    startTurnTimer(room);
     cb?.({ ok: true });
-    broadcast(room.code);
   });
 
   socket.on('stand', (data, rawCb) => {
     const cb = typeof rawCb === 'function' ? rawCb : null;
     if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
-    const { faces } = (data && typeof data === 'object') ? data : {};
     const room = rooms[socket.data.roomCode];
     if (!room || room.phase !== 'playing') return cb?.({ ok: false });
     const player = room.players[room.currentPlayerIndex];
     if (player.id !== socket.id || player.done) return cb?.({ ok: false });
     if (player.rollCount === 0) return cb?.({ ok: false, error: 'Debes tirar al menos una vez' });
-    const VALID = new Set(['AS', 'K', 'Q', 'J', '8', '7']);
-    if (Array.isArray(faces) && faces.length === 5 && faces.every(f => VALID.has(f))) {
-      player.currentDice = faces;
-    }
     finishTurn(room, player);
     cb?.({ ok: true });
     broadcast(room.code);

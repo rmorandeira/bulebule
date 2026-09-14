@@ -24,21 +24,7 @@ const _skinColors = {
 
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
 const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
-const VALUE_TO_FACE = Object.fromEntries(FACE_VALUES.map((v, i) => [v, i]))
 const VALUE_RANK = { AS: 0, K: 1, Q: 2, J: 3, '8': 4, '7': 5 }
-
-const FACE_UP_QUATS = (() => {
-  const E = THREE.Euler
-  const Q = THREE.Quaternion
-  return [
-    new Q().setFromEuler(new E(-Math.PI / 2, 0,  Math.PI / 2)),  // +X face (K)  → +Y world, text legible
-    new Q().setFromEuler(new E(-Math.PI / 2, 0, -Math.PI / 2)),  // -X face (Q)  → +Y world, text legible
-    new Q(),                                            // +Y face (AS) → +Y world
-    new Q().setFromEuler(new E(Math.PI, 0, 0)),        // -Y face (7)  → +Y world
-    new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),  // +Z face (8)  → +Y world
-    new Q().setFromEuler(new E( Math.PI / 2, 0, 0)),  // -Z face (J)  → +Y world
-  ]
-})()
 
 const DIE    = 1.21
 const FY     = -2.5   // floor Y
@@ -162,18 +148,8 @@ function buildMats(skinId = null) {
 }
 
 const eio = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
-const mag = v => Math.sqrt(v.x**2 + v.y**2 + v.z**2)
-
-// Deterministic PRNG — same seed → same sequence on every device
-function mulberry32(seed) {
-  let s = seed >>> 0
-  return () => {
-    s = (s + 0x6D2B79F5) >>> 0
-    let t = Math.imul(s ^ (s >>> 15), 1 | s)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
+const _q0 = new THREE.Quaternion()
+const _q1 = new THREE.Quaternion()
 
 const _diceSounds = ['/assets/dado1.mp3', '/assets/dado2.mp3', '/assets/dado3.mp3'].map(s => new Audio(s))
 let _diceSoundIdx = 0
@@ -187,29 +163,11 @@ function playDiceHit(impact = 3) {
 
 const _eliminarAudio = new Audio('/assets/eliminar_dados.mp3')
 
-const FACE_NORMALS = [
-  new THREE.Vector3( 1,  0,  0),
-  new THREE.Vector3(-1,  0,  0),
-  new THREE.Vector3( 0,  1,  0),
-  new THREE.Vector3( 0, -1,  0),
-  new THREE.Vector3( 0,  0,  1),
-  new THREE.Vector3( 0,  0, -1),
-]
-const UP = new THREE.Vector3(0, 1, 0)
-function getTopFace(mesh) {
-  let best = 0, bestDot = -Infinity
-  FACE_NORMALS.forEach((n, i) => {
-    const dot = n.clone().applyQuaternion(mesh.quaternion).dot(UP)
-    if (dot > bestDot) { bestDot = dot; best = i }
-  })
-  return FACE_VALUES[best]
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
-  interactive, onDieClick, onSettled, seed, sorted = false,
+  interactive, onDieClick, onSettled, keyframes, frameIntervalMs = 50, rollId, sorted = false,
   skin = undefined,
 }) {
   const mountRef = useRef(null)
@@ -314,15 +272,14 @@ export default function DiceRollerScene({
       mesh.add(outline)
 
       return {
-        mesh, outline, body: null, value: null,
-        phase: 'hidden',  // hidden|rolling|facing|placing|idle|exiting
-        ts: 0,
-        fq: new THREE.Quaternion(), tq: new THREE.Quaternion(),
-        fp: new THREE.Vector3(),    tp: new THREE.Vector3(),
+        mesh, outline, value: null,
+        phase: 'hidden',  // hidden|rolling|placing|idle|exiting
+        ts: 0, throwPos: -1, lastKfIdx: -1, prevKfY: null, prevKfDy: 0,
+        fp: new THREE.Vector3(), tp: new THREE.Vector3(),
         moveActive: false, moveTs: 0,
         moveFrom: new THREE.Vector3(), moveTo: new THREE.Vector3(),
         exitFrom: new THREE.Vector3(), exitTs: 0,
-        prevVelY: 0, hitCooldown: 0, inCorner: false,
+        hitCooldown: 0, inCorner: false,
       }
     })
 
@@ -337,8 +294,7 @@ export default function DiceRollerScene({
 
     const ctx = {
       renderer, scene, camera, dice,
-      RAPIER: null, world: null,
-      pendingRoll: null, onExitDone: null, rollId: 0, settleSince: null, animId: null, tempBodies: [],
+      onExitDone: null, rollId: 0, animId: null,
       camCurPos:  new THREE.Vector3(0, 7.5, 11.5),
       camCurLook: new THREE.Vector3(0, FY + 1.5, 0),
       camTween: null,
@@ -375,19 +331,6 @@ export default function DiceRollerScene({
     }
     ctx.animId = requestAnimationFrame(tick)
 
-    // Async Rapier init
-    import('@dimforge/rapier3d-compat').then(async R => {
-      await R.init()
-      if (!alive) return
-      ctx.RAPIER = R
-      ctx.world  = makeWorld(R)
-      if (ctx.pendingRoll) {
-        const { values, rollingIndices, seed } = ctx.pendingRoll
-        doRoll(ctx, values, rollingIndices, seed)
-        ctx.pendingRoll = null
-      }
-    })
-
     return () => {
       alive = false
       ro.disconnect()
@@ -400,13 +343,14 @@ export default function DiceRollerScene({
   }, [])
 
   // ── Roll trigger ────────────────────────────────────────────────────────────
-  const rollKey = `${seed ?? 0}_${rollingIndices?.slice().sort().join(',')}_${values?.join(',')}`
+  // rollId identifica la tirada de forma unívoca (lo asigna el servidor) — los
+  // keyframes ya vienen calculados por el backend, aquí solo se reproducen.
   useEffect(() => {
     const ctx = ctxRef.current
-    if (!ctx || !values?.length || !rollingIndices?.length) return
-    rollWithSounds(ctx, [...values], [...rollingIndices], seed ?? Date.now())
+    if (!ctx || !values?.length || !rollingIndices?.length || !keyframes?.length) return
+    rollWithSounds(ctx, [...values], [...rollingIndices], keyframes, frameIntervalMs)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rollKey])
+  }, [rollId])
 
   // ── Pending discards: borde rojo + alpha 50% + mover al fondo ──────────────
   useEffect(() => {
@@ -491,7 +435,6 @@ export default function DiceRollerScene({
       ts: performance.now(), dur: 350,
     }
     ctx.dice.forEach(d => {
-      if (d.body) { ctx.world?.removeRigidBody(d.body); d.body = null }
       d.mesh.visible = false
       d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
       d.outline.material.color.set(0x000000)
@@ -501,9 +444,8 @@ export default function DiceRollerScene({
       d.moveActive = false
       d.inCorner = false
     })
-    ctx.settleSince = null
     ctx.onExitDone = null
-    ctx.pendingRoll = null
+    ctx.keyframes = null
   }, [values])
 
   return <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
@@ -511,86 +453,41 @@ export default function DiceRollerScene({
 
 // ─── Scene helpers (no React state closures) ──────────────────────────────────
 
-function makeWorld(R) {
-  const w = new R.World({ x: 0, y: -28, z: 0 })
-  w.timestep = w.timestep * 1.15
-  const fixed = (tx, ty, tz) => w.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(tx, ty, tz))
-  const box   = (b, hx, hy, hz) => w.createCollider(R.ColliderDesc.cuboid(hx, hy, hz).setRestitution(0.35).setFriction(0.7), b)
-  // floor
-  box(fixed(0, FY, 0), WX, 0.1, WZ)
-  // 4 walls
-  const wh = 4, wy = FY + wh
-  box(fixed( WX, wy, 0), 0.1, wh, WZ)
-  box(fixed(-WX, wy, 0), 0.1, wh, WZ)
-  box(fixed(0, wy,  WZ), WX, wh, 0.1)
-  box(fixed(0, wy, -WZ), WX, wh, 0.1)
-  return w
-}
+// El servidor ya corrió la física una vez (ver backend/game/dicePhysics.js) y
+// manda la trayectoria completa — aquí solo se coloca cada dado en su primer
+// keyframe y se deja que step() reproduzca el resto.
+function doRoll(ctx, values, rollingIndices, keyframes, frameIntervalMs) {
+  const { dice } = ctx
+  ctx.keyframes = keyframes
+  ctx.frameIntervalMs = frameIntervalMs
+  ctx.rollStartTs = performance.now()
 
-function doRoll(ctx, values, rollingIndices, seed = Date.now()) {
-  const { RAPIER: R, world, dice } = ctx
-  ctx.settleSince = null
+  rollingIndices.forEach((i, position) => {
+    const d = dice[i]
+    d.value = values[i]
+    d.throwPos = position
+    d.phase = 'rolling'
+    d.moveActive = false
+    d.mesh.visible = true
+    d.outline.material.color.set(0x000000)
+    d.outline.material.transparent = false
+    d.outline.material.opacity = 1.0
+    d.mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
+    d.lastKfIdx = -1
+    d.prevKfY = null
+    d.prevKfDy = 0
+    d.hitCooldown = 0
 
-  // Fixed ghost colliders for idle dice so incoming dice bounce off them
-  ctx.tempBodies.forEach(b => world.removeRigidBody(b))
-  ctx.tempBodies = []
-  dice.forEach((d, i) => {
-    if (d.phase !== 'idle' || rollingIndices.includes(i)) return
-    // Use final position for dice still animating (inCorner slide or return)
-    const p = d.moveActive ? d.moveTo : d.mesh.position
-    const body = world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(p.x, p.y, p.z))
-    world.createCollider(R.ColliderDesc.cuboid(DIE / 2, DIE / 2, DIE / 2).setRestitution(0.1).setFriction(0.9), body)
-    ctx.tempBodies.push(body)
-  })
-
-  const rng = mulberry32(seed)
-  ctx.rng = rng
-
-  rollingIndices.forEach((i, slot) => {
-    // Remove old body
-    if (dice[i].body) { world.removeRigidBody(dice[i].body); dice[i].body = null }
-
-    dice[i].value = values[i]
-
-    // Launch from bottom edge (front of scene) toward top (back of scene)
-    // Wide X spread reduces stacking probability
-    const startX = (slot - (rollingIndices.length - 1) / 2) * 1.6 + (rng() - .5) * 0.4
-    const startZ = 2.8 + (rng() - .5) * 0.3
-    const startY = FY + 0.7 + slot * 0.15
-
-    const bd = R.RigidBodyDesc.dynamic()
-      .setTranslation(startX, startY, startZ)
-      .setLinearDamping(0.4)
-      .setAngularDamping(0.4)
-      .setCcdEnabled(true)
-      .setLinvel(
-        (rng() - .5) * 3,
-        2 + rng() * 2,
-        -8 - rng() * 4
-      )
-      .setAngvel({ x: (rng()-.5)*25, y: (rng()-.5)*25, z: (rng()-.5)*25 })
-
-    const body = world.createRigidBody(bd)
-    world.createCollider(
-      R.ColliderDesc.cuboid(DIE/2, DIE/2, DIE/2).setRestitution(0.2).setFriction(0.9),
-      body
-    )
-
-    dice[i].body  = body
-    dice[i].phase = 'rolling'
-    dice[i].moveActive = false
-    dice[i].mesh.visible = true
-    dice[i].mesh.position.set(startX, startY, startZ)
-    dice[i].outline.material.color.set(0x000000)
-    dice[i].outline.material.transparent = false
-    dice[i].outline.material.opacity = 1.0
-    dice[i].mesh.material.forEach(mat => { mat.transparent = false; mat.opacity = 1.0 })
+    const first = keyframes[0]?.[position]
+    if (first) {
+      d.mesh.position.set(first[0], first[1], first[2])
+      d.mesh.quaternion.set(first[3], first[4], first[5], first[6])
+    }
   })
 }
 
 function step(ctx, now, propsRef) {
-  const { world, dice } = ctx
-  if (!world) return
+  const { dice } = ctx
 
   // Detect skin changes every frame (handles both prop changes and localStorage updates)
   const propSkin = propsRef.current.skin
@@ -611,46 +508,44 @@ function step(ctx, now, propsRef) {
 
   const rolling = dice.filter(d => d.phase === 'rolling')
 
-  // ── Physics ─────────────────────────────────────────────────────────────────
-  if (rolling.length > 0) {
-    world.step()
+  // ── Reproducción de keyframes (calculados una vez en el servidor — misma
+  // animación en todos los dispositivos, ver [[project_dice_sync_bug]]) ────────
+  if (rolling.length > 0 && ctx.keyframes?.length) {
+    const elapsed = now - ctx.rollStartTs
+    const frameFloat = elapsed / ctx.frameIntervalMs
+    const lastIdx = ctx.keyframes.length - 1
+    const i0 = Math.min(Math.floor(frameFloat), lastIdx)
+    const i1 = Math.min(i0 + 1, lastIdx)
+    const frac = i0 === i1 ? 0 : Math.min(Math.max(frameFloat - i0, 0), 1)
+    const frame0 = ctx.keyframes[i0], frame1 = ctx.keyframes[i1]
+
     rolling.forEach(d => {
-      const p = d.body.translation(), q = d.body.rotation()
-      d.mesh.position.set(p.x, p.y, p.z)
-      d.mesh.quaternion.set(q.x, q.y, q.z, q.w)
-      // Bounce sound: velocity flipped from strongly negative to less negative
-      const vy = d.body.linvel().y
-      if (d.prevVelY < -2.5 && vy > d.prevVelY * 0.2 && now - d.hitCooldown > 80) {
-        playDiceHit(Math.abs(d.prevVelY))
-        d.hitCooldown = now
+      const k0 = frame0[d.throwPos], k1 = frame1[d.throwPos]
+      if (!k0) return
+      d.mesh.position.set(
+        k0[0] + (k1[0] - k0[0]) * frac,
+        k0[1] + (k1[1] - k0[1]) * frac,
+        k0[2] + (k1[2] - k0[2]) * frac
+      )
+      _q0.set(k0[3], k0[4], k0[5], k0[6])
+      _q1.set(k1[3], k1[4], k1[5], k1[6])
+      d.mesh.quaternion.copy(_q0).slerp(_q1, frac)
+
+      // Bounce sound: cada vez que se avanza a un nuevo keyframe, detecta un
+      // frenazo brusco en Y (caída seguida de rebote) para disparar el sonido
+      if (i0 !== d.lastKfIdx) {
+        d.lastKfIdx = i0
+        const dy = k0[1] - (d.prevKfY ?? k0[1])
+        if (d.prevKfDy < -0.15 && dy > d.prevKfDy * 0.2 && now - d.hitCooldown > 80) {
+          playDiceHit(Math.abs(d.prevKfDy) * 10)
+          d.hitCooldown = now
+        }
+        d.prevKfDy = dy
+        d.prevKfY = k0[1]
       }
-      d.prevVelY = vy
     })
 
-    const slow = rolling.every(d => mag(d.body.linvel()) < .25 && mag(d.body.angvel()) < .25)
-    if (slow) {
-      // Detect stacked dice (center elevated more than 65% of die height above floor)
-      const stacked = rolling.filter(d => d.body.translation().y > REST_Y + DIE * 0.65)
-      if (stacked.length > 0) {
-        // Nudge stacked dice sideways so they slide off and reach the floor
-        const rng = ctx.rng ?? Math.random
-        stacked.forEach(d => {
-          d.body.applyImpulse(
-            { x: (rng() - 0.5) * 0.4, y: 0, z: (rng() - 0.5) * 0.4 },
-            true
-          )
-        })
-        ctx.settleSince = null
-      } else {
-        if (!ctx.settleSince) ctx.settleSince = now
-        else if (now - ctx.settleSince > 200) {
-          ctx.settleSince = null
-          beginPlace(ctx, now)
-        }
-      }
-    } else {
-      ctx.settleSince = null
-    }
+    if (frameFloat >= lastIdx) beginPlace(ctx, now)
   }
 
   // ── Animación de agrupación (placing tween) ──────────────────────────────────
@@ -665,7 +560,7 @@ function step(ctx, now, propsRef) {
       else { d.mesh.position.copy(d.tp); d.phase = 'idle' }
     })
     if (done) {
-      const faces = ctx.dice.map(d => d.mesh.visible ? getTopFace(d.mesh) : d.value)
+      const faces = ctx.dice.map(d => d.value)
       propsRef.current.onSettled?.(faces)
       ctx.camTween = {
         fromPos: ctx.camCurPos.clone(), fromLook: ctx.camCurLook.clone(),
@@ -734,28 +629,14 @@ function step(ctx, now, propsRef) {
 
 }
 
-function beginFace(ctx, now) {
-  ctx.dice.forEach(d => {
-    if (d.phase !== 'rolling') return
-    const fi = VALUE_TO_FACE[d.value] ?? 2
-    d.fq.copy(d.mesh.quaternion)
-    d.tq.copy(FACE_UP_QUATS[fi])
-    d.ts = now
-    d.phase = 'facing'
-    if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
-  })
-}
-
 function beginPlace(ctx, now) {
-  ctx.tempBodies.forEach(b => ctx.world.removeRigidBody(b))
-  ctx.tempBodies = []
   ctx.dice.forEach((d, i) => {
     if (d.phase !== 'rolling') return
-    if (d.body) { ctx.world.removeRigidBody(d.body); d.body = null }
-    // Read physical top face before snapping Y
-    d.value = getTopFace(d.mesh)
+    // El valor ya lo fijó doRoll() a partir del resultado autoritativo del
+    // servidor — el último keyframe ya deja el dado en esa cara, esto solo
+    // recoloca al hueco de la rejilla (evita que aparezca "flotando" si el
+    // último keyframe quedó ligeramente descuadrado).
     const { x, z } = slotPos(i)
-    // Always snap to floor — prevents stacked dice appearing elevated
     d.mesh.position.y = REST_Y
     d.fp.copy(d.mesh.position)
     d.tp.set(x, REST_Y, z)
@@ -764,7 +645,7 @@ function beginPlace(ctx, now) {
   })
 }
 
-function rollWithSounds(ctx, values, rollingIndices, seed) {
+function rollWithSounds(ctx, values, rollingIndices, keyframes, frameIntervalMs) {
   ctx.rollId = (ctx.rollId ?? 0) + 1
   const myId = ctx.rollId
   ctx.camTween = {
@@ -775,8 +656,7 @@ function rollWithSounds(ctx, values, rollingIndices, seed) {
 
   const launchPhysics = () => {
     if (ctx.rollId !== myId) return
-    if (ctx.RAPIER && ctx.world) doRoll(ctx, values, rollingIndices, seed)
-    else ctx.pendingRoll = { values, rollingIndices, seed }
+    doRoll(ctx, values, rollingIndices, keyframes, frameIntervalMs)
   }
 
   const playCubilete = () => {
