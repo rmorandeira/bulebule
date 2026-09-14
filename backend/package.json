@@ -6,6 +6,7 @@
     "dev": "npx nodemon server.js"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.3",
     "better-sqlite3": "^12.11.1",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
