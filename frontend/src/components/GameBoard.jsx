@@ -6,6 +6,7 @@ import Die from './Die'
 import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 import DiceRollerScene from './DiceRollerScene'
+import HandBurstEffect from './HandBurstEffect'
 import CountdownButton from './CountdownButton'
 import WaitingBar from './WaitingBar'
 import { pushBackHandler } from '../utils/backHandler'
@@ -59,6 +60,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [keptPositions, setKeptPositions] = useState([])
   const [rollKeptHand, setRollKeptHand] = useState(null)
   const [rollId, setRollId] = useState(0)
+  const [handBurst, setHandBurst] = useState(null) // null | 'poker' | 'repoker'
+  const lastBurstFacesRef = useRef(null)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
   const [rolling, setRolling] = useState(false)
@@ -864,7 +867,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                (me.hand.rank === minHand.hand.rank && (me.hand.topKey ?? '') <= (minHand.hand.topKey ?? '')))
 
             return (
-              <div className="dice-box">
+              <div className={`dice-box${handBurst === 'repoker' ? ' dice-box--quake' : ''}`}>
                 <div className="dice-box__header">
                   {shownHand?.rank != null && (
                     <>
@@ -901,6 +904,18 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       if (faces?.length === 5) {
                         lastFacesRef.current = faces
                         setScoreboardDice(prev => ({ ...prev, [currentPlayer?.id]: faces }))
+                        // Póker/Repóker: efecto manga para enfatizar la tirada.
+                        // Dedupe por rollId (único por tirada real) en vez de
+                        // por valores — así un repóker de K repetido en otra
+                        // ronda no queda silenciado por el dedupe.
+                        if (lastBurstFacesRef.current !== rollId) {
+                          lastBurstFacesRef.current = rollId
+                          const counts = {}
+                          faces.forEach(f => { counts[f] = (counts[f] ?? 0) + 1 })
+                          const maxCount = Math.max(...Object.values(counts))
+                          if (maxCount === 5) setHandBurst('repoker')
+                          else if (maxCount === 4) setHandBurst('poker')
+                        }
                       }
                       if (currentPlayer?.isBot && room.botPhase === 'rolled') {
                         clearTimeout(botReadyTimerRef.current)
@@ -908,6 +923,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       }
                     }}
                   />
+                  <HandBurstEffect variant={handBurst} onDone={() => setHandBurst(null)} />
                   {messageBubbles.length > 0 && (
                     <div className="msg-bubble-stack">
                       {messageBubbles.map((b, i) => (
