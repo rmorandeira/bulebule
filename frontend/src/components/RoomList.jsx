@@ -176,7 +176,7 @@ function FilterSheet({ filter, onApply, closing, onClose }) {
 
 // ── Sheet: crear sala (multijugador + solo play) ─────────────────────────────
 
-function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit, storyModeEnabled = true, onSelectStory }) {
+function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlayersLimit, storyModeEnabled = true, powerupsEnabled = true, onSelectStory }) {
   const { t } = useTranslation()
   const { sheetRef, handleProps } = useSheetDrag(onClose)
   const maxPlayersOptions = MAX_PLAYERS_OPTIONS.filter(n => n <= maxPlayersLimit)
@@ -186,6 +186,7 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
   const [maxPlayers, setMaxPlayers] = useState(Math.min(6, maxPlayersLimit))
   const [soloPlayers, setSoloPlayers] = useState(2)
   const [isPrivate, setIsPrivate]   = useState(false)
+  const [gameMode, setGameMode]     = useState('classic') // 'classic' | 'powerups'
   const [error, setError]           = useState('')
   const [loading, setLoading]       = useState(false)
   const inputRef = useRef(null)
@@ -195,6 +196,10 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
       inputRef.current?.focus()
     }
   }, [mode])
+
+  useEffect(() => {
+    if (!powerupsEnabled) setGameMode('classic')
+  }, [powerupsEnabled])
 
   const activeName = user ? playerName : guestName
 
@@ -219,10 +224,11 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
         maxRounds: 0,
         isPrivate: false,
         diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
+        gameMode,
       }, (res) => {
         setLoading(false)
         if (!res?.ok) return setError(res?.error || t('create.createGameError'))
-        track('room_create', { vsBot: true })
+        track('room_create', { vsBot: true, gameMode })
         onClose()
       })
     } else {
@@ -234,10 +240,11 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
         maxRounds: 0,
         isPrivate,
         diceSkin: localStorage.getItem('bule_dice_skin') ?? null,
+        gameMode,
       }, (res) => {
         setLoading(false)
         if (!res?.ok) return setError(res?.error || t('create.createRoomError'))
-        track('room_create', { isPrivate })
+        track('room_create', { isPrivate, gameMode })
         onClose()
       })
     }
@@ -307,6 +314,21 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
                     onClick={() => setMaxPlayers(n)}>{n}</button>
                 ))}
               </div>
+              {powerupsEnabled && (
+                <>
+                  <p className="bs__label">{t('create.gameModeLabel')}</p>
+                  <div className="bs__mode-row">
+                    <button className={`bs__mode-btn${gameMode === 'classic' ? ' bs__mode-btn--active' : ''}`}
+                      onClick={() => setGameMode('classic')}>
+                      {t('create.gameModeClassic')}
+                    </button>
+                    <button className={`bs__mode-btn${gameMode === 'powerups' ? ' bs__mode-btn--active' : ''}`}
+                      onClick={() => setGameMode('powerups')}>
+                      {t('create.gameModePowerups')}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -320,6 +342,21 @@ function CreateSheet({ user, playerName, onNameChange, closing, onClose, maxPlay
                     onClick={() => setSoloPlayers(n)}>{n - 1}</button>
                 ))}
               </div>
+              {powerupsEnabled && (
+                <>
+                  <p className="bs__label">{t('create.gameModeLabel')}</p>
+                  <div className="bs__mode-row">
+                    <button className={`bs__mode-btn${gameMode === 'classic' ? ' bs__mode-btn--active' : ''}`}
+                      onClick={() => setGameMode('classic')}>
+                      {t('create.gameModeClassic')}
+                    </button>
+                    <button className={`bs__mode-btn${gameMode === 'powerups' ? ' bs__mode-btn--active' : ''}`}
+                      onClick={() => setGameMode('powerups')}>
+                      {t('create.gameModePowerups')}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -1138,6 +1175,7 @@ export default function RoomList({
         <CreateSheet user={user} playerName={playerName} onNameChange={onNameChange}
           closing={createClosing} onClose={closeCreate} maxPlayersLimit={maxPlayersLimit}
           storyModeEnabled={featureFlags.storyMode !== false}
+          powerupsEnabled={featureFlags.powerups !== false}
           onSelectStory={() => { closeCreate(); onEnterStory() }} />
       )}
 

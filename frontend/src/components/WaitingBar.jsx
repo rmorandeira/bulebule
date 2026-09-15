@@ -39,7 +39,7 @@ function CloseIcon() {
 // Barra que se muestra mientras el jugador espera su turno: dos botones que
 // despliegan, respectivamente, reacciones rápidas y un campo de texto libre.
 // Ambos se pueden desactivar por separado desde el backoffice (Ajustes).
-export default function WaitingBar({ label }) {
+export default function WaitingBar({ label, powerupsButton = null }) {
   const [openPanel, setOpenPanel] = useState(null)   // null | 'quick' | 'custom' — objetivo
   const [renderPanel, setRenderPanel] = useState(null) // panel montado (se retrasa en el cierre)
   const [closing, setClosing] = useState(false)
@@ -98,6 +98,7 @@ export default function WaitingBar({ label }) {
     return (
       <div className="waiting-bar">
         <div className="waiting-bar__row">
+          {powerupsButton}
           {emojisEnabled && (
             <button type="button" className="waiting-bar__icon-btn" onClick={() => openPanelFn('quick')} aria-label="Mensajes rápidos">
               <SmileIcon />

@@ -6,7 +6,7 @@ import Confirm from '../components/Confirm.jsx';
 import Switch from '../components/Switch.jsx';
 import { useToast } from '../components/Toast.jsx';
 
-const CATEGORIES = ['collectible', 'landmark', 'figure', 'dice', 'pack'];
+const CATEGORIES = ['collectible', 'landmark', 'figure', 'dice', 'pack', 'powerup'];
 
 const CAT_BADGE = {
   collectible: 'badge-blue',
@@ -14,6 +14,7 @@ const CAT_BADGE = {
   figure:      'badge-yellow',
   dice:        'badge-gray',
   pack:        'badge-green',
+  powerup:     'badge-red',
 };
 
 function fmtDate(ts) {

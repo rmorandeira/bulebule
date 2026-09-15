@@ -263,6 +263,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS user_items (
     user_id   TEXT    NOT NULL,
     item_id   TEXT    NOT NULL,
+    quantity  INTEGER NOT NULL DEFAULT 1,
     bought_at INTEGER NOT NULL DEFAULT (unixepoch()),
     PRIMARY KEY (user_id, item_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id),
@@ -341,6 +342,11 @@ db.exec(`
   }
   const cols2 = db.prepare('PRAGMA table_info(items)').all().map(c => c.name);
   if (!cols2.includes('visible')) db.prepare('ALTER TABLE items ADD COLUMN visible INTEGER DEFAULT 1').run();
+})();
+
+;(function migrateUserItemsSchema() {
+  const cols = db.prepare('PRAGMA table_info(user_items)').all().map(c => c.name);
+  if (!cols.includes('quantity')) db.prepare('ALTER TABLE user_items ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1').run();
 })();
 
 ;(function migrateUsersSchema() {
@@ -551,8 +557,10 @@ const stmts = {
   getRollStats:   db.prepare(`SELECT rolls, count FROM roll_stats WHERE user_id = ? ORDER BY rolls`),
   getItems:       db.prepare(`SELECT * FROM items WHERE visible = 1 ORDER BY price ASC`),
   getItemById:    db.prepare(`SELECT * FROM items WHERE id = ?`),
-  getUserItems:   db.prepare(`SELECT item_id FROM user_items WHERE user_id = ?`),
+  getUserItems:   db.prepare(`SELECT item_id, quantity FROM user_items WHERE user_id = ?`),
   insertUserItem: db.prepare(`INSERT OR IGNORE INTO user_items (user_id, item_id) VALUES (?, ?)`),
+  addUserItem:    db.prepare(`INSERT INTO user_items (user_id, item_id, quantity) VALUES (?, ?, ?)
+                               ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + excluded.quantity`),
   deductScore:    db.prepare(`UPDATE player_stats SET score = score - ? WHERE user_id = ? AND score >= ?`),
   getStoryProgress:    db.prepare(`SELECT * FROM story_progress WHERE user_id = ?`),
   ensureStoryProgress: db.prepare(`INSERT OR IGNORE INTO story_progress (user_id, map_seed) VALUES (?, ?)`),
@@ -579,12 +587,14 @@ const stmts = {
     { id: 'bar-el-olimpico',   name: 'Bar El Olímpico',       description: 'Un referente del barrio donde el tiempo se detiene entre partida y partida.<br><em>Especialidad en café, no café de especialidad.</em>', price: 45000, image_url: '/assets/items/bar-el-olimpico.png', category: 'landmark' },
     { id: 'bar-doce',          name: 'Bar Doce',              description: 'El número doce de la calle y el primero en tu corazón. Pintxos, conversación y alguna que otra mano ganada en la barra.', price: 45000, image_url: '/assets/items/bar-doce.png', category: 'landmark' },
     { id: 'bar-el-ocho',       name: 'Bar El Ocho',           description: 'Café-bar de Monte Alto con solera. Donde el barrio se sienta, se sirve el mejor café y las partidas duran lo que tienen que durar.', price: 45000, image_url: '/assets/items/bar-el-ocho.png', category: 'landmark' },
+    { id: 'powerup-bloqueo',   name: 'Bloqueo',               description: 'Paraliza un dado del contrincante durante todo su turno. Solo se puede usar una vez por turno.', price: 50, image_url: '/assets/items/powerup-bloqueo.png', category: 'powerup' },
   ];
   const ins = db.prepare(`INSERT OR IGNORE INTO items (id, name, description, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)`);
   const tx  = db.transaction(() => SEED.forEach(i => ins.run(i.id, i.name, i.description, i.price, i.image_url, i.category)));
   tx();
   // Fix image_url for items that existed before the path was updated
   db.prepare(`UPDATE items SET image_url = '/assets/dice/transparent-red.png' WHERE id = 'dice-transp-red' AND image_url = '/assets/dice/transparent-red.svg'`).run();
+  db.prepare(`UPDATE items SET image_url = '/assets/items/powerup-bloqueo.png' WHERE id = 'powerup-bloqueo' AND image_url IS NULL`).run();
   // Update Bar El Olímpico description to use <br> before italic line
   db.prepare(`UPDATE items SET description = 'Un referente del barrio donde el tiempo se detiene entre partida y partida.<br><em>Especialidad en café, no café de especialidad.</em>' WHERE id = 'bar-el-olimpico'`).run();
   // Ensure Bar El Ocho and Bar Doce exist with correct data
@@ -815,7 +825,7 @@ function makeRateLimiter(maxCalls, windowMs) {
 }
 
 function makePlayer(id, name) {
-  return { id, name, diceSkin: null, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false, forcedHandRank: null };
+  return { id, name, diceSkin: null, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false, forcedHandRank: null, blockedDice: [] };
 }
 
 function makeBotPlayer(n = 0) {
@@ -939,7 +949,8 @@ async function botAct(code) {
   if (room.botPhase === 'picking') {
     // Frontend finished showing selection — do the re-roll now
     const keptIndices = room.botKeptIndices || [];
-    const rollingIndices = bot.currentDice.map((_, i) => i).filter(i => !keptIndices.includes(i));
+    const blockedIndices = (bot.blockedDice ?? []).map(b => b.index);
+    const rollingIndices = bot.currentDice.map((_, i) => i).filter(i => !keptIndices.includes(i) && !blockedIndices.includes(i));
     bot.rollHistory.push([...bot.currentDice]);
     bot.rollDiscardHistory.push(rollingIndices);
 
@@ -972,7 +983,9 @@ async function botAct(code) {
       return;
     }
     // Show selection to frontend, then wait for bot_ready to do re-roll
-    room.botKeptIndices = botPickKept(bot.currentDice);
+    // (los dados bloqueados por un powerup se fuerzan a "kept" aunque el bot quisiera relanzarlos)
+    const blockedIndices = (bot.blockedDice ?? []).map(b => b.index);
+    room.botKeptIndices = Array.from(new Set([...botPickKept(bot.currentDice), ...blockedIndices]));
     room.botPhase = 'picking';
     broadcast(code);
     return;
@@ -1030,6 +1043,16 @@ const POKER_MS = 1100;
 const REPOKER_MS = 1500;
 const VIOLINAZO_MS = 3400;
 
+// Powerups (modo "powerups"): usos permitidos por blocker y turno objetivo
+// (ronda + índice de jugador) — ver socket.on('use_powerup') y bloqueoUsedThisTurn
+// en sanitize(), que expone al cliente si YA se agotó para desactivar el botón
+// en vez de esperar al error del servidor.
+const POWERUP_TURN_LIMITS = { 'powerup-bloqueo': 1 };
+function powerupUsesAgainstCurrentTurn(room, player, itemId) {
+  const turnKey = `${itemId}:${room.roundNumber}:${room.currentPlayerIndex}`;
+  return player.powerupUsesThisTurn?.[turnKey] ?? 0;
+}
+
 // "Remontada": el último jugador de la ronda supera la jugada mínima (la
 // peor entre los ya terminados, la misma que el cliente muestra como
 // "Superar" en el dice-box) — ver AnimacionRemontada/HandBurstEffect en el
@@ -1082,6 +1105,7 @@ function startDesempate(room, playerIds, provisionalWinnerId) {
       p.pendingDiscards  = [];
       p.rollHistory      = [];
       p.rollDiscardHistory = [];
+      p.blockedDice      = [];
     } else {
       p.inDesempate = false;
       // non-desempate players keep done=true from the main round
@@ -1182,6 +1206,7 @@ function sanitize(room) {
     maxRounds: room.maxRounds ?? 0,
     desempate: room.desempate ?? false,
     storyNode: room.storyNode ?? null,
+    gameMode: room.gameMode ?? 'classic',
     players: room.players.map(p => {
       const uid = getUserIdForPlayer(p);
       return {
@@ -1208,6 +1233,11 @@ function sanitize(room) {
         breaks: p.breaks ?? 0,
         liberado: p.liberado ?? false,
         pendingDiscards: p.pendingDiscards ?? [],
+        blockedDice: p.blockedDice ?? [],
+        // Ya agotó su cupo de Bloqueo contra el turno actual (room.currentPlayerIndex)
+        // — el cliente lo usa para desactivar el botón en el menú de powerups en vez
+        // de que el jugador se entere solo al intentarlo y recibir el error.
+        bloqueoUsedThisTurn: powerupUsesAgainstCurrentTurn(room, p, 'powerup-bloqueo') >= (POWERUP_TURN_LIMITS['powerup-bloqueo'] ?? 1),
         score: (!uid || p.isBot) ? null : (room.phase === 'finished'
           ? (room.lastGameScores?.[uid] ?? 0)
           : (room.pendingScores?.[uid] ?? 0)),
@@ -1227,6 +1257,7 @@ function sanitizeForList(room) {
     isPrivate: !!room.isPrivate,
     isChallenge: !!room.isChallenge,
     tournamentId: room.tournamentId ?? null,
+    gameMode: room.gameMode ?? 'classic',
     playerIds: room.players.map(p => p.id),
   };
 }
@@ -1312,6 +1343,7 @@ function startRound(room) {
     p.hand = null;
     p.pendingDiscards = [];
     p.forcedHandRank = null;
+    p.blockedDice = [];
   }
   // Si quien abriría la ronda ya está liberado, pasa al siguiente jugador disponible
   const n = room.players.length;
@@ -1374,6 +1406,7 @@ function finishTurn(room, player) {
   clearTurnTimer(room);
   player.done = true;
   player.forcedHandRank = null;
+  player.blockedDice = [];
   player.hand = evaluateHand(player.currentDice);
   if (player.hand.rank === 7) {
     player.liberado = true;
@@ -1897,17 +1930,23 @@ io.on('connection', (socket) => {
   socket.on('get_marketplace', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     if (!isFeatureEnabled('marketplace')) return cb?.({ ok: false, error: 'Tienda desactivada temporalmente' });
-    const uid       = socket.data.userId;
-    const userItems = uid ? stmts.getUserItems.all(uid).map(r => r.item_id) : [];
+    const uid           = socket.data.userId;
+    const userItemRows   = uid ? stmts.getUserItems.all(uid) : [];
+    const userItems       = userItemRows.map(r => r.item_id);
+    const userItemQuantities = Object.fromEntries(userItemRows.map(r => [r.item_id, r.quantity]));
     // Solo lo que sigue en venta — un item oculto desaparece de la tienda
     // aunque el usuario ya lo posea; sigue gestionable (equipar/desequipar)
     // desde su inventario en el perfil, que no filtra por `visible`.
-    const items     = stmts.getItems.all();
+    const items     = stmts.getItems.all().filter(i => i.category !== 'powerup' || isFeatureEnabled('powerups'));
     const credits   = uid ? (stmts.getStats.get(uid)?.score ?? 0) : 0;
-    cb?.({ ok: true, items, userItems, credits });
+    cb?.({ ok: true, items, userItems, userItemQuantities, credits });
   });
 
-  socket.on('buy_item', ({ itemId } = {}, cb) => {
+  // Categorías con stock apilable (se pueden comprar N unidades de golpe y
+  // se van consumiendo en partida); el resto son de posesión única.
+  const STACKABLE_ITEM_CATEGORIES = new Set(['powerup']);
+
+  socket.on('buy_item', ({ itemId, quantity } = {}, cb) => {
     if (!rl.buy()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     if (!isFeatureEnabled('marketplace')) return cb?.({ ok: false, error: 'Tienda desactivada temporalmente' });
     const uid  = socket.data.userId;
@@ -1915,11 +1954,18 @@ io.on('connection', (socket) => {
     const item = stmts.getItemById.get(itemId);
     if (!item)   return cb?.({ ok: false, error: 'Item no encontrado' });
     if (!item.active || !item.visible) return cb?.({ ok: false, error: 'Item no disponible' });
-    const result = stmts.deductScore.run(item.price, uid, item.price);
+    if (item.category === 'powerup' && !isFeatureEnabled('powerups')) return cb?.({ ok: false, error: 'Powerups desactivados temporalmente' });
+    const stackable = STACKABLE_ITEM_CATEGORIES.has(item.category);
+    let qty = stackable ? Math.trunc(Number(quantity)) : 1;
+    if (!Number.isFinite(qty) || qty < 1) qty = 1;
+    qty = Math.min(qty, 99);
+    const totalPrice = item.price * qty;
+    const result = stmts.deductScore.run(totalPrice, uid, totalPrice);
     if (result.changes === 0) return cb?.({ ok: false, error: 'Créditos insuficientes' });
-    stmts.insertUserItem.run(uid, itemId);
+    if (stackable) stmts.addUserItem.run(uid, itemId, qty);
+    else stmts.insertUserItem.run(uid, itemId);
     const newCredits = stmts.getStats.get(uid)?.score ?? 0;
-    cb?.({ ok: true, credits: newCredits });
+    cb?.({ ok: true, credits: newCredits, quantity: qty });
   });
 
   socket.on('buy_bules_pack', ({ packId } = {}, cb) => {
@@ -1937,10 +1983,13 @@ io.on('connection', (socket) => {
 
   socket.on('get_user_items', (cb) => {
     if (!rl.read()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
-    const uid       = socket.data.userId;
+    const uid  = socket.data.userId;
     if (!uid) return cb?.({ ok: true, items: [] });
-    const itemIds   = stmts.getUserItems.all(uid).map(r => r.item_id);
-    const items     = itemIds.map(id => stmts.getItemById.get(id)).filter(Boolean);
+    const rows  = stmts.getUserItems.all(uid);
+    const items = rows.map(r => {
+      const item = stmts.getItemById.get(r.item_id);
+      return item ? { ...item, quantity: r.quantity } : null;
+    }).filter(Boolean);
     cb?.({ ok: true, items });
   });
 
@@ -2039,7 +2088,11 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null, diceSkin = null, storyNode = null }, cb) => {
+  const VALID_GAME_MODES = new Set(['classic', 'powerups']);
+
+  socket.on('create_room', ({ playerName, roomName, maxPlayers = 6, vsBot = false, maxRounds = 0, isPrivate = false, tournamentId = null, userId = null, diceSkin = null, storyNode = null, gameMode = 'classic' }, cb) => {
+    if (!VALID_GAME_MODES.has(gameMode)) gameMode = 'classic';
+    if (gameMode === 'powerups' && !isFeatureEnabled('powerups')) gameMode = 'classic';
     if (!rl.room()) return cb?.({ ok: false, error: 'Demasiadas peticiones, espera un momento' });
     if (isUserBanned(socket.data.userId)) return cb?.({ ok: false, error: 'Tu cuenta está inactiva' });
     if (!playerName?.trim()) return cb?.({ ok: false, error: 'Faltan datos' });
@@ -2065,9 +2118,11 @@ io.on('connection', (socket) => {
       maxRounds  = 0;
       isPrivate  = false;
       maxPlayers = 1 + storyOpponentCount(storyNode);
+      gameMode   = 'classic'; // el modo powerups aún no está integrado en Modo Historia
     }
 
     if (tournamentId) {
+      gameMode = 'classic'; // los torneos aún no soportan el modo powerups
       if (!isFeatureEnabled('tournaments')) return cb?.({ ok: false, error: 'Campeonatos desactivados temporalmente' });
       const def = getTournamentDef(tournamentId);
       if (!def || !def.visible) return cb?.({ ok: false, error: 'Torneo no encontrado' });
@@ -2105,6 +2160,7 @@ io.on('connection', (socket) => {
       turnDeadline: null,
       tournamentId: tournamentId ?? null,
       storyNode: storyNode ?? null,
+      gameMode,
       players: [{ ...makePlayer(socket.id, playerName.trim()), diceSkin: diceSkin ?? null }],
     };
 
@@ -2119,9 +2175,9 @@ io.on('connection', (socket) => {
     rooms[code] = room;
     socket.join(code);
     socket.data.roomCode = code;
-    console.log(`create_room: "${room.name}" code="${code}" host="${playerName}" vsBot=${vsBot} tournament=${tournamentId}`);
+    console.log(`create_room: "${room.name}" code="${code}" host="${playerName}" vsBot=${vsBot} tournament=${tournamentId} gameMode=${gameMode}`);
     cb?.({ ok: true, code });
-    trackEvent('room_create', { vsBot, isPrivate: !!isPrivate, maxPlayers: room.maxPlayers, tournamentId });
+    trackEvent('room_create', { vsBot, isPrivate: !!isPrivate, maxPlayers: room.maxPlayers, tournamentId, gameMode });
     broadcast(code);
     if (tournamentId) broadcastTournament(tournamentId);
     else if (!vsBot) broadcastRoomList();
@@ -2305,9 +2361,11 @@ io.on('connection', (socket) => {
     if (player.rollCount >= maxAllowed) return cb?.({ ok: false, error: 'No puedes tirar más' });
 
     const diceCount = player.currentDice.length;
-    const rollingIndices = player.rollCount > 0
+    const blockedIndices = (player.blockedDice ?? []).map(b => b.index);
+    const rollingIndices = (player.rollCount > 0
       ? Array.from({ length: diceCount }, (_, i) => i).filter(i => !keptIndices.includes(i))
-      : [0, 1, 2, 3, 4];
+      : [0, 1, 2, 3, 4]
+    ).filter(i => !blockedIndices.includes(i));
 
     if (player.rollCount > 0) {
       player.rollHistory.push([...player.currentDice]);
@@ -2374,6 +2432,56 @@ io.on('connection', (socket) => {
       startTurnTimer(room);
       broadcast(room.code);
     }, animMs);
+  });
+
+  // Powerups (modo "powerups"): de momento solo existe 'powerup-bloqueo' —
+  // un jugador que NO tiene el turno bloquea un dado del jugador activo,
+  // que queda inmune a relanzamientos hasta que termine su turno (ver el
+  // filtro de blockedDice en 'roll'/runBotTurn y su limpieza en finishTurn).
+  socket.on('use_powerup', ({ itemId, dieIndex } = {}, cb) => {
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.phase !== 'playing') return cb?.({ ok: false, error: 'Partida no disponible' });
+    if (room.gameMode !== 'powerups') return cb?.({ ok: false, error: 'Este modo de sala no tiene powerups' });
+    if (!isFeatureEnabled('powerups')) return cb?.({ ok: false, error: 'Powerups desactivados temporalmente' });
+    if (!POWERUP_TURN_LIMITS[itemId]) return cb?.({ ok: false, error: 'Powerup no válido' });
+
+    const uid = socket.data.userId;
+    if (!uid) return cb?.({ ok: false, error: 'Debes iniciar sesión' });
+
+    const blocker = room.players.find(p => p.id === socket.id);
+    if (!blocker) return cb?.({ ok: false, error: 'No estás en esta sala' });
+
+    const target = room.players[room.currentPlayerIndex];
+    if (!target || target.id === blocker.id) return cb?.({ ok: false, error: 'No puedes usarlo en tu propio turno' });
+    if (target.done) return cb?.({ ok: false, error: 'Ese jugador ya ha terminado su turno' });
+
+    if (!Number.isInteger(dieIndex) || dieIndex < 0 || dieIndex >= target.currentDice.length) {
+      return cb?.({ ok: false, error: 'Dado no válido' });
+    }
+    target.blockedDice = target.blockedDice ?? [];
+    if (target.blockedDice.some(b => b.index === dieIndex)) {
+      return cb?.({ ok: false, error: 'Ese dado ya está bloqueado' });
+    }
+
+    // Cooldown: como mucho POWERUP_TURN_LIMITS[itemId] usos de este blocker
+    // sobre este turno concreto del objetivo (ronda + índice de jugador).
+    blocker.powerupUsesThisTurn = blocker.powerupUsesThisTurn ?? {};
+    const turnKey = `${itemId}:${room.roundNumber}:${room.currentPlayerIndex}`;
+    const usesSoFar = powerupUsesAgainstCurrentTurn(room, blocker, itemId);
+    if (usesSoFar >= POWERUP_TURN_LIMITS[itemId]) {
+      return cb?.({ ok: false, error: 'Ya has usado ese powerup en este turno' });
+    }
+
+    const row = db.prepare(`SELECT quantity FROM user_items WHERE user_id = ? AND item_id = ?`).get(uid, itemId);
+    if (!row || row.quantity < 1) return cb?.({ ok: false, error: 'No tienes ese powerup' });
+    db.prepare(`UPDATE user_items SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ?`).run(uid, itemId);
+
+    target.blockedDice.push({ index: dieIndex, blockerId: blocker.id });
+    blocker.powerupUsesThisTurn[turnKey] = usesSoFar + 1;
+
+    cb?.({ ok: true });
+    broadcast(room.code);
   });
 
   // Legacy: apps ya instaladas de versiones anteriores todavía pueden emitir

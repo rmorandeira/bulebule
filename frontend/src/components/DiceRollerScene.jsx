@@ -98,39 +98,69 @@ function makeToonGradient() {
 // AS, K, 8 → rojo   |   Q, J, 7 → negro
 const RED_FACES = new Set(['AS', 'K', '8'])
 
-function drawPip(ctx, cx, cy, r, isRed, textured = false) {
+// Paleta usada para el bloqueo de un powerup — mismos colores con -50% de
+// saturación y -15% de brillo (calculado sobre cada color de BASE_COLORS),
+// para que la cara del dado se vea "apagada" sin necesidad de un shader.
+const BASE_COLORS = {
+  bg:            '#EDE5D2',
+  redDeep:       '#6A0000',
+  redMain:       '#C02010',
+  blackDeep:     '#0A0500',
+  blackMain:     '#1E0F00',
+  redTexturedPip:  '#ff9999',
+  whiteTextured: '#ffffff',
+  redTexturedTxt:  '#ffaaaa',
+}
+const BLOCKED_COLORS = {
+  bg:            '#c8bfaa',
+  redDeep:       '#160707',
+  redMain:       '#5e2b26',
+  blackDeep:     '#000000',
+  blackMain:     '#000000',
+  redTexturedPip:  '#d27979',
+  whiteTextured: '#d9d9d9',
+  redTexturedTxt:  '#d78686',
+}
+const highlightRgba = blocked =>
+  blocked ? 'rgba(192,95,66,0.18)' : 'rgba(255,120,80,0.18)'
+const highlightRgbaBlack = blocked =>
+  blocked ? 'rgba(135,107,58,0.15)' : 'rgba(230,160,40,0.15)'
+
+function drawPip(ctx, cx, cy, r, isRed, textured = false, blocked = false) {
+  const C = blocked ? BLOCKED_COLORS : BASE_COLORS
   if (textured) {
     ctx.fillStyle = 'rgba(0,0,0,0.28)'
     ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = isRed ? '#ff9999' : '#ffffff'
+    ctx.fillStyle = isRed ? C.redTexturedPip : C.whiteTextured
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill()
     return
   }
-  ctx.fillStyle = isRed ? '#6A0000' : '#0A0500'
+  ctx.fillStyle = isRed ? C.redDeep : C.blackDeep
   ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = isRed ? '#C02010' : '#1E0F00'
+  ctx.fillStyle = isRed ? C.redMain : C.blackMain
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = isRed ? 'rgba(255,120,80,0.18)' : 'rgba(230,160,40,0.15)'
+  ctx.fillStyle = isRed ? highlightRgba(blocked) : highlightRgbaBlack(blocked)
   ctx.beginPath(); ctx.arc(cx - r * 0.28, cy - r * 0.32, r * 0.48, 0, Math.PI * 2); ctx.fill()
 }
 
-function makeTex(value, bgImg = null, bgColor = null) {
+function makeTex(value, bgImg = null, bgColor = null, blocked = false) {
   const S = 256
   const cv = document.createElement('canvas')
   cv.width = cv.height = S
   const ctx = cv.getContext('2d')
+  const C = blocked ? BLOCKED_COLORS : BASE_COLORS
 
   const textured = bgImg !== null || bgColor !== null
   if (bgImg) {
     ctx.drawImage(bgImg, 0, 0, S, S)
-    ctx.fillStyle = 'rgba(10,20,40,0.12)'
+    ctx.fillStyle = blocked ? 'rgba(10,10,10,0.35)' : 'rgba(10,20,40,0.12)'
     ctx.fillRect(0, 0, S, S)
   } else if (bgColor) {
     ctx.fillStyle = bgColor
     ctx.fillRect(0, 0, S, S)
   } else {
     // Amber base — fills full canvas so rounded-box corners blend
-    ctx.fillStyle = '#EDE5D2'
+    ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, S, S)
   }
 
@@ -142,7 +172,7 @@ function makeTex(value, bgImg = null, bgColor = null) {
       if (!on) return
       let cx = m + (i % 3) * st
       if (value === '8' && Math.floor(i / 3) === 1) cx -= st / 2
-      drawPip(ctx, cx, m + Math.floor(i / 3) * st, pr, isRed, textured)
+      drawPip(ctx, cx, m + Math.floor(i / 3) * st, pr, isRed, textured, blocked)
     })
   } else {
     const label = value === 'AS' ? 'A' : value
@@ -151,13 +181,13 @@ function makeTex(value, bgImg = null, bgColor = null) {
     if (textured) {
       ctx.shadowColor = 'rgba(0,0,0,0.55)'
       ctx.shadowBlur = 10
-      ctx.fillStyle = isRed ? '#ffaaaa' : '#ffffff'
+      ctx.fillStyle = isRed ? C.redTexturedTxt : C.whiteTextured
       ctx.fillText(label, S / 2, S / 2)
       ctx.shadowBlur = 0
     } else {
-      ctx.fillStyle = isRed ? '#6A0000' : '#0A0500'
+      ctx.fillStyle = isRed ? C.redDeep : C.blackDeep
       ctx.fillText(label, S / 2 + 2, S / 2 + 3)
-      ctx.fillStyle = isRed ? '#C02010' : '#1E0F00'
+      ctx.fillStyle = isRed ? C.redMain : C.blackMain
       ctx.fillText(label, S / 2, S / 2)
     }
   }
@@ -166,11 +196,11 @@ function makeTex(value, bgImg = null, bgColor = null) {
 
 const _toonGrad = makeToonGradient()
 
-function buildMats(skinId = null) {
+function buildMats(skinId = null, blocked = false) {
   const colorCfg = skinId ? _skinColors[skinId] : null
   if (colorCfg) {
     return FACE_VALUES.map(v => {
-      const mat = new THREE.MeshToonMaterial({ map: makeTex(v, null, colorCfg.bg), gradientMap: _toonGrad })
+      const mat = new THREE.MeshToonMaterial({ map: makeTex(v, null, colorCfg.bg, blocked), gradientMap: _toonGrad })
       mat.transparent = true
       mat.opacity = colorCfg.opacity
       return mat
@@ -178,7 +208,7 @@ function buildMats(skinId = null) {
   }
   const img = skinId ? _skinImgs[skinId] : null
   const bgImg = img?.complete && img.naturalWidth > 0 ? img : null
-  return FACE_VALUES.map(v => new THREE.MeshToonMaterial({ map: makeTex(v, bgImg), gradientMap: _toonGrad }))
+  return FACE_VALUES.map(v => new THREE.MeshToonMaterial({ map: makeTex(v, bgImg, null, blocked), gradientMap: _toonGrad }))
 }
 
 const eio = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
@@ -200,7 +230,7 @@ const _eliminarAudio = new Audio('/assets/eliminar_dados.mp3')
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function DiceRollerScene({
-  values, rollingIndices, pendingDiscards = [],
+  values, rollingIndices, pendingDiscards = [], blockedDice = [],
   interactive, onDieClick, onSettled, keyframes, frameIntervalMs = 50, keptPositions = [], rollId, sorted = false,
   skin = undefined,
 }) {
@@ -292,9 +322,10 @@ export default function DiceRollerScene({
 
     // 5 persistent die meshes
     const dice = Array.from({ length: 5 }, (_, i) => {
+      const matsNormal = buildMats(activeSkin)
       const mesh = new THREE.Mesh(
         new RoundedBoxGeometry(DIE, DIE, DIE, 4, DIE * 0.12),
-        buildMats(activeSkin)
+        matsNormal
       )
       mesh.userData.idx = i
       mesh.visible = false
@@ -312,6 +343,10 @@ export default function DiceRollerScene({
 
       return {
         mesh, outline, value: null,
+        // Set de materiales "apagado" (-50% saturación, -15% brillo) que se
+        // asigna en vez del normal mientras el dado está bloqueado por un
+        // powerup — ver el efecto reactivo a blockedDice más abajo.
+        matsNormal, matsBlocked: buildMats(activeSkin, true), isBlocked: false,
         phase: 'hidden',  // hidden|rolling|placing|idle|exiting
         ts: 0, throwPos: -1, lastKfIdx: -1, prevKfY: null, prevKfDy: 0,
         fp: new THREE.Vector3(), tp: new THREE.Vector3(),
@@ -327,8 +362,11 @@ export default function DiceRollerScene({
     const skinImg = activeSkin ? _skinImgs[activeSkin] : null
     if (skinImg && !skinImg.complete) {
       skinImg.onload = () => {
-        const mats = buildMats(activeSkin)
-        dice.forEach(d => { d.mesh.material = mats })
+        dice.forEach(d => {
+          d.matsNormal = buildMats(activeSkin)
+          d.matsBlocked = buildMats(activeSkin, true)
+          d.mesh.material = d.isBlocked ? d.matsBlocked : d.matsNormal
+        })
       }
     }
 
@@ -393,19 +431,31 @@ export default function DiceRollerScene({
   }, [rollId])
 
   // ── Pending discards: borde rojo + alpha 50% + mover al fondo ──────────────
+  // (los dados bloqueados por un powerup usan su propio color de borde y no
+  // se mueven ni pierden opacidad, aunque coincidan con un índice descartado)
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx) return
     const now = performance.now()
 
+    const blockedColorByIndex = new Map(blockedDice.map(b => [b.index, b.color]))
+
     // Discarded dice: arrange centered, evenly spaced — no overlaps
-    const discardedIdle = pendingDiscards.filter(i => ctx.dice[i]?.phase === 'idle')
+    const discardedIdle = pendingDiscards.filter(i => ctx.dice[i]?.phase === 'idle' && !blockedColorByIndex.has(i))
     const nDiscard = discardedIdle.length
 
     ctx.dice.forEach((d, i) => {
       if (d.phase !== 'idle') return
-      const discarded = pendingDiscards.includes(i)
-      d.outline.material.color.set(discarded ? 0xe63946 : 0x000000)
+      const blockedColor = blockedColorByIndex.get(i)
+      const isBlocked = blockedColor !== undefined
+      const discarded = !isBlocked && pendingDiscards.includes(i)
+      d.outline.material.color.set(isBlocked ? blockedColor : (discarded ? 0xe63946 : 0x000000))
+      // Textura "apagada" (-50% saturación, -15% brillo) mientras el dado
+      // está bloqueado por un powerup — ver buildMats(skinId, blocked).
+      if (d.isBlocked !== isBlocked) {
+        d.isBlocked = isBlocked
+        d.mesh.material = isBlocked ? d.matsBlocked : d.matsNormal
+      }
       d.mesh.material.forEach(mat => {
         mat.transparent = discarded
         mat.opacity = discarded ? 0.5 : 1.0
@@ -441,7 +491,7 @@ export default function DiceRollerScene({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingDiscards.join(',')])
+  }, [pendingDiscards.join(','), blockedDice.map(b => `${b.index}:${b.color}`).join(',')])
 
   // ── Ordenar dados por valor cuando el jugador finaliza su turno ───────────────
   useEffect(() => {
@@ -535,15 +585,19 @@ function step(ctx, now, propsRef) {
   if (resolvedSkin !== ctx.lastSkin) {
     ctx.lastSkin = resolvedSkin
     const img = resolvedSkin ? _skinImgs[resolvedSkin] : null
-    if (img && !img.complete) {
-      img.onload = () => {
-        const mats = buildMats(resolvedSkin)
-        ctx.dice.forEach(d => { d.mesh.material = mats })
-      }
-    } else {
-      const mats = buildMats(resolvedSkin)
-      ctx.dice.forEach(d => { d.mesh.material = mats })
+    // Cada dado necesita su propio set de materiales (no uno compartido):
+    // el swap normal/bloqueado de abajo asigna d.mesh.material por dado, y
+    // compartir el array haría que el último dado procesado "ganara" para
+    // todos.
+    const rebuild = () => {
+      ctx.dice.forEach(d => {
+        d.matsNormal = buildMats(resolvedSkin)
+        d.matsBlocked = buildMats(resolvedSkin, true)
+        d.mesh.material = d.isBlocked ? d.matsBlocked : d.matsNormal
+      })
     }
+    if (img && !img.complete) img.onload = rebuild
+    else rebuild()
   }
 
   const rolling = dice.filter(d => d.phase === 'rolling')

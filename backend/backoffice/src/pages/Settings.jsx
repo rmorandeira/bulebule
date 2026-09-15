@@ -174,7 +174,7 @@ export default function Settings() {
 
   if (loading) return <div className="loading">Cargando…</div>;
 
-  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis', 'marketplace', 'tournaments', 'music'];
+  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis', 'marketplace', 'tournaments', 'music', 'powerups'];
   const flagEntries = Object.entries(flags).filter(([key]) => !RESERVED_FLAGS.includes(key));
 
   return (
@@ -345,6 +345,15 @@ export default function Settings() {
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
             Si se desactiva, se oculta la pestaña Campeonatos y no se puede entrar ni crear salas de torneo.
+          </p>
+
+          <div className="toggle-row" style={{ justifyContent: 'space-between', marginTop: 16 }}>
+            <label style={{ flex: 1 }}>Modo Powerups</label>
+            <Switch checked={flagOn('powerups')} onChange={() => setFlag('powerups', !flagOn('powerups'))} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4 }}>
+            Si se desactiva, al crear sala solo se puede elegir Classic (aunque el cliente pida "powerups"), se oculta
+            el item "Bloqueo" en la tienda y se rechaza cualquier intento de usar un powerup en partida.
           </p>
         </div>
 

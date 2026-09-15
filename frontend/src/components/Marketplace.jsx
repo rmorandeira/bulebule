@@ -10,6 +10,7 @@ const CATEGORIES = [
   { id: 'all',         labelKey: 'categoryAll',         emoji: '🛍️' },
   { id: 'pack',        labelKey: 'categoryPack',        emoji: '💰' },
   { id: 'dice',        labelKey: 'categoryDice',        emoji: '🎲' },
+  { id: 'powerup',     labelKey: 'categoryPowerup',     emoji: '⚡' },
   { id: 'collectible', labelKey: 'categoryCollectible', emoji: '🎰' },
   { id: 'landmark',    labelKey: 'categoryLandmark',    emoji: '🏛️' },
   { id: 'figure',      labelKey: 'categoryFigure',      emoji: '🧑‍🎨' },
@@ -21,6 +22,7 @@ export default function Marketplace({ user }) {
   const { sheetRef, handleProps } = useSheetDrag(() => closeItem())
   const [items, setItems]         = useState([])
   const [userItems, setUserItems] = useState([])
+  const [userItemQuantities, setUserItemQuantities] = useState({})
   const [credits, setCredits]     = useState(0)
   const [selected, setSelected]   = useState(null)
   const [closing, setClosing]     = useState(false)
@@ -28,13 +30,17 @@ export default function Marketplace({ user }) {
   const [error, setError]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeSkin, setActiveSkin] = useState(() => localStorage.getItem('bule_dice_skin') ?? null)
+  const [buyQty, setBuyQty]       = useState(1)
   const closeRef = useRef(null)
+
+  const STACKABLE_CATEGORIES = ['powerup']
 
   useEffect(() => {
     socket.emit('get_marketplace', (res) => {
       if (!res?.ok) return
       setItems(res.items)
       setUserItems(res.userItems ?? [])
+      setUserItemQuantities(res.userItemQuantities ?? {})
       setCredits(res.credits ?? 0)
     })
   }, [])
@@ -43,6 +49,7 @@ export default function Marketplace({ user }) {
     clearTimeout(closeRef.current)
     setClosing(false)
     setError('')
+    setBuyQty(1)
     setSelected(item)
   }
 
@@ -56,12 +63,15 @@ export default function Marketplace({ user }) {
 
   function handleBuy() {
     if (!selected || buying) return
+    const stackable = STACKABLE_CATEGORIES.includes(selected.category)
+    const qty = stackable ? buyQty : 1
     setBuying(true)
     setError('')
-    socket.emit('buy_item', { itemId: selected.id }, (res) => {
+    socket.emit('buy_item', { itemId: selected.id, quantity: qty }, (res) => {
       setBuying(false)
       if (!res?.ok) { setError(res?.error ?? t('shop.buyErrorGeneric')); return }
-      setUserItems(prev => [...prev, selected.id])
+      setUserItems(prev => prev.includes(selected.id) ? prev : [...prev, selected.id])
+      setUserItemQuantities(prev => ({ ...prev, [selected.id]: (prev[selected.id] ?? 0) + qty }))
       setCredits(res.credits)
       closeItem()
     })
@@ -134,7 +144,12 @@ export default function Marketplace({ user }) {
               />
               {!item.active && <span className="mkt__inactive-badge">{t('shop.unavailable')}</span>}
               {item.active && activeSkin === item.id && <span className="mkt__active-badge">{t('shop.active')}</span>}
-              {owned(item.id) && <span className="mkt__owned-badge">{t('shop.owned')}</span>}
+              {STACKABLE_CATEGORIES.includes(item.category)
+                ? (userItemQuantities[item.id] > 0) && (
+                    <span className="mkt__owned-badge">x{userItemQuantities[item.id]}</span>
+                  )
+                : owned(item.id) && <span className="mkt__owned-badge">{t('shop.owned')}</span>
+              }
             </div>
             <p className="mkt__card-name">{item.name}</p>
             <p className="mkt__card-price">
@@ -176,6 +191,47 @@ export default function Marketplace({ user }) {
                   <button className="bs__submit" disabled>
                     {t('shop.buyPack')}
                   </button>
+                </>
+              ) : STACKABLE_CATEGORIES.includes(selected.category) ? (
+                <>
+                  <p className="mkt__sheet-price">
+                    {t('shop.bules', { n: (selected.price * buyQty).toLocaleString() })}
+                  </p>
+                  <p className="mkt__sheet-hint">{t('shop.youHave', { n: userItemQuantities[selected.id] ?? 0 })}</p>
+                  {!selected.active ? (
+                    <button className="bs__submit" disabled>{t('shop.notAvailable')}</button>
+                  ) : !user ? (
+                    <p className="mkt__sheet-hint">{t('shop.loginToBuy')}</p>
+                  ) : (
+                    <>
+                      <div className="mkt__qty">
+                        <button
+                          type="button"
+                          className="mkt__qty-btn"
+                          onClick={() => setBuyQty(q => Math.max(1, q - 1))}
+                          disabled={buyQty <= 1}
+                        >−</button>
+                        <span className="mkt__qty-value">{buyQty}</span>
+                        <button
+                          type="button"
+                          className="mkt__qty-btn"
+                          onClick={() => setBuyQty(q => Math.min(99, q + 1))}
+                          disabled={buyQty >= 99}
+                        >+</button>
+                      </div>
+                      <button
+                        className="bs__submit"
+                        onClick={handleBuy}
+                        disabled={buying || credits < selected.price * buyQty}
+                      >
+                        {buying
+                          ? t('shop.buying')
+                          : credits < selected.price * buyQty
+                            ? t('shop.notEnoughBules')
+                            : t('shop.buy', { n: (selected.price * buyQty).toLocaleString() })}
+                      </button>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

@@ -10,6 +10,7 @@ import HandBurstEffect from './HandBurstEffect'
 import TesterHandPicker from './TesterHandPicker'
 import CountdownButton from './CountdownButton'
 import WaitingBar from './WaitingBar'
+import PowerupsButton from './PowerupsButton'
 import { pushBackHandler } from '../utils/backHandler'
 
 const ROLL_WORDS = ['uno', 'dos', 'tres']
@@ -19,6 +20,16 @@ const handPts = rank => 8 + (rank ?? 0) * 4
 const sortDice = arr => [...arr].sort((a, b) => (DIE_RANK[b] ?? 0) - (DIE_RANK[a] ?? 0))
 
 const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+// Color del borde de un dado bloqueado, según quién lo bloqueó. El rojo
+// queda reservado (ya se usa para marcar descartes propios), así que la
+// paleta de bloqueo empieza en azul. Se asigna por posición del jugador en
+// la sala — estable durante toda la partida.
+const BLOCKER_COLORS = [0x3b82f6, 0x22c55e, 0xeab308, 0xa855f7, 0xec4899, 0x14b8a6]
+function colorForBlocker(room, blockerId) {
+  const idx = room.players.findIndex(p => p.id === blockerId)
+  return BLOCKER_COLORS[idx >= 0 ? idx % BLOCKER_COLORS.length : 0]
+}
 
 const _audioDiscard    = new Audio('/assets/cogerdado.mp3')
 const _audioPalillo    = new Audio('/assets/romper_palillo.mp3')
@@ -70,6 +81,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [nextPlayerVisible, setNextPlayerVisible] = useState(false)
   const [violinazo, setViolinazo] = useState(null) // { name } | null
   const violinazoShownRef = useRef(new Set()) // claves "playerId:roundNumber" ya mostradas
+  const pendingNextPlayerRef = useRef(false) // esperando a que acabe el burst de poker/repóker antes de revelar el cambio de turno
   const [scoreDeltas, setScoreDeltas] = useState({})  // { [playerId]: deltaValue }
   const prevScoresRef = useRef({})                    // { [playerId]: score }
   const [resultsDisplayScores, setResultsDisplayScores] = useState({})  // { [playerId]: número mostrado (animado) }
@@ -77,6 +89,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const scoreAnimFrameRef = useRef(null)
   const [messageBubbles, setMessageBubbles] = useState([]) // [{ id, text, side, fading }], index 0 = más reciente
   const msgSeqRef = useRef(0)
+  const [targetingPowerup, setTargetingPowerup] = useState(null) // null | id del powerup armado esperando dado objetivo
 
   const dismissBubble = useCallback((id) => {
     setMessageBubbles(prev => prev.map(b => b.id === id ? { ...b, fading: true } : b))
@@ -115,6 +128,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   // cerrarse se revela el de cambio de turno — ver handleViolinazoDone. Si
   // se planta antes (con Carta alta por elección, poco probable pero
   // posible) no cuenta como violinazo — solo cuando no le quedó otra.
+  // Si en cambio el turno terminó justo tras un Póker/Repóker (burst
+  // todavía en pantalla, ver handBurst), tampoco se revela el cambio de
+  // turno hasta que ese burst termine — ver el onDone de HandBurstEffect.
   const awaitingContinue = room.phase === 'playing' && room.awaitingContinue
   useEffect(() => {
     if (awaitingContinue) {
@@ -130,6 +146,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
         // todavía no había terminado su animación de salida (turno muy
         // rápido) — sin esto se solapaban ambos overlays a la vez.
         setNextPlayerVisible(false)
+      } else if (handBurst) {
+        pendingNextPlayerRef.current = true
       } else {
         setNextPlayerVisible(true)
       }
@@ -137,6 +155,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     if (room.phase !== 'playing') {
       setNextPlayerVisible(false)
       setViolinazo(null)
+      pendingNextPlayerRef.current = false
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [awaitingContinue, room.phase])
@@ -144,6 +163,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   function handleViolinazoDone() {
     setViolinazo(null)
     setNextPlayerVisible(true)
+  }
+
+  function handleHandBurstDone() {
+    setHandBurst(null)
+    if (pendingNextPlayerRef.current) {
+      pendingNextPlayerRef.current = false
+      setNextPlayerVisible(true)
+    }
   }
 
   // Banner nativo inferior — se muestra durante la partida
@@ -282,6 +309,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const me = room.players.find(p => p.id === myId)
   const currentPlayer = room.players[room.currentPlayerIndex]
   const isMyTurn = currentPlayer?.id === myId
+  const showPowerups = room.gameMode === 'powerups' && !!me?.userId
   const maxAllowed = room.maxRolls ?? 3
   const mustPass = isMyTurn && !me?.done && ((me?.rollCount ?? 0) >= maxAllowed || me?.hand?.rank === 7)
   const rollCount = me?.rollCount ?? 0
@@ -296,6 +324,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     setSceneValues(null)
     setRollKeyframes(null)
     burstShownRankRef.current = -1
+    setTargetingPowerup(null)
   }, [room.roundNumber, room.currentPlayerIndex])
 
   // Reset dados del marcador al empezar nueva ronda
@@ -323,12 +352,33 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   }, [])
 
   function toggleDiscard(index) {
+    if ((currentPlayer?.blockedDice ?? []).some(b => b.index === index)) return
     setPendingDiscards(prev => {
       const next = prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
       if (!prev.includes(index)) playDiscardSound()
       socket.emit('discard', { indices: next })
       return next
     })
+  }
+
+  function handleActivatePowerup(itemId) {
+    setTargetingPowerup(itemId)
+  }
+
+  function handleCancelPowerup() {
+    setTargetingPowerup(null)
+  }
+
+  function handleDieClick(index) {
+    if (targetingPowerup && !isMyTurn) {
+      const itemId = targetingPowerup
+      socket.emit('use_powerup', { itemId, dieIndex: index }, (res) => {
+        setTargetingPowerup(null)
+        if (!res?.ok && res?.error) alert(res.error)
+      })
+      return
+    }
+    toggleDiscard(index)
   }
 
   const handleRoll = useCallback(() => {
@@ -926,8 +976,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                           ? botDiscards
                           : (currentPlayer?.pendingDiscards ?? [])
                     }
-                    interactive={isMyTurn && !me?.done && !mustPass && rollNum > 0}
-                    onDieClick={toggleDiscard}
+                    interactive={(isMyTurn && !me?.done && !mustPass && rollNum > 0) || (!!targetingPowerup && !isMyTurn)}
+                    onDieClick={handleDieClick}
+                    blockedDice={(currentPlayer?.blockedDice ?? []).map(b => ({ index: b.index, color: colorForBlocker(room, b.blockerId) }))}
                     keyframes={rollKeyframes}
                     frameIntervalMs={frameIntervalMs}
                     keptPositions={keptPositions}
@@ -961,7 +1012,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       }
                     }}
                   />
-                  <HandBurstEffect variant={handBurst} onDone={() => setHandBurst(null)} />
+                  <HandBurstEffect variant={handBurst} onDone={handleHandBurstDone} />
                   <HandBurstEffect variant={violinazo ? 'violinazo' : null} onDone={handleViolinazoDone} />
                   <HandBurstEffect variant={room.phase === 'playing' && room.remontada ? 'remontada' : null} onDone={() => {}} />
                   {messageBubbles.length > 0 && (
@@ -1030,6 +1081,16 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       Toca los dados a descartar
                     </p>
                     <div className="actions__row">
+                      {showPowerups && (
+                        <PowerupsButton
+                          isMyTurn={isMyTurn}
+                          currentPlayer={currentPlayer}
+                          bloqueoUsedThisTurn={!!me?.bloqueoUsedThisTurn}
+                          armedItemId={targetingPowerup}
+                          onActivate={handleActivatePowerup}
+                          onCancel={handleCancelPowerup}
+                        />
+                      )}
                       <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || isAnimating}>
                         Me planto
                       </button>
@@ -1055,7 +1116,17 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             )}
             {me?.done && (
               <WaitingBar
-                label={(
+                powerupsButton={showPowerups ? (
+                  <PowerupsButton
+                    isMyTurn={isMyTurn}
+                    currentPlayer={currentPlayer}
+                    bloqueoUsedThisTurn={!!me?.bloqueoUsedThisTurn}
+                    armedItemId={targetingPowerup}
+                    onActivate={handleActivatePowerup}
+                    onCancel={handleCancelPowerup}
+                  />
+                ) : null}
+                label={targetingPowerup ? 'Selecciona el dado a bloquear' : (
                   <>
                     {`Tu mano: ${me?.hand?.desc}`}
                     {me?.hand?.rank != null && <span className="dice-box__hand-pts">+{handPts(me.hand.rank)} B</span>}
@@ -1065,7 +1136,17 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             )}
             {!isMyTurn && !me?.done && (
               <WaitingBar
-                label={(
+                powerupsButton={showPowerups ? (
+                  <PowerupsButton
+                    isMyTurn={isMyTurn}
+                    currentPlayer={currentPlayer}
+                    bloqueoUsedThisTurn={!!me?.bloqueoUsedThisTurn}
+                    armedItemId={targetingPowerup}
+                    onActivate={handleActivatePowerup}
+                    onCancel={handleCancelPowerup}
+                  />
+                ) : null}
+                label={targetingPowerup ? 'Selecciona el dado a bloquear' : (
                   <span className={waitTimeLeft !== null && waitTimeLeft <= 10 ? 'actions__hint--urgent' : ''}>
                     {waitTimeLeft !== null
                       ? `Esperando la tirada del otro jugador (${waitTimeLeft}s)`
