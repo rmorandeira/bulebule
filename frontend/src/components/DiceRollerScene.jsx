@@ -36,8 +36,8 @@ const FACE_UP_QUATS = (() => {
   const E = THREE.Euler
   const Q = THREE.Quaternion
   return [
-    new Q().setFromEuler(new E(-Math.PI / 2, 0,  Math.PI / 2)),  // +X face (K)  → +Y world, text legible
-    new Q().setFromEuler(new E(-Math.PI / 2, 0, -Math.PI / 2)),  // -X face (Q)  → +Y world, text legible
+    new Q().setFromEuler(new E(0, 0,  Math.PI / 2)),  // +X face (K)  → +Y world
+    new Q().setFromEuler(new E(0, 0, -Math.PI / 2)),  // -X face (Q)  → +Y world
     new Q(),                                            // +Y face (AS) → +Y world
     new Q().setFromEuler(new E(Math.PI, 0, 0)),        // -Y face (7)  → +Y world
     new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),  // +Z face (8)  → +Y world
