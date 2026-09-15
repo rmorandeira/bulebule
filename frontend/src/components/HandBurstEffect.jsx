@@ -1,12 +1,17 @@
 import { useEffect } from 'react'
 
-// Efecto manga de "speed lines" al sacar Póker/Repóker — siempre en blanco y
-// negro (modo Light) para máximo contraste, independiente del tema de la app.
+// Efecto manga de "speed lines" al sacar Póker/Repóker — líneas negras en
+// modo Light, blancas en modo Dark (mismo criterio que DiceRollerScene para
+// el fondo de la escena) para mantener el contraste en los dos temas.
 // Repóker añade además un temblor de pantalla (ver .dice-box--quake en
 // index.css) y sustituye el texto por la imagen repoker.png, deslizando con
 // la misma curva que la animación de cambio de turno (AnimacionNextPlayer:
 // entra desde la izquierda, sale por la derecha), pero contenida dentro de
 // la caja de dados en vez de a pantalla completa.
+function isDarkTheme() {
+  const t = document.documentElement.getAttribute('data-theme')
+  return t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+}
 const style = `
 @keyframes hb_flash {
   0%   { opacity: 0; }
@@ -51,9 +56,9 @@ const style = `
   inset: -25%;
   animation: hb_lines_in var(--hb-dur, 1100ms) cubic-bezier(.22,1,.36,1) forwards;
   background-image:
-    repeating-conic-gradient(from 0deg at 50% 50%, rgba(10,10,10,0.92) 0deg 1deg, transparent 1deg 3.4deg),
-    repeating-conic-gradient(from 12deg at 50% 50%, rgba(10,10,10,0.55) 0deg 0.7deg, transparent 0.7deg 5.6deg),
-    repeating-conic-gradient(from 6deg at 50% 50%, rgba(10,10,10,0.3) 0deg 2deg, transparent 2deg 9deg);
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(var(--hb-line-rgb), 0.92) 0deg 1deg, transparent 1deg 3.4deg),
+    repeating-conic-gradient(from 12deg at 50% 50%, rgba(var(--hb-line-rgb), 0.55) 0deg 0.7deg, transparent 0.7deg 5.6deg),
+    repeating-conic-gradient(from 6deg at 50% 50%, rgba(var(--hb-line-rgb), 0.3) 0deg 2deg, transparent 2deg 9deg);
   -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 9%, #000 26%, #000 68%, transparent 96%);
   mask-image: radial-gradient(circle at 50% 50%, transparent 9%, #000 26%, #000 68%, transparent 96%);
 }
@@ -110,10 +115,15 @@ export default function HandBurstEffect({ variant, onDone }) {
 
   if (!variant) return null
 
+  const lineRgb = isDarkTheme() ? '255,255,255' : '10,10,10'
+
   return (
     <>
       <style>{style}</style>
-      <div className={`hb${variant === 'repoker' ? ' hb--repoker' : ''}`} style={{ '--hb-dur': `${duration}ms` }}>
+      <div
+        className={`hb${variant === 'repoker' ? ' hb--repoker' : ''}`}
+        style={{ '--hb-dur': `${duration}ms`, '--hb-line-rgb': lineRgb }}
+      >
         <div className="hb__flash" />
         <div className="hb__lines" />
         {variant === 'repoker'

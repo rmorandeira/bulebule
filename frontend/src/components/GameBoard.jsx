@@ -63,6 +63,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [rollId, setRollId] = useState(0)
   const [handBurst, setHandBurst] = useState(null) // null | 'poker' | 'repoker'
   const lastBurstFacesRef = useRef(null)
+  const burstShownRankRef = useRef(-1) // rank más alto ya mostrado en el turno actual (6=Póker, 7=Repóker)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
   const [rolling, setRolling] = useState(false)
@@ -262,6 +263,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     setRollingIndices([])
     setSceneValues(null)
     setRollKeyframes(null)
+    burstShownRankRef.current = -1
   }, [room.roundNumber, room.currentPlayerIndex])
 
   // Reset dados del marcador al empezar nueva ronda
@@ -906,16 +908,19 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                         lastFacesRef.current = faces
                         setScoreboardDice(prev => ({ ...prev, [currentPlayer?.id]: faces }))
                         // Póker/Repóker: efecto manga para enfatizar la tirada.
-                        // Dedupe por rollId (único por tirada real) en vez de
-                        // por valores — así un repóker de K repetido en otra
-                        // ronda no queda silenciado por el dedupe.
+                        // Solo la primera vez que aparece en el turno — si ya
+                        // se mostró por un Póker, una tirada posterior solo
+                        // vuelve a disparar el efecto si se supera con Repóker.
                         if (lastBurstFacesRef.current !== rollId) {
                           lastBurstFacesRef.current = rollId
                           const counts = {}
                           faces.forEach(f => { counts[f] = (counts[f] ?? 0) + 1 })
                           const maxCount = Math.max(...Object.values(counts))
-                          if (maxCount === 5) setHandBurst('repoker')
-                          else if (maxCount === 4) setHandBurst('poker')
+                          const rank = maxCount === 5 ? 7 : maxCount === 4 ? 6 : null
+                          if (rank != null && rank > burstShownRankRef.current) {
+                            burstShownRankRef.current = rank
+                            setHandBurst(rank === 7 ? 'repoker' : 'poker')
+                          }
                         }
                       }
                       if (currentPlayer?.isBot && room.botPhase === 'rolled') {
