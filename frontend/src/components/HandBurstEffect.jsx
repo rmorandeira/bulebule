@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 // Efecto manga de "speed lines" al sacar Póker/Repóker — speedlines-light.png
 // (líneas oscuras) en modo Light, speedlines-dark.png (líneas blancas) en
@@ -8,9 +8,23 @@ import { useEffect } from 'react'
 // la misma curva que la animación de cambio de turno (AnimacionNextPlayer:
 // entra desde la izquierda, sale por la derecha), pero contenida dentro de
 // la caja de dados en vez de a pantalla completa.
+// Violinazo reutiliza esa misma mecánica (imagen + texto sobre los dados)
+// pero sin las speed lines — ver justo después se encadena con la animación
+// de cambio de turno (ver handleViolinazoDone en GameBoard.jsx).
 function isDarkTheme() {
   const t = document.documentElement.getAttribute('data-theme')
   return t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+}
+
+const SOUNDS = {
+  repoker: new Audio('/assets/repoker.mp3'),
+  violinazo: new Audio('/assets/violinazo.mp3'),
+}
+function playHandSound(variant) {
+  const a = SOUNDS[variant]
+  if (!a) return
+  a.currentTime = 0
+  a.play().catch(() => {})
 }
 const style = `
 @keyframes hb_flash {
@@ -23,13 +37,6 @@ const style = `
   10%  { opacity: 1;  transform: scale(1.05) rotate(1deg); }
   70%  { opacity: 1;  transform: scale(1) rotate(0deg); }
   100% { opacity: 0;  transform: scale(1.12) rotate(-0.5deg); }
-}
-@keyframes hb_badge_pop {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(-10deg); }
-  45%  { opacity: 1;  transform: translate(-50%, -50%) scale(1.18) rotate(-3deg); }
-  60%  { opacity: 1;  transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
-  85%  { opacity: 1;  transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
-  100% { opacity: 0;  transform: translate(-50%, -50%) scale(1.08) rotate(-3deg); }
 }
 @keyframes hb_img_slide {
   0%   { transform: translate(-50%, -50%) translateX(-170%); opacity: 0; }
@@ -60,22 +67,6 @@ const style = `
   -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 9%, #000 26%, #000 68%, transparent 96%);
   mask-image: radial-gradient(circle at 50% 50%, transparent 9%, #000 26%, #000 68%, transparent 96%);
 }
-.hb__badge {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  animation: hb_badge_pop var(--hb-dur, 1100ms) cubic-bezier(.22,1,.36,1) forwards;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 900;
-  font-style: italic;
-  font-size: clamp(26px, 8vw, 44px);
-  letter-spacing: 1px;
-  color: #0a0a0a;
-  -webkit-text-stroke: 2px #fff;
-  paint-order: stroke fill;
-  text-shadow: 0 0 0 #fff, 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff;
-  white-space: nowrap;
-}
 .hb__img {
   position: absolute;
   left: 50%;
@@ -83,6 +74,12 @@ const style = `
   width: min(78%, 320px);
   filter: drop-shadow(0 6px 14px rgba(0,0,0,0.45));
   animation: hb_img_slide var(--hb-dur, 1500ms) cubic-bezier(.22,1,.36,1) forwards;
+}
+.hb__img--violinazo {
+  width: min(55%, 210px);
+}
+.hb__img--remontada {
+  width: min(80%, 340px);
 }
 @keyframes dice_box_quake {
   0%   { transform: translate(0,0) rotate(0deg); }
@@ -100,16 +97,23 @@ const style = `
 .dice-box--quake { animation: dice_box_quake 650ms ease-in-out; }
 `
 
-const DURATION_MS = { poker: 1100, repoker: 1500 }
+const DURATION_MS = { poker: 1100, repoker: 1500, violinazo: 3400, remontada: 1600 } // violinazo: dura lo mismo que violinazo.mp3 (3.43s)
 
 export default function HandBurstEffect({ variant, onDone }) {
   const duration = DURATION_MS[variant] ?? 1100
+  // onDone llega como función inline desde GameBoard (identidad nueva en
+  // cada render) — si entrara en las deps del efecto, cualquier re-render de
+  // GameBoard durante los 3.4s del violinazo lo reiniciaba y repetía el
+  // sonido. Con la ref solo se dispara al cambiar `variant`.
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
 
   useEffect(() => {
     if (!variant) return
-    const t = setTimeout(() => onDone?.(), duration)
+    playHandSound(variant)
+    const t = setTimeout(() => onDoneRef.current?.(), duration)
     return () => clearTimeout(t)
-  }, [variant, duration, onDone])
+  }, [variant, duration])
 
   if (!variant) return null
 
@@ -128,10 +132,18 @@ export default function HandBurstEffect({ variant, onDone }) {
           className="hb__flash"
           style={{ background: `radial-gradient(circle at 50% 50%, rgba(${flashRgb},1) 0%, rgba(${flashRgb},1) 35%, rgba(${flashRgb},0) 72%)` }}
         />
-        <div className="hb__lines" style={{ backgroundImage: `url(${lineImg})` }} />
-        {variant === 'repoker'
-          ? <img className="hb__img" src="/assets/repoker.png" alt="¡Repóker!" />
-          : <span className="hb__badge">¡PÓKER!</span>}
+        {variant !== 'violinazo' && (
+          <div className="hb__lines" style={{ backgroundImage: `url(${lineImg})` }} />
+        )}
+        {variant === 'violinazo' ? (
+          <img className="hb__img hb__img--violinazo" src="/assets/violinazo.png" alt="Violinazo" />
+        ) : variant === 'remontada' ? (
+          <img className="hb__img hb__img--remontada" src="/assets/remontada.png" alt="¡Remontada!" />
+        ) : variant === 'repoker' ? (
+          <img className="hb__img" src="/assets/repoker.png" alt="¡Repóker!" />
+        ) : (
+          <img className="hb__img" src="/assets/poker.png" alt="¡Póker!" />
+        )}
       </div>
     </>
   )

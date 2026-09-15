@@ -179,7 +179,7 @@ export default function App() {
     return () => { sub.remove() }
   }, [])
 
-  // ── Música de lobby ──────────────────────────────────────────────────────────
+  // ── Música de intro (solo splash/intro, antes de entrar al hall) ───────────────
   // La URL puede venir personalizada desde el backoffice (settings.introMusicUrl);
   // hasta que se resuelve el fetch usa la pista por defecto y se recrea si cambia.
   useEffect(() => {
@@ -187,21 +187,10 @@ export default function App() {
     audio.loop   = true
     audio.volume = 0.55
     musicRef.current = audio
-
-    function tryPlay() {
-      if (musicOnRef.current && musicGloballyEnabledRef.current) audio.play().catch(() => {})
-    }
-    document.addEventListener('click',      tryPlay, { once: true })
-    document.addEventListener('touchstart', tryPlay, { once: true })
-
-    return () => {
-      audio.pause()
-      document.removeEventListener('click',      tryPlay)
-      document.removeEventListener('touchstart', tryPlay)
-    }
+    return () => { audio.pause() }
   }, [musicUrls.intro])
 
-  // ── Música de partida ────────────────────────────────────────────────────────
+  // ── Música de hall + partida (todo lo que no sea splash/intro) ─────────────────
   useEffect(() => {
     const audio = new Audio(musicUrls.game || '/assets/dice-lemonlight.mp3')
     audio.loop   = true
@@ -210,18 +199,34 @@ export default function App() {
     return () => { audio.pause() }
   }, [musicUrls.game])
 
-  // ── Lobby: para en partida o al silenciar; partida: para en lobby o al silenciar
-  const inGame = !!(room && room.phase !== 'lobby')
+  // ── Splash/intro → bule-escaleira; hall (lista/crear sala) y partida (sala en
+  // espera o jugando) → dice-lemonlight. Solo se para al silenciar o al cambiar
+  // de pista, nunca al reproducirla — así no hace falta gesto nuevo cada vez.
+  const introScreenActive = !room && (screen === 'splash' || screen === 'intro')
   useEffect(() => {
-    const lobby = musicRef.current
-    const game  = gameMusicRef.current
-    if (!lobby || !game) return
+    const introTrack = musicRef.current
+    const hallTrack   = gameMusicRef.current
+    if (!introTrack || !hallTrack) return
     const on = musicOn && musicGloballyEnabled
-    if (inGame || !on) lobby.pause()
-    else                lobby.play().catch(() => {})
-    if (!inGame || !on) game.pause()
-    else                 game.play().catch(() => {})
-  }, [inGame, musicOn, musicGloballyEnabled])
+
+    function tryPlayCurrent() {
+      if (!musicOnRef.current || !musicGloballyEnabledRef.current) return
+      if (introScreenActive) introTrack.play().catch(() => {})
+      else                   hallTrack.play().catch(() => {})
+    }
+    document.addEventListener('click',      tryPlayCurrent, { once: true })
+    document.addEventListener('touchstart', tryPlayCurrent, { once: true })
+
+    if (!introScreenActive || !on) introTrack.pause()
+    else                           introTrack.play().catch(() => {})
+    if (introScreenActive || !on) hallTrack.pause()
+    else                          hallTrack.play().catch(() => {})
+
+    return () => {
+      document.removeEventListener('click',      tryPlayCurrent)
+      document.removeEventListener('touchstart', tryPlayCurrent)
+    }
+  }, [introScreenActive, musicOn, musicGloballyEnabled])
 
   function toggleMusic() {
     // Ref actualizado en síncrono: el listener global tryPlay del primer

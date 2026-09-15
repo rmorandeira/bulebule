@@ -68,6 +68,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
   const [rolling, setRolling] = useState(false)
   const [nextPlayerVisible, setNextPlayerVisible] = useState(false)
+  const [violinazo, setViolinazo] = useState(null) // { name } | null
+  const violinazoShownRef = useRef(new Set()) // claves "playerId:roundNumber" ya mostradas
   const [scoreDeltas, setScoreDeltas] = useState({})  // { [playerId]: deltaValue }
   const prevScoresRef = useRef({})                    // { [playerId]: score }
   const [resultsDisplayScores, setResultsDisplayScores] = useState({})  // { [playerId]: número mostrado (animado) }
@@ -107,12 +109,42 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   }, [pushBubble])
 
   // animacion_next_player: el servidor pausa el turno (awaitingContinue) hasta
-  // que alguien pulsa Continuar o expira su contador de 30s
+  // que alguien pulsa Continuar o expira su contador de 30s. Si quien acaba
+  // de terminar agotó las 3 tiradas y no consiguió ninguna combinación
+  // (Carta alta = "violinazo"), se muestra ese overlay primero y solo al
+  // cerrarse se revela el de cambio de turno — ver handleViolinazoDone. Si
+  // se planta antes (con Carta alta por elección, poco probable pero
+  // posible) no cuenta como violinazo — solo cuando no le quedó otra.
   const awaitingContinue = room.phase === 'playing' && room.awaitingContinue
   useEffect(() => {
-    if (awaitingContinue) setNextPlayerVisible(true)
-    if (room.phase !== 'playing') setNextPlayerVisible(false)
+    if (awaitingContinue) {
+      const maxAllowed = room.maxRolls ?? 3
+      const justFinished = room.players.find(p =>
+        p.done && p.hand?.rank === 0 && p.rollCount >= maxAllowed &&
+        !violinazoShownRef.current.has(`${p.id}:${room.roundNumber}`)
+      )
+      if (justFinished) {
+        violinazoShownRef.current.add(`${justFinished.id}:${room.roundNumber}`)
+        setViolinazo({ name: justFinished.name })
+        // Por si el overlay de cambio de turno del inicio de ESTE mismo turno
+        // todavía no había terminado su animación de salida (turno muy
+        // rápido) — sin esto se solapaban ambos overlays a la vez.
+        setNextPlayerVisible(false)
+      } else {
+        setNextPlayerVisible(true)
+      }
+    }
+    if (room.phase !== 'playing') {
+      setNextPlayerVisible(false)
+      setViolinazo(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [awaitingContinue, room.phase])
+
+  function handleViolinazoDone() {
+    setViolinazo(null)
+    setNextPlayerVisible(true)
+  }
 
   // Banner nativo inferior — se muestra durante la partida
   useEffect(() => {
@@ -930,6 +962,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     }}
                   />
                   <HandBurstEffect variant={handBurst} onDone={() => setHandBurst(null)} />
+                  <HandBurstEffect variant={violinazo ? 'violinazo' : null} onDone={handleViolinazoDone} />
+                  <HandBurstEffect variant={room.phase === 'playing' && room.remontada ? 'remontada' : null} onDone={() => {}} />
                   {messageBubbles.length > 0 && (
                     <div className="msg-bubble-stack">
                       {messageBubbles.map((b, i) => (
@@ -997,7 +1031,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     </p>
                     <div className="actions__row">
                       <button className="btn btn--secondary" onClick={handleStand} disabled={rollCount === 0 || isAnimating}>
-                        Plantarse
+                        Me planto
                       </button>
                       <CountdownButton
                         className="btn--primary"

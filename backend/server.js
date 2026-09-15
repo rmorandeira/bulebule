@@ -1022,6 +1022,49 @@ function clearTiebreakerTimer(room) {
   }
 }
 
+// Duraciones de los efectos manga (HandBurstEffect en el frontend) — deben
+// coincidir con DURATION_MS ahí. Se usan para retrasar el inicio de los
+// contadores de turno/continuar mientras esas animaciones se reproducen, así
+// no le comen tiempo real al jugador (ver usos más abajo).
+const POKER_MS = 1100;
+const REPOKER_MS = 1500;
+const VIOLINAZO_MS = 3400;
+
+// "Remontada": el último jugador de la ronda supera la jugada mínima (la
+// peor entre los ya terminados, la misma que el cliente muestra como
+// "Superar" en el dice-box) — ver AnimacionRemontada/HandBurstEffect en el
+// frontend. Mismo criterio de exclusión por desempate que usa el cliente
+// para calcular esa jugada mínima.
+const REMONTADA_MS = 1600;
+const REMONTADA_ENABLED = false; // desactivada a petición — lógica intacta para reactivar
+function findWorstFinishedHand(room, excludePlayerId) {
+  let worst = null;
+  for (const p of room.players) {
+    if (p.id === excludePlayerId) continue;
+    const counts = p.inDesempate ? (p.done && p.hand) : (p.done && p.hand && !room.desempate);
+    if (!counts) continue;
+    if (!worst || compareHands(p.hand, worst.hand) < 0) worst = p;
+  }
+  return worst;
+}
+
+function maybeRemontadaThenEndRound(room, player) {
+  const worst = REMONTADA_ENABLED ? findWorstFinishedHand(room, player.id) : null;
+  if (worst && compareHands(player.hand, worst.hand) > 0) {
+    room.remontada = { playerId: player.id, name: player.name };
+    const code = room.code;
+    setTimeout(() => {
+      const r = rooms[code];
+      if (!r || r.remontada?.playerId !== player.id) return;
+      r.remontada = null;
+      endRound(r);
+      broadcast(code);
+    }, REMONTADA_MS);
+    return;
+  }
+  endRound(room);
+}
+
 // ── Desempate a la caída (mini-ronda con los dados normales) ──────────────────
 
 function startDesempate(room, playerIds, provisionalWinnerId) {
@@ -1058,11 +1101,11 @@ function startDesempate(room, playerIds, provisionalWinnerId) {
 // alguien pulse Continuar o expire el contador de 30s
 const BOT_CONTINUE_TIMEOUT = 3_000;
 
-function awaitContinue(room) {
+function awaitContinue(room, extraDelayMs = 0) {
   clearContinueTimer(room);
   room.awaitingContinue = true;
   const nextPlayer = room.players[room.currentPlayerIndex];
-  const timeout = nextPlayer?.isBot ? BOT_CONTINUE_TIMEOUT : CONTINUE_TIMEOUT;
+  const timeout = (nextPlayer?.isBot ? BOT_CONTINUE_TIMEOUT : CONTINUE_TIMEOUT) + extraDelayMs;
   room.continueDeadline = Date.now() + timeout;
   const code = room.code;
   room.continueTimerId = setTimeout(() => {
@@ -1135,6 +1178,7 @@ function sanitize(room) {
     turnDeadline: room.turnDeadline ?? null,
     awaitingContinue: room.awaitingContinue ?? false,
     continueDeadline: room.continueDeadline ?? null,
+    remontada: room.remontada ?? null,
     maxRounds: room.maxRounds ?? 0,
     desempate: room.desempate ?? false,
     storyNode: room.storyNode ?? null,
@@ -1258,6 +1302,7 @@ function startRound(room) {
   room.continueDeadline = null;
   room.roundNumber = (room.roundNumber ?? 0) + 1;
   room.roundLoserId = null;
+  room.remontada = null;
   for (const p of room.players) {
     p.currentDice = [];
     p.rollHistory = [];
@@ -1354,9 +1399,14 @@ function finishTurn(room, player) {
   }
   if (next !== -1) {
     room.currentPlayerIndex = next;
-    awaitContinue(room);
+    // Violinazo: si este jugador agotó las tiradas sin ninguna combinación,
+    // el cliente reproduce esa animación (ver HandBurstEffect) antes de
+    // revelar el cambio de turno — sin este extra, el contador de
+    // "Continuar" ya estaría corriendo por detrás mientras se ve.
+    const isViolinazo = player.hand.rank === 0 && player.rollCount >= (room.maxRolls ?? 3);
+    awaitContinue(room, isViolinazo ? VIOLINAZO_MS : 0);
   } else {
-    endRound(room);
+    maybeRemontadaThenEndRound(room, player);
   }
 }
 
@@ -2310,8 +2360,14 @@ io.on('connection', (socket) => {
     maybeBotChatter(room, player);
 
     // El contador de 30s empieza cuando termina de reproducirse la animación
-    // en pantalla, no al lanzar — igual que antes (ver KEYFRAME_INTERVAL_MS)
-    const animMs = result.keyframes.length * KEYFRAME_INTERVAL_MS + 500;
+    // en pantalla, no al lanzar — igual que antes (ver KEYFRAME_INTERVAL_MS).
+    // Si esta tirada dispara el efecto manga de Póker/Repóker (los 5 dados
+    // recién tirados, sin ninguno guardado), se suma su duración también —
+    // si no, ese tiempo de animación se comía tiempo real del jugador.
+    const burstMs = rollingIndices.length === 5 && player.hand.rank === 7 ? REPOKER_MS
+      : rollingIndices.length === 5 && player.hand.rank === 6 ? POKER_MS
+      : 0;
+    const animMs = result.keyframes.length * KEYFRAME_INTERVAL_MS + 500 + burstMs;
     setTimeout(() => {
       if (rooms[socket.data.roomCode] !== room || room.phase !== 'playing' ||
           room.players[room.currentPlayerIndex] !== player || player.done) return;
