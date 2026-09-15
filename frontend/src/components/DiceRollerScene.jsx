@@ -35,13 +35,28 @@ const VALUE_RANK = { AS: 0, K: 1, Q: 2, J: 3, '8': 4, '7': 5 }
 const FACE_UP_QUATS = (() => {
   const E = THREE.Euler
   const Q = THREE.Quaternion
+  const rotY = deg => new Q().setFromEuler(new E(0, deg * Math.PI / 180, 0))
+  // Alineación base: lleva cada cara a +Y mundo (sin garantía de que el
+  // texto/pip quede legible desde la cámara — solo la cara correcta arriba).
+  const base = [
+    new Q().setFromEuler(new E(0, 0,  Math.PI / 2)),  // +X face (K)
+    new Q().setFromEuler(new E(0, 0, -Math.PI / 2)),  // -X face (Q)
+    new Q(),                                            // +Y face (AS)
+    new Q().setFromEuler(new E(Math.PI, 0, 0)),        // -Y face (7)
+    new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),  // +Z face (8)
+    new Q().setFromEuler(new E( Math.PI / 2, 0, 0)),  // -Z face (J)
+  ]
+  // Corrección de roll (giro extra sobre el eje vertical mundo) para que el
+  // texto quede derecho y legible — el mapeo de UV de RoundedBoxGeometry no
+  // es simétrico entre caras opuestas, así que cada una necesitó verificarse
+  // visualmente por separado (colocando el dado a mano y mirando el render).
   return [
-    new Q().setFromEuler(new E(0, 0,  Math.PI / 2)),  // +X face (K)  → +Y world
-    new Q().setFromEuler(new E(0, 0, -Math.PI / 2)),  // -X face (Q)  → +Y world
-    new Q(),                                            // +Y face (AS) → +Y world
-    new Q().setFromEuler(new E(Math.PI, 0, 0)),        // -Y face (7)  → +Y world
-    new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),  // +Z face (8)  → +Y world
-    new Q().setFromEuler(new E( Math.PI / 2, 0, 0)),  // -Z face (J)  → +Y world
+    base[0],                     // K: legible tal cual
+    rotY(90).multiply(base[1]),  // Q: +90°
+    base[2],                     // AS: pip simétrico
+    base[3],                     // 7: pip simétrico
+    base[4],                     // 8: legible tal cual
+    rotY(180).multiply(base[5]), // J: +180°
   ]
 })()
 
