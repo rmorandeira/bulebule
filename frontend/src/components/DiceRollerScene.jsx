@@ -167,7 +167,7 @@ const _eliminarAudio = new Audio('/assets/eliminar_dados.mp3')
 
 export default function DiceRollerScene({
   values, rollingIndices, pendingDiscards = [],
-  interactive, onDieClick, onSettled, keyframes, frameIntervalMs = 50, cornerSide = null, rollId, sorted = false,
+  interactive, onDieClick, onSettled, keyframes, frameIntervalMs = 50, keptPositions = [], rollId, sorted = false,
   skin = undefined,
 }) {
   const mountRef = useRef(null)
@@ -348,7 +348,7 @@ export default function DiceRollerScene({
   useEffect(() => {
     const ctx = ctxRef.current
     if (!ctx || !values?.length || !rollingIndices?.length || !keyframes?.length) return
-    rollWithSounds(ctx, [...values], [...rollingIndices], keyframes, frameIntervalMs, cornerSide)
+    rollWithSounds(ctx, [...values], [...rollingIndices], keyframes, frameIntervalMs, keptPositions)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollId])
 
@@ -645,7 +645,7 @@ function beginPlace(ctx, now) {
   })
 }
 
-function rollWithSounds(ctx, values, rollingIndices, keyframes, frameIntervalMs, cornerSide) {
+function rollWithSounds(ctx, values, rollingIndices, keyframes, frameIntervalMs, keptPositions) {
   ctx.rollId = (ctx.rollId ?? 0) + 1
   const myId = ctx.rollId
   ctx.camTween = {
@@ -675,26 +675,23 @@ function rollWithSounds(ctx, values, rollingIndices, keyframes, frameIntervalMs,
     return d && d.mesh.visible && (d.phase === 'idle' || d.moveActive)
   })
 
-  // Kept dice: slide to a random top corner (left or right) while discarded dice exit
+  // Los dados que se quedan se apartan a las posiciones EXACTAS donde el
+  // servidor puso los obstáculos al simular (keptPositions), así los dados que
+  // caen chocan de verdad contra ellos en vez de atravesarlos. Antes el cliente
+  // elegía la esquina por su cuenta y podía no coincidir con la simulación.
   const keptDice = [0,1,2,3,4].filter(i =>
     !rollingIndices.includes(i) &&
     ctx.dice[i].mesh.visible &&
     (ctx.dice[i].phase === 'idle' || ctx.dice[i].moveActive)
   )
-  if (keptDice.length > 0 && needExit.length > 0) {
+  if (keptDice.length > 0 && keptPositions?.length) {
     const now = performance.now()
-    // side: +1 = right wall, -1 = left wall. Lo decide el servidor (mismo lado
-    // que usó como obstáculo físico al simular la tirada) para que los dados
-    // que caen realmente choquen con los guardados en vez de atravesarlos.
-    const side = cornerSide === 1 || cornerSide === -1 ? cornerSide : (Math.random() < 0.5 ? 1 : -1)
-    const anchorX = side * (WX - 0.8)   // ±3.4 — just inside the wall
-    const cornerZ = -(WZ - 0.8)          // -2.6 — just inside the back wall
     keptDice.forEach((dieIdx, slot) => {
+      const p = keptPositions[slot]
+      if (!p) return
       const d = ctx.dice[dieIdx]
-      // Expand dice away from the wall so they don't overlap
-      const x = anchorX - side * slot * 1.65
       d.moveFrom.copy(d.mesh.position)
-      d.moveTo.set(x, REST_Y, cornerZ)
+      d.moveTo.set(p.x, p.y, p.z)
       d.moveTs = now
       d.moveActive = true
       d.inCorner = true

@@ -56,7 +56,8 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [sceneValues, setSceneValues] = useState(null)
   const [rollKeyframes, setRollKeyframes] = useState(null)
   const [frameIntervalMs, setFrameIntervalMs] = useState(50)
-  const [rollCornerSide, setRollCornerSide] = useState(null)
+  const [keptPositions, setKeptPositions] = useState([])
+  const [rollKeptHand, setRollKeptHand] = useState(null)
   const [rollId, setRollId] = useState(0)
   const [scoreboardDice, setScoreboardDice] = useState({})
   const [leaveIntent, setLeaveIntent] = useState(null) // null | 'refresh' | 'exit'
@@ -269,13 +270,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   // (ver [[project_dice_sync_bug]] en memoria). El evento es autocontenido
   // (trae los valores finales), no depende de la llegada de room_state.
   useEffect(() => {
-    function onDiceKeyframes({ rollingIndices: ri, keyframes, values, frameIntervalMs: fi, cornerSide }) {
+    function onDiceKeyframes({ rollingIndices: ri, keyframes, values, frameIntervalMs: fi, keptPositions, keptHand }) {
       if (!Array.isArray(ri) || !Array.isArray(keyframes) || !Array.isArray(values)) return
       setSceneValues(values)
       setRollingIndices(ri)
       setRollKeyframes(keyframes)
       setFrameIntervalMs(fi ?? 50)
-      setRollCornerSide(cornerSide ?? null)
+      setKeptPositions(Array.isArray(keptPositions) ? keptPositions : [])
+      setRollKeptHand(keptHand ?? null)
       setRollId(id => id + 1)
     }
     socket.on('dice_keyframes', onDiceKeyframes)
@@ -299,6 +301,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     )
     setPendingDiscards([])
     setRollingIndices([])   // limpia hasta que llegue la respuesta del servidor
+    // Fija ya la jugada de los dados que se quedan, para que no parpadee la
+    // del lanzamiento anterior mientras llega el resultado del servidor
+    setRollKeptHand(me?.keptHand ?? null)
     socket.emit('roll', { keptIndices }, (res) => {
       setRolling(false)
       if (!res?.ok && res?.error) alert(res.error)
@@ -782,8 +787,9 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             {[...room.players].sort((a, b) => b.wins - a.wins).map((p) => {
               const isActive = p.id === currentPlayer?.id
               const isRolling = rollingIndices.length > 0 && isActive
+              // Mientras ruedan, solo los dados que se quedan sobre el tablero
               const dice = isRolling
-                ? (scoreboardDice[p.id] ?? [])
+                ? (scoreboardDice[p.id] ?? []).filter((_, i) => !rollingIndices.includes(i))
                 : (p.currentDice?.length > 0 ? p.currentDice : [])
               const delta = scoreDeltas[p.id]
               return (
@@ -837,6 +843,12 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
           ) : (() => {
             const rollNum = displayPlayer?.rollCount ?? 0
 
+            // El resultado de la tirada no se destapa hasta que los dados paran:
+            // mientras ruedan (o mientras se eligen descartes) se muestra la
+            // jugada que forman los dados que se quedan sobre el tablero.
+            const partialHand = isAnimating ? rollKeptHand : (displayPlayer?.keptHand ?? null)
+            const shownHand = partialHand ?? (isAnimating ? null : displayPlayer?.hand ?? null)
+
             // Jugada mínima = la peor mano de los jugadores ya terminados (la que hay que superar para no perder)
             let minHand = null
             for (const p of room.players) {
@@ -854,10 +866,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
             return (
               <div className="dice-box">
                 <div className="dice-box__header">
-                  {displayPlayer?.hand?.rank != null && (
+                  {shownHand?.rank != null && (
                     <>
-                      <span className="dice-box__hand-desc">{displayPlayer.hand.desc}</span>
-                      <span className="dice-box__hand-pts">+{handPts(displayPlayer.hand.rank)} Bules</span>
+                      <span className="dice-box__hand-desc">{shownHand.desc}</span>
+                      {/* Los Bules solo cuando la jugada es definitiva — con
+                          dados aún rodando o descartados no es la mano final */}
+                      {!partialHand && (
+                        <span className="dice-box__hand-pts">+{handPts(shownHand.rank)} Bules</span>
+                      )}
                     </>
                   )}
                 </div>
@@ -876,7 +892,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                     onDieClick={toggleDiscard}
                     keyframes={rollKeyframes}
                     frameIntervalMs={frameIntervalMs}
-                    cornerSide={rollCornerSide}
+                    keptPositions={keptPositions}
                     rollId={rollId}
                     sorted={!!displayPlayer?.done}
                     skin={isMyTurn ? undefined : (currentPlayer?.diceSkin ?? null)}

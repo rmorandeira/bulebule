@@ -7,7 +7,7 @@ const webpush = require('web-push');
 const fs = require('fs');
 const path = require('path');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
-const { simulateRoll, KEYFRAME_INTERVAL_MS } = require('./game/dicePhysics');
+const { simulateRoll, KEYFRAME_INTERVAL_MS, cornerPos } = require('./game/dicePhysics');
 
 let diceSeedBank = {};
 try {
@@ -18,6 +18,15 @@ try {
 const DICE_CANON_ORDER = ['AS', 'K', 'Q', 'J', '8', '7'];
 function diceSortedKey(values) {
   return [...values].sort((a, b) => DICE_CANON_ORDER.indexOf(a) - DICE_CANON_ORDER.indexOf(b)).join(',');
+}
+
+// Jugada que forman solo los dados que se quedan sobre el tablero (los que no
+// se descartan). Es lo que se muestra mientras ruedan los nuevos dados, para
+// no destapar el resultado de la tirada antes de que los dados paren.
+function handOfKept(currentDice, discardedIndices) {
+  if (!Array.isArray(currentDice) || currentDice.length === 0) return null;
+  const kept = currentDice.filter((_, i) => !discardedIndices.includes(i));
+  return kept.length > 0 ? evaluateHand(kept) : null;
 }
 
 // Lanza rollingIndices.length dados: rollDie() (RNG justo, uniforme) decide el
@@ -58,7 +67,14 @@ async function performDiceRoll(rollingIndices, keptCount = 0) {
 
   // faces[p] es el valor final del game-slot rollingIndices[p] — mismo orden
   // posicional que ya usaba el cliente para su física local.
-  return { faces: result.faces, keyframes: result.keyframes, cornerSide };
+  // keptPositions son las coordenadas EXACTAS donde se pusieron los obstáculos:
+  // el cliente aparca ahí los dados guardados, así lo que se ve coincide
+  // siempre con lo que chocó en la simulación (antes el cliente calculaba la
+  // esquina por su cuenta y podía no cuadrar → dados atravesándose).
+  const keptPositions = keptCorner
+    ? Array.from({ length: keptCount }, (_, slot) => cornerPos(cornerSide, slot))
+    : [];
+  return { faces: result.faces, keyframes: result.keyframes, keptPositions };
 }
 
 // Última red de seguridad: un error asíncrono sin capturar (p.ej. dentro de
@@ -915,6 +931,7 @@ async function botAct(code) {
     const result = await performDiceRoll(rollingIndices, keptIndices.length);
     if (rooms[code] !== room || room.phase !== 'playing' || room.players[room.currentPlayerIndex] !== bot) return;
 
+    const keptHand = handOfKept(bot.currentDice, rollingIndices);
     rollingIndices.forEach((slot, p) => { bot.currentDice[slot] = result.faces[p]; });
     bot.hand = evaluateHand(bot.currentDice);
     bot.rollCount++;
@@ -922,7 +939,8 @@ async function botAct(code) {
     room.botPhase = 'rolled';
     room.botKeptIndices = [];
     io.to(code).emit('dice_keyframes', {
-      playerId: bot.id, rollingIndices, keyframes: result.keyframes, cornerSide: result.cornerSide,
+      playerId: bot.id, rollingIndices, keyframes: result.keyframes,
+      keptPositions: result.keptPositions, keptHand,
       values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
     });
     broadcast(code);
@@ -956,7 +974,8 @@ async function botAct(code) {
   room.botPhase = 'rolled';
   room.botKeptIndices = [];
   io.to(code).emit('dice_keyframes', {
-    playerId: bot.id, rollingIndices, keyframes: result.keyframes, cornerSide: result.cornerSide,
+    playerId: bot.id, rollingIndices, keyframes: result.keyframes,
+    keptPositions: result.keptPositions, keptHand: null,
     values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
   });
   broadcast(code);
@@ -1119,6 +1138,11 @@ function sanitize(room) {
         rollSeed: p.rollSeed ?? null,
         done: p.done,
         hand: p.hand,
+        // Jugada de los dados que se quedan sobre el tablero al marcar
+        // descartes — se muestra en vez de la mano completa mientras se elige
+        keptHand: (p.pendingDiscards?.length && !p.done)
+          ? handOfKept(p.currentDice, p.pendingDiscards)
+          : null,
         wins: p.wins,
         breaks: p.breaks ?? 0,
         liberado: p.liberado ?? false,
@@ -2185,6 +2209,7 @@ io.on('connection', (socket) => {
       return cb?.({ ok: false });
     }
 
+    const keptHand = player.rollCount > 0 ? handOfKept(player.currentDice, rollingIndices) : null;
     rollingIndices.forEach((slot, p) => { player.currentDice[slot] = result.faces[p]; });
     player.hand = evaluateHand(player.currentDice);
     player.rollCount += 1;
@@ -2195,7 +2220,8 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true });
     io.to(room.code).emit('dice_keyframes', {
-      playerId: player.id, rollingIndices, keyframes: result.keyframes, cornerSide: result.cornerSide,
+      playerId: player.id, rollingIndices, keyframes: result.keyframes,
+      keptPositions: result.keptPositions, keptHand,
       values: player.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
     });
     broadcast(room.code);
