@@ -48,7 +48,6 @@ const style = `
 .hb__flash {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 50%, #fff 0%, #fff 35%, rgba(255,255,255,0) 72%);
   animation: hb_flash var(--hb-dur, 1100ms) ease-out forwards;
 }
 .hb__lines {
@@ -114,7 +113,9 @@ export default function HandBurstEffect({ variant, onDone }) {
 
   if (!variant) return null
 
-  const lineImg = isDarkTheme() ? '/assets/speedlines-dark.png' : '/assets/speedlines-light.png'
+  const dark = isDarkTheme()
+  const lineImg = dark ? '/assets/speedlines-dark.png' : '/assets/speedlines-light.png'
+  const flashRgb = dark ? '0,0,0' : '255,255,255'
 
   return (
     <>
@@ -123,7 +124,10 @@ export default function HandBurstEffect({ variant, onDone }) {
         className={`hb${variant === 'repoker' ? ' hb--repoker' : ''}`}
         style={{ '--hb-dur': `${duration}ms` }}
       >
-        <div className="hb__flash" />
+        <div
+          className="hb__flash"
+          style={{ background: `radial-gradient(circle at 50% 50%, rgba(${flashRgb},1) 0%, rgba(${flashRgb},1) 35%, rgba(${flashRgb},0) 72%)` }}
+        />
         <div className="hb__lines" style={{ backgroundImage: `url(${lineImg})` }} />
         {variant === 'repoker'
           ? <img className="hb__img" src="/assets/repoker.png" alt="¡Repóker!" />
