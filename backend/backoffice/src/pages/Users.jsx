@@ -25,7 +25,7 @@ export default function Users() {
   const [search, setSearch]         = useState('');
   const [offset, setOffset]         = useState(0);
   const [editModal, setEditModal]   = useState(null);
-  const [editForm, setEditForm]     = useState({ name: '', email: '', score: 0, active: true, visible: true });
+  const [editForm, setEditForm]     = useState({ name: '', email: '', score: 0, active: true, visible: true, isTester: false });
   const [detail, setDetail]         = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving]         = useState(false);
@@ -128,11 +128,12 @@ export default function Users() {
 
   async function openEdit(user) {
     setEditForm({
-      name:    user.name,
-      email:   user.email ?? '',
-      score:   user.score ?? 0,
-      active:  user.active !== 0,
-      visible: user.visible !== 0,
+      name:     user.name,
+      email:    user.email ?? '',
+      score:    user.score ?? 0,
+      active:   user.active !== 0,
+      visible:  user.visible !== 0,
+      isTester: user.is_tester === 1,
     });
     setEditModal(user);
     setDetail(null);
@@ -151,11 +152,12 @@ export default function Users() {
     setSaving(true);
     try {
       await api.users.update(editModal.user_id, {
-        name:    editForm.name,
-        email:   editForm.email || null,
-        score:   Number(editForm.score),
-        active:  editForm.active,
-        visible: editForm.visible,
+        name:     editForm.name,
+        email:    editForm.email || null,
+        score:    Number(editForm.score),
+        active:   editForm.active,
+        visible:  editForm.visible,
+        isTester: editForm.isTester,
       });
       toast('Usuario actualizado', 'success');
       setEditModal(null);
@@ -294,6 +296,7 @@ export default function Users() {
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <span className={`badge ${u.visible ? 'badge-green' : 'badge-gray'}`}>{u.visible ? 'Visible' : 'Oculto'}</span>
                           <span className={`badge ${u.active ? 'badge-green' : 'badge-red'}`}>{u.active ? 'Activo' : 'Inactivo'}</span>
+                          {u.is_tester === 1 && <span className="badge badge-purple">🎯 Tester</span>}
                         </div>
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fmtDate(u.created_at)}</td>
@@ -354,6 +357,10 @@ export default function Users() {
           <div className="toggle-row">
             <Switch checked={editForm.active} onChange={v => setField('active', v)} disabled={!editForm.visible} />
             <label style={!editForm.visible ? { opacity: 0.5 } : undefined}>Activo (puede jugar)</label>
+          </div>
+          <div className="toggle-row">
+            <Switch checked={editForm.isTester} onChange={v => setField('isTester', v)} />
+            <label>Tester (puede forzar su próxima jugada en partida)</label>
           </div>
 
           {detailLoading ? (

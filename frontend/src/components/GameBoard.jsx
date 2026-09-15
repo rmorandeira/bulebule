@@ -7,6 +7,7 @@ import AnimacionNextPlayer from './AnimacionNextPlayer'
 import AnimacionPalilloRoto from './AnimacionPalilloRoto'
 import DiceRollerScene from './DiceRollerScene'
 import HandBurstEffect from './HandBurstEffect'
+import TesterHandPicker from './TesterHandPicker'
 import CountdownButton from './CountdownButton'
 import WaitingBar from './WaitingBar'
 import { pushBackHandler } from '../utils/backHandler'
@@ -1002,6 +1003,7 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       >
                         Tirar dados
                       </CountdownButton>
+                      {me?.isTester && <TesterHandPicker forcedHandRank={me?.forcedHandRank ?? null} />}
                     </div>
                   </>
                 )}

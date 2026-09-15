@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
 const { simulateRoll, KEYFRAME_INTERVAL_MS, cornerPos } = require('./game/dicePhysics');
+const { achievableRanks, pickCompletionForRank } = require('./game/testerHands');
 
 let diceSeedBank = {};
 try {
@@ -41,8 +42,11 @@ function handOfKept(currentDice, discardedIndices) {
 // los dados que se tiran choquen con ellos en vez de atravesarlos. El banco
 // de semillas se generó SIN ese obstáculo, así que se revalida el resultado
 // y se reintenta con otra semilla del bucket si el choque lo desvía (raro).
-async function performDiceRoll(rollingIndices, keptCount = 0) {
-  const targetValues = rollingIndices.map(() => rollDie());
+async function performDiceRoll(rollingIndices, keptCount = 0, forcedTargetValues = null) {
+  // forcedTargetValues: jugador tester forzando el resultado de esta tirada
+  // (ver isTesterPlayer / tester_set_forced_hand) — misma física y banco de
+  // semillas, solo cambia quién decide el valor objetivo de cada dado.
+  const targetValues = forcedTargetValues ?? rollingIndices.map(() => rollDie());
   const key = diceSortedKey(targetValues);
   const bucket = diceSeedBank[rollingIndices.length]?.[key];
   const cornerSide = keptCount > 0 ? (Math.random() < 0.5 ? 1 : -1) : null;
@@ -346,6 +350,9 @@ db.exec(`
   // RGPD: fecha de aceptación de política de privacidad / términos y condiciones
   if (!cols.includes('privacy_accepted_at')) db.prepare('ALTER TABLE users ADD COLUMN privacy_accepted_at INTEGER').run();
   if (!cols.includes('terms_accepted_at'))   db.prepare('ALTER TABLE users ADD COLUMN terms_accepted_at   INTEGER').run();
+  // Cuentas de prueba (backoffice): pueden forzar la jugada de su próxima
+  // tirada, para reproducir bugs sin depender del azar — ver tester_*
+  if (!cols.includes('is_tester')) db.prepare('ALTER TABLE users ADD COLUMN is_tester INTEGER NOT NULL DEFAULT 0').run();
 })();
 
 db.exec(`
@@ -408,8 +415,8 @@ db.exec(`
 
 // ── Load persisted users + push subscriptions into memory ─────────────────────
 (function loadPersistedData() {
-  for (const u of db.prepare('SELECT user_id, name, email, picture FROM users').all()) {
-    registeredUsers[u.user_id] = { userId: u.user_id, name: u.name, email: u.email ?? null, picture: u.picture ?? null, socketId: null, pushSubscription: null, isGoogleUser: true };
+  for (const u of db.prepare('SELECT user_id, name, email, picture, is_tester FROM users').all()) {
+    registeredUsers[u.user_id] = { userId: u.user_id, name: u.name, email: u.email ?? null, picture: u.picture ?? null, socketId: null, pushSubscription: null, isGoogleUser: true, isTester: !!u.is_tester };
   }
   let subCount = 0;
   for (const s of db.prepare('SELECT user_id, endpoint, p256dh, auth FROM push_subscriptions').all()) {
@@ -620,6 +627,14 @@ function getUserIdForPlayer(player) {
   return socketToUser[player.id] ?? null;
 }
 
+// Cuenta de prueba marcada desde el backoffice — puede forzar el resultado
+// de su próxima tirada (ver tester_hand_options / tester_set_forced_hand).
+function isTesterPlayer(player) {
+  if (!player || player.isBot) return false;
+  const uid = getUserIdForPlayer(player);
+  return !!uid && !!registeredUsers[uid]?.isTester;
+}
+
 function awardRoundPoints(room) {
   if (!room.pendingScores) room.pendingScores = {};
   for (const player of room.players) {
@@ -800,7 +815,7 @@ function makeRateLimiter(maxCalls, windowMs) {
 }
 
 function makePlayer(id, name) {
-  return { id, name, diceSkin: null, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false };
+  return { id, name, diceSkin: null, currentDice: [], rollHistory: [], rollDiscardHistory: [], rollCount: 0, done: false, hand: null, wins: 0, pendingDiscards: [], breaks: 0, liberado: false, forcedHandRank: null };
 }
 
 function makeBotPlayer(n = 0) {
@@ -1143,6 +1158,8 @@ function sanitize(room) {
         keptHand: (p.pendingDiscards?.length && !p.done)
           ? handOfKept(p.currentDice, p.pendingDiscards)
           : null,
+        isTester: isTesterPlayer(p),
+        forcedHandRank: p.forcedHandRank ?? null,
         wins: p.wins,
         breaks: p.breaks ?? 0,
         liberado: p.liberado ?? false,
@@ -1249,6 +1266,7 @@ function startRound(room) {
     p.done = !!p.liberado; // los liberados ya no juegan
     p.hand = null;
     p.pendingDiscards = [];
+    p.forcedHandRank = null;
   }
   // Si quien abriría la ronda ya está liberado, pasa al siguiente jugador disponible
   const n = room.players.length;
@@ -1310,6 +1328,7 @@ function applyRoundLoss(room, loser) {
 function finishTurn(room, player) {
   clearTurnTimer(room);
   player.done = true;
+  player.forcedHandRank = null;
   player.hand = evaluateHand(player.currentDice);
   if (player.hand.rank === 7) {
     player.liberado = true;
@@ -1698,7 +1717,7 @@ app.delete('/api/admin/tournaments/:id', requireAdmin, (req, res) => {
 // Users management
 app.get('/api/admin/users', requireAdmin, (req, res) => {
   const { q, limit = 50, offset = 0 } = req.query;
-  const base = `SELECT u.user_id, u.name, u.email, u.picture, u.active, u.visible, u.created_at, ps.score, ps.games_played, ps.games_won
+  const base = `SELECT u.user_id, u.name, u.email, u.picture, u.active, u.visible, u.is_tester, u.created_at, ps.score, ps.games_played, ps.games_won
     FROM users u LEFT JOIN player_stats ps ON u.user_id=ps.user_id`;
   if (q) {
     const like = `%${q}%`;
@@ -1720,19 +1739,21 @@ app.get('/api/admin/users/:id', requireAdmin, (req, res) => {
 });
 
 app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
-  const { name, email, score, active, visible } = req.body;
+  const { name, email, score, active, visible, isTester } = req.body;
   const uid = req.params.id;
   if (name    !== undefined) db.prepare('UPDATE users SET name=?, updated_at=unixepoch() WHERE user_id=?').run(name, uid);
   if (email   !== undefined) db.prepare('UPDATE users SET email=?, updated_at=unixepoch() WHERE user_id=?').run(email, uid);
   if (active  !== undefined) db.prepare('UPDATE users SET active=?, updated_at=unixepoch() WHERE user_id=?').run(active !== false ? 1 : 0, uid);
   if (visible !== undefined) db.prepare('UPDATE users SET visible=?, updated_at=unixepoch() WHERE user_id=?').run(visible !== false ? 1 : 0, uid);
+  if (isTester !== undefined) db.prepare('UPDATE users SET is_tester=?, updated_at=unixepoch() WHERE user_id=?').run(isTester ? 1 : 0, uid);
   if (score !== undefined) {
     if (db.prepare('SELECT 1 FROM player_stats WHERE user_id=?').get(uid))
       db.prepare('UPDATE player_stats SET score=?, updated_at=unixepoch() WHERE user_id=?').run(score, uid);
   }
   if (registeredUsers[uid]) {
-    if (name  !== undefined) registeredUsers[uid].name  = name;
-    if (email !== undefined) registeredUsers[uid].email = email;
+    if (name     !== undefined) registeredUsers[uid].name     = name;
+    if (email    !== undefined) registeredUsers[uid].email    = email;
+    if (isTester !== undefined) registeredUsers[uid].isTester = !!isTester;
   }
   res.json({ ok: true });
 });
@@ -2175,6 +2196,54 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
+  // Jugador tester (marcado desde el backoffice): consulta qué jugadas son
+  // alcanzables en la próxima tirada dado lo que ya tiene bloqueado.
+  socket.on('tester_hand_options', (cb) => {
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.phase !== 'playing') return cb?.({ ok: false });
+    const player = room.players[room.currentPlayerIndex];
+    if (!player || player.id !== socket.id || player.done) return cb?.({ ok: false });
+    if (!isTesterPlayer(player)) return cb?.({ ok: false, error: 'No autorizado' });
+    const maxAllowed = room.maxRolls ?? 3;
+    if (player.rollCount >= maxAllowed) return cb?.({ ok: false, error: 'No puedes tirar más' });
+    const keptValues = player.rollCount > 0
+      ? player.currentDice.filter((_, i) => !(player.pendingDiscards ?? []).includes(i))
+      : [];
+    cb?.({ ok: true, options: achievableRanks(keptValues) });
+  });
+
+  // Arma la jugada forzada para la próxima tirada de este turno (se consume
+  // al tirar, ver socket.on('roll', ...)).
+  socket.on('tester_set_forced_hand', ({ rank } = {}, cb) => {
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const room = rooms[socket.data.roomCode];
+    if (!room || room.phase !== 'playing') return cb?.({ ok: false });
+    const player = room.players[room.currentPlayerIndex];
+    if (!player || player.id !== socket.id || player.done) return cb?.({ ok: false });
+    if (!isTesterPlayer(player)) return cb?.({ ok: false, error: 'No autorizado' });
+    const maxAllowed = room.maxRolls ?? 3;
+    if (player.rollCount >= maxAllowed) return cb?.({ ok: false, error: 'No puedes tirar más' });
+    if (typeof rank !== 'number' || rank < 0 || rank > 7) return cb?.({ ok: false });
+    const keptValues = player.rollCount > 0
+      ? player.currentDice.filter((_, i) => !(player.pendingDiscards ?? []).includes(i))
+      : [];
+    const isAchievable = achievableRanks(keptValues).some(o => o.rank === rank);
+    if (!isAchievable) return cb?.({ ok: false, error: 'Jugada no alcanzable con los dados bloqueados' });
+    player.forcedHandRank = rank;
+    cb?.({ ok: true });
+    broadcast(room.code);
+  });
+
+  socket.on('tester_clear_forced_hand', (cb) => {
+    if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
+    const room = rooms[socket.data.roomCode];
+    const player = room?.players?.find(p => p.id === socket.id);
+    if (player) player.forcedHandRank = null;
+    cb?.({ ok: true });
+    if (room) broadcast(room.code);
+  });
+
   socket.on('roll', async ({ keptIndices = [] }, cb) => {
     if (!rl.action()) return cb?.({ ok: false, error: 'Demasiadas peticiones' });
     const room = rooms[socket.data.roomCode];
@@ -2195,10 +2264,23 @@ io.on('connection', (socket) => {
       player.rollDiscardHistory.push(rollingIndices);
     }
 
+    // Jugador tester: si hay una jugada forzada armada, sustituye el RNG por
+    // valores objetivo que garantizan ese resultado exacto — se consume aquí
+    // tanto si tiene éxito como si no (ver tester_set_forced_hand).
+    let forcedTargetValues = null;
+    if (player.forcedHandRank != null) {
+      const keptValues = player.currentDice.filter((_, i) => !rollingIndices.includes(i));
+      forcedTargetValues = pickCompletionForRank(keptValues, player.forcedHandRank);
+      if (!forcedTargetValues) {
+        console.warn(`tester: jugada forzada rank=${player.forcedHandRank} ya no alcanzable al tirar — se ignora`);
+      }
+      player.forcedHandRank = null;
+    }
+
     player.rollInFlight = true;
     let result;
     try {
-      result = await performDiceRoll(rollingIndices, diceCount - rollingIndices.length);
+      result = await performDiceRoll(rollingIndices, diceCount - rollingIndices.length, forcedTargetValues);
     } finally {
       player.rollInFlight = false;
     }

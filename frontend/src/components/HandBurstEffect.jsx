@@ -2,7 +2,11 @@ import { useEffect } from 'react'
 
 // Efecto manga de "speed lines" al sacar Póker/Repóker — siempre en blanco y
 // negro (modo Light) para máximo contraste, independiente del tema de la app.
-// Repóker añade además un temblor de pantalla (ver .dice-box--quake en index.css).
+// Repóker añade además un temblor de pantalla (ver .dice-box--quake en
+// index.css) y sustituye el texto por la imagen repoker.png, deslizando con
+// la misma curva que la animación de cambio de turno (AnimacionNextPlayer:
+// entra desde la izquierda, sale por la derecha), pero contenida dentro de
+// la caja de dados en vez de a pantalla completa.
 const style = `
 @keyframes hb_flash {
   0%   { opacity: 0; }
@@ -22,6 +26,13 @@ const style = `
   85%  { opacity: 1;  transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
   100% { opacity: 0;  transform: translate(-50%, -50%) scale(1.08) rotate(-3deg); }
 }
+@keyframes hb_img_slide {
+  0%   { transform: translate(-50%, -50%) translateX(-170%); opacity: 0; }
+  8%   { opacity: 1; }
+  30%  { transform: translate(-50%, -50%) translateX(0); opacity: 1; }
+  78%  { transform: translate(-50%, -50%) translateX(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) translateX(170%); opacity: 1; }
+}
 .hb {
   position: absolute;
   inset: 0;
@@ -33,12 +44,12 @@ const style = `
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at 50% 50%, #fff 0%, #fff 35%, rgba(255,255,255,0) 72%);
-  animation: hb_flash 480ms ease-out forwards;
+  animation: hb_flash var(--hb-dur, 1100ms) ease-out forwards;
 }
 .hb__lines {
   position: absolute;
   inset: -25%;
-  animation: hb_lines_in 1100ms cubic-bezier(.22,1,.36,1) forwards;
+  animation: hb_lines_in var(--hb-dur, 1100ms) cubic-bezier(.22,1,.36,1) forwards;
   background-image:
     repeating-conic-gradient(from 0deg at 50% 50%, rgba(10,10,10,0.92) 0deg 1deg, transparent 1deg 3.4deg),
     repeating-conic-gradient(from 12deg at 50% 50%, rgba(10,10,10,0.55) 0deg 0.7deg, transparent 0.7deg 5.6deg),
@@ -50,7 +61,7 @@ const style = `
   position: absolute;
   left: 50%;
   top: 50%;
-  animation: hb_badge_pop 1100ms cubic-bezier(.22,1,.36,1) forwards;
+  animation: hb_badge_pop var(--hb-dur, 1100ms) cubic-bezier(.22,1,.36,1) forwards;
   font-family: Georgia, 'Times New Roman', serif;
   font-weight: 900;
   font-style: italic;
@@ -62,7 +73,14 @@ const style = `
   text-shadow: 0 0 0 #fff, 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff;
   white-space: nowrap;
 }
-.hb--repoker .hb__badge { color: #c0161e; }
+.hb__img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(78%, 320px);
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.45));
+  animation: hb_img_slide var(--hb-dur, 1500ms) cubic-bezier(.22,1,.36,1) forwards;
+}
 @keyframes dice_box_quake {
   0%   { transform: translate(0,0) rotate(0deg); }
   10%  { transform: translate(-6px, 3px) rotate(-1deg); }
@@ -79,24 +97,28 @@ const style = `
 .dice-box--quake { animation: dice_box_quake 650ms ease-in-out; }
 `
 
-const LABEL = { poker: '¡PÓKER!', repoker: '¡REPÓKER!' }
-const DURATION_MS = 1100
+const DURATION_MS = { poker: 1100, repoker: 1500 }
 
 export default function HandBurstEffect({ variant, onDone }) {
+  const duration = DURATION_MS[variant] ?? 1100
+
   useEffect(() => {
-    const t = setTimeout(() => onDone?.(), DURATION_MS)
+    if (!variant) return
+    const t = setTimeout(() => onDone?.(), duration)
     return () => clearTimeout(t)
-  }, [onDone])
+  }, [variant, duration, onDone])
 
   if (!variant) return null
 
   return (
     <>
       <style>{style}</style>
-      <div className={`hb${variant === 'repoker' ? ' hb--repoker' : ''}`}>
+      <div className={`hb${variant === 'repoker' ? ' hb--repoker' : ''}`} style={{ '--hb-dur': `${duration}ms` }}>
         <div className="hb__flash" />
         <div className="hb__lines" />
-        <span className="hb__badge">{LABEL[variant]}</span>
+        {variant === 'repoker'
+          ? <img className="hb__img" src="/assets/repoker.png" alt="¡Repóker!" />
+          : <span className="hb__badge">¡PÓKER!</span>}
       </div>
     </>
   )
