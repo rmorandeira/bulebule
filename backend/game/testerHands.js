@@ -8,7 +8,10 @@
 const { evaluateHand } = require('../gameLogic');
 
 const DICE_VALUES = ['AS', 'K', 'Q', 'J', '8', '7'];
-const RANK_NAMES = ['Carta alta', 'Pareja', 'Dobles parejas', 'Trío', 'Escalera', 'Full', 'Póker', 'Repóker'];
+// "Carta alta" (rank 0) es la jugada sin ninguna combinación — el evento
+// "violinazo" (sonido + animación) se dispara con este mismo resultado, así
+// que se etiqueta explícito para que el tester sepa cómo provocarlo.
+const RANK_NAMES = ['Carta alta (Violinazo)', 'Pareja', 'Dobles parejas', 'Trío', 'Escalera', 'Full', 'Póker', 'Repóker'];
 
 function combosWithRepetition(values, k) {
   const results = [];

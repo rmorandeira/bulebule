@@ -7,7 +7,7 @@ import socket from '../socket'
 // los dados ya bloqueados (ver tester_hand_options/tester_set_forced_hand
 // en backend/server.js) y sigue usando física + banco de semillas reales,
 // solo cambia quién decide el valor objetivo de cada dado.
-const RANK_LABELS = ['Carta alta', 'Pareja', 'Dobles parejas', 'Trío', 'Escalera', 'Full', 'Póker', 'Repóker']
+const RANK_LABELS = ['Carta alta (Violinazo)', 'Pareja', 'Dobles parejas', 'Trío', 'Escalera', 'Full', 'Póker', 'Repóker']
 
 export default function TesterHandPicker({ forcedHandRank }) {
   const [open, setOpen] = useState(false)

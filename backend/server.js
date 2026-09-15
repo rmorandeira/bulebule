@@ -2433,7 +2433,16 @@ io.on('connection', (socket) => {
 
     const prev = registeredUsers[userId];
     if (prev?.socketId) delete socketToUser[prev.socketId];
-    registeredUsers[userId] = { ...(prev || {}), userId, name, email: email ?? null, picture: picture ?? null, socketId: socket.id, isGoogleUser };
+    // isGoogleUser es un estado PERSISTENTE del usuario (se verificó alguna
+    // vez con Google), no algo que cada reconexión deba recalcular — la
+    // mayoría de register_user posteriores al login inicial llegan sin
+    // idToken (recarga de página, reconexión tras corte), así que sin este
+    // OR aquí se pisaba a `false` en cada una de esas reconexiones. Eso hacía
+    // que el handler de 'disconnect' tratara a un usuario real de Google como
+    // invitado y borrara su entrada entera de registeredUsers (incluyendo
+    // isTester, que solo se recarga desde BD al arrancar el proceso) en vez
+    // de solo limpiar el socketId.
+    registeredUsers[userId] = { ...(prev || {}), userId, name, email: email ?? null, picture: picture ?? null, socketId: socket.id, isGoogleUser: isGoogleUser || prev?.isGoogleUser || false };
     socketToUser[socket.id] = userId;
     socket.data.userId = userId;
 
