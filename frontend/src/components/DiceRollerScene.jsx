@@ -24,7 +24,26 @@ const _skinColors = {
 
 // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
 const FACE_VALUES = ['K', 'Q', 'AS', '7', '8', 'J']
+const VALUE_TO_FACE = Object.fromEntries(FACE_VALUES.map((v, i) => [v, i]))
 const VALUE_RANK = { AS: 0, K: 1, Q: 2, J: 3, '8': 4, '7': 5 }
+
+// Orientación "limpia" (cara hacia arriba, sin yaw arbitrario) por valor —
+// a la que se hace snap al posar cada dado, en vez de dejarlo con el
+// aterrizaje bruto de la física (que puede quedar plano pero girado en
+// cualquier ángulo sobre el eje vertical, viéndose torcido/superpuesto en
+// la rejilla). Ver beginPlace().
+const FACE_UP_QUATS = (() => {
+  const E = THREE.Euler
+  const Q = THREE.Quaternion
+  return [
+    new Q().setFromEuler(new E(-Math.PI / 2, 0,  Math.PI / 2)),  // +X face (K)  → +Y world, text legible
+    new Q().setFromEuler(new E(-Math.PI / 2, 0, -Math.PI / 2)),  // -X face (Q)  → +Y world, text legible
+    new Q(),                                            // +Y face (AS) → +Y world
+    new Q().setFromEuler(new E(Math.PI, 0, 0)),        // -Y face (7)  → +Y world
+    new Q().setFromEuler(new E(-Math.PI / 2, 0, 0)),  // +Z face (8)  → +Y world
+    new Q().setFromEuler(new E( Math.PI / 2, 0, 0)),  // -Z face (J)  → +Y world
+  ]
+})()
 
 const DIE    = 1.21
 const FY     = -2.5   // floor Y
@@ -276,6 +295,7 @@ export default function DiceRollerScene({
         phase: 'hidden',  // hidden|rolling|placing|idle|exiting
         ts: 0, throwPos: -1, lastKfIdx: -1, prevKfY: null, prevKfDy: 0,
         fp: new THREE.Vector3(), tp: new THREE.Vector3(),
+        fq: new THREE.Quaternion(), tq: new THREE.Quaternion(),
         moveActive: false, moveTs: 0,
         moveFrom: new THREE.Vector3(), moveTo: new THREE.Vector3(),
         exitFrom: new THREE.Vector3(), exitTs: 0,
@@ -555,9 +575,11 @@ function step(ctx, now, propsRef) {
     let done = true
     placing.forEach(d => {
       const t = Math.min((now - d.ts) / DUR, 1)
-      d.mesh.position.lerpVectors(d.fp, d.tp, eio(t))
+      const te = eio(t)
+      d.mesh.position.lerpVectors(d.fp, d.tp, te)
+      d.mesh.quaternion.copy(d.fq).slerp(d.tq, te)
       if (t < 1) done = false
-      else { d.mesh.position.copy(d.tp); d.phase = 'idle' }
+      else { d.mesh.position.copy(d.tp); d.mesh.quaternion.copy(d.tq); d.phase = 'idle' }
     })
     if (done) {
       const faces = ctx.dice.map(d => d.value)
@@ -633,13 +655,17 @@ function beginPlace(ctx, now) {
   ctx.dice.forEach((d, i) => {
     if (d.phase !== 'rolling') return
     // El valor ya lo fijó doRoll() a partir del resultado autoritativo del
-    // servidor — el último keyframe ya deja el dado en esa cara, esto solo
-    // recoloca al hueco de la rejilla (evita que aparezca "flotando" si el
-    // último keyframe quedó ligeramente descuadrado).
+    // servidor — el último keyframe deja el dado con esa cara arriba, pero
+    // con el yaw (giro sobre el eje vertical) que le tocó al aterrizar, que
+    // puede ser cualquiera. Aquí se reposiciona a la rejilla Y se endereza a
+    // una orientación limpia (mismo yaw siempre para un valor dado), o si no
+    // los dados se ven torcidos y pueden solaparse visualmente entre sí.
     const { x, z } = slotPos(i)
     d.mesh.position.y = REST_Y
     d.fp.copy(d.mesh.position)
     d.tp.set(x, REST_Y, z)
+    d.fq.copy(d.mesh.quaternion)
+    d.tq.copy(FACE_UP_QUATS[VALUE_TO_FACE[d.value] ?? 2])
     d.ts = now
     d.phase = 'placing'
   })
