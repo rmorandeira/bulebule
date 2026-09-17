@@ -8,7 +8,10 @@ import { Browser } from '@capacitor/browser'
 // (Chrome Custom Tabs) por encima, sin tocar el WebView de la app.
 export async function openExternal(path) {
   if (Capacitor.isNativePlatform()) {
-    const url = path.startsWith('http') ? path : `${window.location.origin}${path}`
+    // window.location.origin en nativo es el origen local del WebView de
+    // Capacitor (https://localhost), no accesible desde Chrome Custom Tabs
+    // (proceso externo) — hay que apuntar siempre a la web en producción.
+    const url = path.startsWith('http') ? path : `https://bulebule.web.app${path}`
     await Browser.open({ url })
   } else {
     window.open(path, '_blank', 'noopener,noreferrer')
