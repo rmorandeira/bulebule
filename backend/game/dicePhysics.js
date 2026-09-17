@@ -8,8 +8,18 @@ const RAPIER_MODULE = require('@dimforge/rapier3d-compat');
 
 const DIE = 1.21;
 const FY = -2.5;
-const WX = 4.2;
-const WZ = 3.4;
+// Tablero alargado (2026-09-16 v2) para que el suelo llene el canvas en
+// contenedores altos y estrechos (móvil en vertical) sin recortarse — la
+// cámara ve el suelo en perspectiva angulada, así que para aprovechar un
+// hueco alto hace falta que el suelo sea más profundo (Z) que ancho (X),
+// no solo más grande en general (ver [[project_dice_safe_area_task]] en
+// memoria para el razonamiento completo). Historial: WX=4.2/WZ=3.4 →
+// WX=5.7/WZ=4.6 (v1, solo "más grande") → WX=4.3/WZ=7.5 (v2, proporción
+// ajustada al hueco vertical). Requiere regenerar el banco de semillas
+// (ver scripts/generateDiceSeedBank.js) cada vez que esto cambia, ya que
+// las trayectorias guardadas dependen de la posición de las paredes.
+const WX = 4.3;
+const WZ = 7.5;
 const REST_Y = FY + DIE / 2 + 0.02;
 
 // Colliders estáticos más gruesos que en el cliente original (que usaba 0.1)
@@ -75,10 +85,16 @@ function mulberry32(seed) {
 
 function launchParams(seed, position, count) {
   const rng = mulberry32(seed);
-  const startX = (position - (count - 1) / 2) * 1.6 + (rng() - .5) * 0.4;
+  // Todos los dados salen del mismo punto (centro en X, "abajo" en Z, cerca
+  // de la cámara) y se abren en abanico/triángulo según su velocidad
+  // horizontal — antes cada dado arrancaba ya separado en X; ahora el
+  // reparto lo hace la propia trayectoria, con el vértice del triángulo en
+  // el punto de salida (pedido por el usuario, 2026-09-16).
+  const startX = (rng() - .5) * 0.3;
   const startZ = 2.8 + (rng() - .5) * 0.3;
-  const startY = FY + 0.7 + position * 0.15;
-  const vx = (rng() - .5) * 3;
+  const startY = FY + 0.7; // misma altura de salida para los 5 dados
+  const spread = position - (count - 1) / 2; // -2..2 según posición/count
+  const vx = spread * 2.2 + (rng() - .5) * 0.6;
   const vy = 2 + rng() * 2;
   const vz = -8 - rng() * 4;
   const wx = (rng() - .5) * 25;
@@ -116,41 +132,17 @@ function makeWorld(R) {
 
 const round = n => Math.round(n * 1000) / 1000;
 
-// Posición de aparcado en esquina para dados ya guardados — misma fórmula
-// que el tween cosmético del cliente (rollWithSounds en DiceRollerScene.jsx),
-// para que el obstáculo físico coincida exactamente con lo que se ve.
-function cornerPos(side, slot) {
-  const anchorX = side * (WX - 0.8);
-  return { x: anchorX - side * slot * 1.65, y: REST_Y, z: -(WZ - 0.8) };
-}
-
 /**
  * Simula el lanzamiento de `seeds.length` dados a la vez.
  *
  * @param {number[]} seeds - una semilla independiente por dado, en orden de "posición de tirada"
  * @param {boolean} sampleKeyframes - si false, solo calcula el resultado final (usado por el harvester offline)
- * @param {{side: 1|-1, count: number}|null} keptCorner - si hay dados ya
- *   guardados aparcados en una esquina (ver cornerPos), se añaden como
- *   obstáculos fijos para que los dados que se tiran choquen con ellos en
- *   vez de atravesarlos. El banco de semillas se generó SIN este obstáculo,
- *   así que el resultado hay que revalidarlo (ver performDiceRoll en server.js).
  * @returns {{ faces: string[], keyframes: number[][][], steps: number }}
  */
-async function simulateRoll(seeds, { sampleKeyframes = true, keptCorner = null } = {}) {
+async function simulateRoll(seeds, { sampleKeyframes = true } = {}) {
   const R = await getRapier();
   const world = makeWorld(R);
   const count = seeds.length;
-
-  if (keptCorner) {
-    for (let slot = 0; slot < keptCorner.count; slot++) {
-      const p = cornerPos(keptCorner.side, slot);
-      const body = world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(p.x, p.y, p.z));
-      world.createCollider(
-        R.ColliderDesc.cuboid(DIE / 2, DIE / 2, DIE / 2).setRestitution(0.1).setFriction(0.9),
-        body
-      );
-    }
-  }
 
   const dice = seeds.map((seed, position) => {
     const p = launchParams(seed, position, count);
@@ -213,4 +205,4 @@ async function simulateRoll(seeds, { sampleKeyframes = true, keptCorner = null }
   return { faces, keyframes, steps: step };
 }
 
-module.exports = { simulateRoll, getRapier, FACE_VALUES, getTopFace, mulberry32, KEYFRAME_INTERVAL_MS, cornerPos };
+module.exports = { simulateRoll, getRapier, FACE_VALUES, getTopFace, mulberry32, KEYFRAME_INTERVAL_MS };

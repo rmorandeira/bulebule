@@ -9,19 +9,39 @@
 //   - "escape": cada N iteraciones sin converger, se resiembran TODAS las
 //     posiciones a la vez (no solo las que fallan) para salir de mínimos locales
 //
-// Uso: node scripts/topupDiceSeedBank.js
+// Uso: node scripts/topupDiceSeedBank.js [--count=N] [--pool=N] [--trials=N]
+//        [--iters=N] [--outer=N] [--escape=N] [--budget=MIN]
+//
+// --count=N restringe la pasada a un solo count (evita construir pools para
+// counts que de todas formas no se van a procesar por agotar el presupuesto
+// antes de llegar a ellos — ver comentario en main()). Los demás flags
+// sobreescriben los valores por defecto de abajo, pensados para poder
+// "apretar más" en una pasada dedicada a un count concreto (p.ej. count=5,
+// el más difícil de converger) sin afectar al resto.
 
 const fs = require('fs');
 const path = require('path');
 const { simulateRoll, FACE_VALUES } = require('../game/dicePhysics');
 
+function argNum(flag, def) {
+  const a = process.argv.find(x => x.startsWith(`--${flag}=`));
+  return a ? Number(a.split('=')[1]) : def;
+}
+
 const MIN_PER_BUCKET = 5;
-const POOL_PER_FACE_POSITION = 60;
-const MAX_POOL_TRIALS = 12000;
-const MAX_CONVERGE_ITERS = 150;
-const ESCAPE_EVERY = 20;         // cada N iters sin converger, resiembra todo
-const MAX_OUTER_ATTEMPTS = 40;
-const HARD_BUDGET_MS = 12 * 60 * 1000; // tope global de tiempo
+// Bajados de 60/12000 (2026-09-17): 3 fallos seguidos por memoria del
+// sistema, siempre en el mismo punto exacto (construyendo pools de
+// count=4) — a menos pools/intentos, menos simulateRoll() acumulados antes
+// de que el runtime de Rapier libere memoria, a costa de pools más
+// pequeñas (puede necesitar más pasadas para converger según el bucket).
+// Todos ahora ajustables por CLI — con --count=N aislando la memoria a un
+// solo count, hay margen para subirlos en una pasada dedicada (ver arriba).
+const POOL_PER_FACE_POSITION = argNum('pool', 30);
+const MAX_POOL_TRIALS = argNum('trials', 6000);
+const MAX_CONVERGE_ITERS = argNum('iters', 150);
+const ESCAPE_EVERY = argNum('escape', 20); // cada N iters sin converger, resiembra todo
+const MAX_OUTER_ATTEMPTS = argNum('outer', 40);
+const HARD_BUDGET_MS = argNum('budget', 12) * 60 * 1000; // tope global de tiempo (minutos)
 
 const CANON_ORDER = ['AS', 'K', 'Q', 'J', '8', '7'];
 const randSeed = () => Math.floor(Math.random() * 0xFFFFFFFF);
@@ -77,16 +97,29 @@ async function main() {
   const bankPath = path.join(__dirname, '..', 'game', 'diceSeedBank.json');
   const bank = JSON.parse(fs.readFileSync(bankPath, 'utf8'));
 
+  // --count=N (opcional): procesa solo ese count en esta pasada. Sin esto,
+  // una pasada construye pools para TODOS los counts pendientes pero
+  // procesa los targets en el orden en que aparecen en el JSON (4 antes que
+  // 5) — si count=4 tiene muchos targets, se come el presupuesto entero
+  // antes de tocar ni un solo target de count=5, pese a haber pagado ya el
+  // coste (caro) de construirle las pools. Visto en vivo 2026-09-17: una
+  // pasada completa de 12 min avanzó count=4 pero count=5 quedó exactamente
+  // igual. Con --count=5 esa pasada se dedica entera a los targets que de
+  // verdad lo necesitan.
+  const onlyCountArg = process.argv.find(a => a.startsWith('--count='));
+  const onlyCount = onlyCountArg ? Number(onlyCountArg.split('=')[1]) : null;
+
   const targets = []; // { count, key, assign }
   for (const [countStr, buckets] of Object.entries(bank)) {
     const count = Number(countStr);
+    if (onlyCount != null && count !== onlyCount) continue;
     for (const [key, seedsList] of Object.entries(buckets)) {
       if (seedsList.length < MIN_PER_BUCKET) {
         targets.push({ count, key, assign: key.split(',') });
       }
     }
   }
-  console.log(`Buckets a reforzar: ${targets.length}`);
+  console.log(`Buckets a reforzar${onlyCount != null ? ` (solo count=${onlyCount})` : ''}: ${targets.length}`);
   if (targets.length === 0) { console.log('Nada que hacer.'); return; }
 
   // Solo hace falta pool para las cuentas/caras involucradas

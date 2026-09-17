@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../api.js';
+import { imgSrc } from '../config.js';
 import Switch from '../components/Switch.jsx';
+import Modal from '../components/Modal.jsx';
 import { useToast } from '../components/Toast.jsx';
 
 function readFileAsBase64(file) {
@@ -10,6 +12,68 @@ function readFileAsBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// Modal de subida con drag&drop (o clic para abrir el buscador de archivos)
+// — usada por la galería de texturas de suelo del tablero.
+function UploadTextureModal({ onClose, onUploaded }) {
+  const toast = useToast();
+  const fileRef = useRef(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) { toast('Selecciona una imagen', 'error'); return; }
+    setUploading(true);
+    try {
+      const base64 = await readFileAsBase64(file);
+      const { url } = await api.upload(base64, file.name);
+      onUploaded(url);
+      onClose();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <Modal title="Añadir textura de suelo" onClose={onClose}>
+      <div
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => {
+          e.preventDefault();
+          setDragOver(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) handleFile(file);
+        }}
+        onClick={() => !uploading && fileRef.current?.click()}
+        style={{
+          border: `2px dashed ${dragOver ? 'var(--accent, #3b82f6)' : 'var(--border, #ccc)'}`,
+          borderRadius: 10, padding: '48px 20px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer',
+          background: dragOver ? 'var(--surface2, #f0f4ff)' : 'transparent',
+        }}
+      >
+        {uploading ? (
+          <p style={{ margin: 0 }}>Subiendo…</p>
+        ) : (
+          <>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🖼️</div>
+            <p style={{ margin: 0 }}>Arrastra una imagen aquí, o haz clic para elegir un archivo</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 6 }}>JPG, PNG o WEBP</p>
+          </>
+        )}
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); e.target.value = ''; }}
+      />
+    </Modal>
+  );
 }
 
 function MusicPicker({ label, url, onChange, uploading, onUpload }) {
@@ -53,6 +117,10 @@ export default function Settings() {
   const [introMusicUrl, setIntroMusicUrl] = useState(null);
   const [gameMusicUrl, setGameMusicUrl]   = useState(null);
   const [uploadingMusic, setUploadingMusic] = useState(null); // null | 'intro' | 'game'
+  const [diceCameraTuning, setDiceCameraTuning] = useState({ view1: null, view2: null, view3: null });
+  const [floorTextures, setFloorTextures] = useState([]);
+  const [activeFloorTexture, setActiveFloorTexture] = useState(null);
+  const [showTextureModal, setShowTextureModal] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,6 +135,9 @@ export default function Settings() {
       setFlags(settings.featureFlags ?? {});
       setIntroMusicUrl(settings.introMusicUrl ?? null);
       setGameMusicUrl(settings.gameMusicUrl ?? null);
+      setDiceCameraTuning(settings.diceCameraTuning ?? { view1: null, view2: null, view3: null });
+      setFloorTextures(settings.floorTextures ?? []);
+      setActiveFloorTexture(settings.activeFloorTexture ?? null);
       setVersions(appVersions ?? []);
     } catch (e) {
       toast(e.message, 'error');
@@ -162,6 +233,8 @@ export default function Settings() {
         forceLatestVersion,
         introMusicUrl,
         gameMusicUrl,
+        floorTextures,
+        activeFloorTexture,
       });
       setMinVersionCode(settings.minVersionCode ?? 0);
       toast('Ajustes guardados', 'success');
@@ -174,7 +247,7 @@ export default function Settings() {
 
   if (loading) return <div className="loading">Cargando…</div>;
 
-  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis', 'marketplace', 'tournaments', 'music', 'powerups'];
+  const RESERVED_FLAGS = ['storyMode', 'comments', 'emojis', 'marketplace', 'tournaments', 'music', 'powerups', 'diceCameraTuning'];
   const flagEntries = Object.entries(flags).filter(([key]) => !RESERVED_FLAGS.includes(key));
 
   return (
@@ -390,6 +463,70 @@ export default function Settings() {
         </div>
 
         <div className="panel-section">
+          <h3>Texturas del suelo del tablero</h3>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4, marginBottom: 12 }}>
+            Galería de texturas disponibles para el suelo del tablero de dados. Haz clic en una miniatura
+            para aplicarla en el juego (vuelve a hacer clic para quitarla y dejar el suelo sin textura), o en
+            el recuadro "+" para añadir una nueva (arrastrando la imagen o eligiéndola desde el buscador de
+            archivos). Los cambios no se aplican hasta pulsar "Guardar cambios".
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
+            {floorTextures.map((url, i) => {
+              const isActive = url === activeFloorTexture;
+              return (
+                <div
+                  key={`${url}-${i}`}
+                  onClick={() => setActiveFloorTexture(a => a === url ? null : url)}
+                  title={isActive ? 'Aplicada en el juego — clic para quitarla' : 'Clic para aplicarla en el juego'}
+                  style={{
+                    position: 'relative', aspectRatio: '1 / 1', borderRadius: 8, overflow: 'hidden',
+                    background: 'var(--surface2, #eee)', cursor: 'pointer',
+                    outline: isActive ? '3px solid var(--accent, #3b82f6)' : 'none', outlineOffset: -3,
+                  }}
+                >
+                  <img
+                    src={imgSrc(url)}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    onError={e => { e.target.style.opacity = 0.2; }}
+                  />
+                  {isActive && (
+                    <span style={{
+                      position: 'absolute', bottom: 4, left: 4, fontSize: 10, fontWeight: 700, color: '#fff',
+                      background: 'var(--accent, #3b82f6)', padding: '2px 6px', borderRadius: 4,
+                    }}>Activa</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setFloorTextures(t => t.filter((_, idx) => idx !== i));
+                      setActiveFloorTexture(a => a === url ? null : a);
+                    }}
+                    aria-label="Eliminar textura"
+                    style={{
+                      position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%',
+                      border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 12, lineHeight: '22px',
+                      padding: 0, cursor: 'pointer',
+                    }}
+                  >✕</button>
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setShowTextureModal(true)}
+              aria-label="Añadir textura"
+              style={{
+                aspectRatio: '1 / 1', borderRadius: 8, border: '2px dashed var(--border, #ccc)',
+                background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 28, color: 'var(--text-muted, #888)', cursor: 'pointer',
+              }}
+            >+</button>
+          </div>
+        </div>
+
+        <div className="panel-section">
           <h3>Feature flags</h3>
           {flagEntries.length === 0 ? (
             <div className="empty-state">
@@ -418,10 +555,54 @@ export default function Settings() {
           </div>
         </div>
 
+        <div className="panel-section">
+          <h3>Modo tuning de cámara del tablero de dados</h3>
+          <div className="toggle-row" style={{ justifyContent: 'space-between' }}>
+            <label style={{ flex: 1 }}>Activar modo tuning</label>
+            {/* A diferencia del resto de flags (donde ausente = activado),
+                este debe nacer DESACTIVADO — congela el turno de cualquier
+                partida en curso, así que un despliegue nuevo o un flag
+                nunca tocado no debe empezar encendido por accidente. */}
+            <Switch checked={flags.diceCameraTuning === true} onChange={() => setFlag('diceCameraTuning', flags.diceCameraTuning !== true)} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', marginTop: 4, marginBottom: 12 }}>
+            Muestra en el tablero de dados de TODOS los jugadores unos sliders para ajustar en vivo
+            el encuadre de cámara (desplazamiento, tilt, posición y zoom), con botones para cambiar
+            entre "Vista 1" (dados recién lanzados) y "Vista 2" (dados agrupados para seleccionar) y
+            guardar cada una por separado. Mientras está activo, el turno de cualquier partida en curso
+            queda congelado (no corre el tiempo para tirar dados ni se pueden seleccionar) — pensado
+            para usarlo solo durante una sesión de ajuste, no dejarlo activado en producción.
+          </p>
+          {['view1', 'view2', 'view3'].map(slot => (
+            <div key={slot} className="form-group">
+              <label>
+                {slot === 'view1' ? 'Vista 1 (dados recién lanzados)'
+                  : slot === 'view2' ? 'Vista 2 (1ª tirada, dados agrupados)'
+                  : 'Vista 3 (2ª/3ª tirada, con dados aparcados)'}
+              </label>
+              {diceCameraTuning?.[slot] ? (
+                <pre style={{
+                  fontSize: 12, background: 'var(--surface-alt, #f4f4f4)', padding: 10,
+                  borderRadius: 6, overflowX: 'auto', margin: 0,
+                }}>{JSON.stringify(diceCameraTuning[slot], null, 2)}</pre>
+              ) : (
+                <p style={{ fontSize: 12, color: 'var(--text-muted, #888)', margin: 0 }}>Todavía no se ha guardado nada para esta vista.</p>
+              )}
+            </div>
+          ))}
+        </div>
+
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
       </div>
+
+      {showTextureModal && (
+        <UploadTextureModal
+          onClose={() => setShowTextureModal(false)}
+          onUploaded={url => setFloorTextures(t => [...t, url])}
+        />
+      )}
     </div>
   );
 }

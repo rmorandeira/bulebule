@@ -7,7 +7,7 @@ const webpush = require('web-push');
 const fs = require('fs');
 const path = require('path');
 const { rollDie, evaluateHand, compareHands } = require('./gameLogic');
-const { simulateRoll, KEYFRAME_INTERVAL_MS, cornerPos } = require('./game/dicePhysics');
+const { simulateRoll, KEYFRAME_INTERVAL_MS } = require('./game/dicePhysics');
 const { achievableRanks, pickCompletionForRank } = require('./game/testerHands');
 
 let diceSeedBank = {};
@@ -37,48 +37,31 @@ function handOfKept(currentDice, discardedIndices) {
 // difunde a todos los jugadores, así la animación es idéntica en cualquier
 // dispositivo (ver [[project_dice_sync_bug]] en memoria).
 //
-// Si hay dados ya guardados (keptCount > 0), se aparcan en una esquina en el
-// cliente mientras se tira — se añaden como obstáculo físico aquí para que
-// los dados que se tiran choquen con ellos en vez de atravesarlos. El banco
-// de semillas se generó SIN ese obstáculo, así que se revalida el resultado
-// y se reintenta con otra semilla del bucket si el choque lo desvía (raro).
-async function performDiceRoll(rollingIndices, keptCount = 0, forcedTargetValues = null) {
+// Los dados guardados (no incluidos en rollingIndices) ya no aparecen en la
+// escena 3D mientras se relanza el resto — se muestran aparte, en una
+// bandeja 2D fuera del tablero (ver GameBoard.jsx) — así que la física no
+// necesita ningún obstáculo para ellos.
+async function performDiceRoll(rollingIndices, forcedTargetValues = null) {
   // forcedTargetValues: jugador tester forzando el resultado de esta tirada
   // (ver isTesterPlayer / tester_set_forced_hand) — misma física y banco de
   // semillas, solo cambia quién decide el valor objetivo de cada dado.
   const targetValues = forcedTargetValues ?? rollingIndices.map(() => rollDie());
   const key = diceSortedKey(targetValues);
   const bucket = diceSeedBank[rollingIndices.length]?.[key];
-  const cornerSide = keptCount > 0 ? (Math.random() < 0.5 ? 1 : -1) : null;
-  const keptCorner = keptCount > 0 ? { side: cornerSide, count: keptCount } : null;
 
   let result;
   if (bucket && bucket.length) {
-    const MAX_RETRY = 5;
-    for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
-      const seeds = bucket[Math.floor(Math.random() * bucket.length)];
-      result = await simulateRoll(seeds, { keptCorner });
-      if (diceSortedKey(result.faces) === key) break;
-      if (attempt === MAX_RETRY - 1) {
-        console.warn(`dice seed bank: el obstáculo de esquina desvió el resultado tras ${MAX_RETRY} intentos (count=${rollingIndices.length} key=${key}) — se acepta el resultado físico`);
-      }
-    }
+    const seeds = bucket[Math.floor(Math.random() * bucket.length)];
+    result = await simulateRoll(seeds);
   } else {
     console.warn(`dice seed bank: sin semillas para count=${rollingIndices.length} key=${key} — física libre como fallback`);
     const seeds = rollingIndices.map(() => Math.floor(Math.random() * 0xFFFFFFFF));
-    result = await simulateRoll(seeds, { keptCorner });
+    result = await simulateRoll(seeds);
   }
 
   // faces[p] es el valor final del game-slot rollingIndices[p] — mismo orden
   // posicional que ya usaba el cliente para su física local.
-  // keptPositions son las coordenadas EXACTAS donde se pusieron los obstáculos:
-  // el cliente aparca ahí los dados guardados, así lo que se ve coincide
-  // siempre con lo que chocó en la simulación (antes el cliente calculaba la
-  // esquina por su cuenta y podía no cuadrar → dados atravesándose).
-  const keptPositions = keptCorner
-    ? Array.from({ length: keptCount }, (_, slot) => cornerPos(cornerSide, slot))
-    : [];
-  return { faces: result.faces, keyframes: result.keyframes, keptPositions };
+  return { faces: result.faces, keyframes: result.keyframes };
 }
 
 // Última red de seguridad: un error asíncrono sin capturar (p.ej. dentro de
@@ -954,7 +937,7 @@ async function botAct(code) {
     bot.rollHistory.push([...bot.currentDice]);
     bot.rollDiscardHistory.push(rollingIndices);
 
-    const result = await performDiceRoll(rollingIndices, keptIndices.length);
+    const result = await performDiceRoll(rollingIndices);
     if (rooms[code] !== room || room.phase !== 'playing' || room.players[room.currentPlayerIndex] !== bot) return;
 
     const keptHand = handOfKept(bot.currentDice, rollingIndices);
@@ -965,8 +948,7 @@ async function botAct(code) {
     room.botPhase = 'rolled';
     room.botKeptIndices = [];
     io.to(code).emit('dice_keyframes', {
-      playerId: bot.id, rollingIndices, keyframes: result.keyframes,
-      keptPositions: result.keptPositions, keptHand,
+      playerId: bot.id, rollingIndices, keyframes: result.keyframes, keptHand,
       values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
     });
     broadcast(code);
@@ -1002,8 +984,7 @@ async function botAct(code) {
   room.botPhase = 'rolled';
   room.botKeptIndices = [];
   io.to(code).emit('dice_keyframes', {
-    playerId: bot.id, rollingIndices, keyframes: result.keyframes,
-    keptPositions: result.keptPositions, keptHand: null,
+    playerId: bot.id, rollingIndices, keyframes: result.keyframes, keptHand: null,
     values: bot.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
   });
   broadcast(code);
@@ -1561,7 +1542,21 @@ const ADMIN_TOKEN = (() => {
 })();
 
 // ── Ajustes del juego (parámetros + feature flags, persistidos en `config`) ──
-const DEFAULT_SETTINGS = { maxPlayersLimit: 8, featureFlags: {}, minVersionCode: 0, forceLatestVersion: false, introMusicUrl: null, gameMusicUrl: null };
+const DEFAULT_SETTINGS = {
+  maxPlayersLimit: 8, featureFlags: {}, minVersionCode: 0, forceLatestVersion: false,
+  introMusicUrl: null, gameMusicUrl: null,
+  // Posiciones guardadas por la herramienta de tuning en vivo del tablero de
+  // dados (ver DiceRollerScene.jsx) — solo lectura/escritura vía socket
+  // save_dice_camera_tuning, gateada por el feature flag diceCameraTuning;
+  // se muestran en el backoffice (Ajustes) para poder copiarlas a mano.
+  diceCameraTuning: { view1: null, view2: null, view3: null },
+  // Galería de texturas de suelo del tablero de dados, gestionada desde el
+  // backoffice (Ajustes) — array de URLs de imagen subidas vía /api/admin/upload.
+  floorTextures: [],
+  // Cuál de las anteriores se aplica de verdad al suelo del tablero en el
+  // juego (null = ninguna, el suelo se queda invisible/solo sombra).
+  activeFloorTexture: null,
+};
 function loadSettings() {
   const row = db.prepare('SELECT value FROM config WHERE key=?').get('game_settings');
   if (!row) return { ...DEFAULT_SETTINGS, featureFlags: {} };
@@ -1571,6 +1566,9 @@ function loadSettings() {
       ...DEFAULT_SETTINGS,
       ...parsed,
       featureFlags: { ...(parsed.featureFlags ?? {}) },
+      diceCameraTuning: { ...DEFAULT_SETTINGS.diceCameraTuning, ...(parsed.diceCameraTuning ?? {}) },
+      floorTextures: Array.isArray(parsed.floorTextures) ? parsed.floorTextures : [],
+      activeFloorTexture: typeof parsed.activeFloorTexture === 'string' ? parsed.activeFloorTexture : null,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, featureFlags: {} };
@@ -1696,7 +1694,7 @@ function cleanMusicUrl(v, current) {
 }
 
 app.put('/api/admin/settings', requireAdmin, (req, res) => {
-  const { maxPlayersLimit, featureFlags, minVersionCode, forceLatestVersion, introMusicUrl, gameMusicUrl } = req.body;
+  const { maxPlayersLimit, featureFlags, minVersionCode, forceLatestVersion, introMusicUrl, gameMusicUrl, floorTextures, activeFloorTexture } = req.body;
   const limit = parseInt(maxPlayersLimit);
   if (!Number.isFinite(limit) || limit < 2 || limit > 10)
     return res.status(400).json({ error: 'maxPlayersLimit debe estar entre 2 y 10' });
@@ -1727,9 +1725,27 @@ app.put('/api/admin/settings', requireAdmin, (req, res) => {
   if (introUrl === undefined || gameUrl === undefined)
     return res.status(400).json({ error: 'URL de música no válida' });
 
+  // Opcional (como minVersionCode): un backoffice desplegado antes de que
+  // existiera esta galería no la envía, y no debe borrarla sin querer.
+  let textures = gameSettings.floorTextures ?? [];
+  if (floorTextures !== undefined) {
+    if (!Array.isArray(floorTextures) || floorTextures.some(t => typeof t !== 'string' || t.length > 500))
+      return res.status(400).json({ error: 'floorTextures debe ser un array de URLs' });
+    textures = floorTextures;
+  }
+  let activeTexture = gameSettings.activeFloorTexture ?? null;
+  if (activeFloorTexture !== undefined) {
+    if (activeFloorTexture !== null && (typeof activeFloorTexture !== 'string' || !textures.includes(activeFloorTexture)))
+      return res.status(400).json({ error: 'activeFloorTexture debe ser null o una URL de floorTextures' });
+    activeTexture = activeFloorTexture;
+  }
+
   saveSettings({
     maxPlayersLimit: limit, featureFlags: flags, minVersionCode: minVer, forceLatestVersion: forceLatest,
-    introMusicUrl: introUrl, gameMusicUrl: gameUrl,
+    introMusicUrl: introUrl, gameMusicUrl: gameUrl, floorTextures: textures, activeFloorTexture: activeTexture,
+    // No gestionado desde este formulario (lo escribe save_dice_camera_tuning
+    // vía socket) — se preserva tal cual para no perderlo en cada guardado.
+    diceCameraTuning: gameSettings.diceCameraTuning,
   });
 
   res.json({ ok: true, settings: gameSettings });
@@ -1925,6 +1941,30 @@ io.on('connection', (socket) => {
 
   socket.on('get_settings', (cb) => {
     cb?.({ ok: true, settings: gameSettings });
+  });
+
+  // Guarda una de las dos posiciones de la herramienta de tuning en vivo del
+  // tablero de dados (ver DiceRollerScene.jsx) para que quede visible en el
+  // backoffice — gateado por el mismo feature flag que muestra los sliders,
+  // así un cliente sin ese flag activo no puede escribir aquí.
+  socket.on('save_dice_camera_tuning', ({ slot, values } = {}, cb) => {
+    // A diferencia de isFeatureEnabled() (donde un flag ausente cuenta como
+    // activado), aquí se exige que esté EXPLÍCITAMENTE en true — por defecto
+    // (flag ausente o en false) esta escritura debe quedar bloqueada.
+    if (gameSettings.featureFlags?.diceCameraTuning !== true) {
+      return cb?.({ ok: false, error: 'Herramienta de tuning desactivada' });
+    }
+    if (slot !== 'view1' && slot !== 'view2' && slot !== 'view3') return cb?.({ ok: false, error: 'slot inválido' });
+    const RANGES = { shiftPercent: [-1, 1], tiltDeg: [-30, 30], camY: [-30, 30], zoomMultiplier: [0.5, 1.5] };
+    if (!values || typeof values !== 'object') return cb?.({ ok: false, error: 'values inválido' });
+    const clean = {};
+    for (const [key, [min, max]] of Object.entries(RANGES)) {
+      const v = Number(values[key]);
+      if (!Number.isFinite(v) || v < min || v > max) return cb?.({ ok: false, error: `${key} fuera de rango` });
+      clean[key] = v;
+    }
+    saveSettings({ ...gameSettings, diceCameraTuning: { ...gameSettings.diceCameraTuning, [slot]: clean } });
+    cb?.({ ok: true });
   });
 
   socket.on('get_marketplace', (cb) => {
@@ -2388,7 +2428,7 @@ io.on('connection', (socket) => {
     player.rollInFlight = true;
     let result;
     try {
-      result = await performDiceRoll(rollingIndices, diceCount - rollingIndices.length, forcedTargetValues);
+      result = await performDiceRoll(rollingIndices, forcedTargetValues);
     } finally {
       player.rollInFlight = false;
     }
@@ -2410,8 +2450,7 @@ io.on('connection', (socket) => {
 
     cb?.({ ok: true });
     io.to(room.code).emit('dice_keyframes', {
-      playerId: player.id, rollingIndices, keyframes: result.keyframes,
-      keptPositions: result.keptPositions, keptHand,
+      playerId: player.id, rollingIndices, keyframes: result.keyframes, keptHand,
       values: player.currentDice.slice(), frameIntervalMs: KEYFRAME_INTERVAL_MS,
     });
     broadcast(room.code);
@@ -2541,7 +2580,15 @@ io.on('connection', (socket) => {
     const bot = room.players[room.currentPlayerIndex];
     if (!bot?.isBot) return cb?.({ ok: false });
     cb?.({ ok: true });
-    botAct(code);
+    // Si el bot va a plantarse justo después de esta tirada sin pasar por la
+    // fase de "picking" (p.ej. a la caída, con una sola tirada permitida),
+    // no hay ninguna pausa previa que deje ver la jugada — se le da un
+    // respiro antes de continuar al siguiente jugador/resultado.
+    const maxAllowed = room.maxRolls ?? 3;
+    const aboutToStand = room.botPhase === 'rolled' && bot.rollCount > 0 &&
+      botShouldStand(evaluateHand(bot.currentDice), bot.rollCount, maxAllowed);
+    if (aboutToStand) setTimeout(() => botAct(code), 3000);
+    else botAct(code);
   });
 
   socket.on('next_round', (cb) => {

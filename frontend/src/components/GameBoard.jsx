@@ -69,7 +69,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [sceneValues, setSceneValues] = useState(null)
   const [rollKeyframes, setRollKeyframes] = useState(null)
   const [frameIntervalMs, setFrameIntervalMs] = useState(50)
-  const [keptPositions, setKeptPositions] = useState([])
   const [rollKeptHand, setRollKeptHand] = useState(null)
   const [rollId, setRollId] = useState(0)
   const [handBurst, setHandBurst] = useState(null) // null | 'poker' | 'repoker'
@@ -88,6 +87,18 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   const [resultsScoreDeltas, setResultsScoreDeltas] = useState({})
   const scoreAnimFrameRef = useRef(null)
   const [messageBubbles, setMessageBubbles] = useState([]) // [{ id, text, side, fading }], index 0 = más reciente
+
+  // Modo tuning de cámara del tablero de dados (backoffice → Ajustes,
+  // feature flag diceCameraTuning) — mientras está activo, congela el turno
+  // (no corre el countdown de tirar dados) y desactiva la selección de
+  // dados, para que el board quede libre para ajustar los sliders de
+  // DiceRollerScene sin interferencias de una partida real en curso.
+  const [tuningModeActive, setTuningModeActive] = useState(false)
+  useEffect(() => {
+    socket.emit('get_settings', res => {
+      if (res?.ok) setTuningModeActive(res.settings?.featureFlags?.diceCameraTuning === true)
+    })
+  }, [])
   const msgSeqRef = useRef(0)
   const [targetingPowerup, setTargetingPowerup] = useState(null) // null | id del powerup armado esperando dado objetivo
 
@@ -337,13 +348,12 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   // (ver [[project_dice_sync_bug]] en memoria). El evento es autocontenido
   // (trae los valores finales), no depende de la llegada de room_state.
   useEffect(() => {
-    function onDiceKeyframes({ rollingIndices: ri, keyframes, values, frameIntervalMs: fi, keptPositions, keptHand }) {
+    function onDiceKeyframes({ rollingIndices: ri, keyframes, values, frameIntervalMs: fi, keptHand }) {
       if (!Array.isArray(ri) || !Array.isArray(keyframes) || !Array.isArray(values)) return
       setSceneValues(values)
       setRollingIndices(ri)
       setRollKeyframes(keyframes)
       setFrameIntervalMs(fi ?? 50)
-      setKeptPositions(Array.isArray(keptPositions) ? keptPositions : [])
       setRollKeptHand(keptHand ?? null)
       setRollId(id => id + 1)
     }
@@ -563,23 +573,23 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [botPhase])
 
-  // Countdown timer — active player
+  // Countdown timer — active player (congelado en modo tuning de cámara)
   useEffect(() => {
-    if (!room.turnDeadline || !isMyTurn) { setTimeLeft(null); return }
+    if (!room.turnDeadline || !isMyTurn || tuningModeActive) { setTimeLeft(null); return }
     const update = () => setTimeLeft(Math.max(0, Math.ceil((room.turnDeadline - Date.now()) / 1000)))
     update()
     const id = setInterval(update, 500)
     return () => clearInterval(id)
-  }, [room.turnDeadline, isMyTurn])
+  }, [room.turnDeadline, isMyTurn, tuningModeActive])
 
-  // Countdown timer — waiting player
+  // Countdown timer — waiting player (congelado en modo tuning de cámara)
   useEffect(() => {
-    if (!room.turnDeadline || isMyTurn) { setWaitTimeLeft(null); return }
+    if (!room.turnDeadline || isMyTurn || tuningModeActive) { setWaitTimeLeft(null); return }
     const update = () => setWaitTimeLeft(Math.max(0, Math.ceil((room.turnDeadline - Date.now()) / 1000)))
     update()
     const id = setInterval(update, 500)
     return () => clearInterval(id)
-  }, [room.turnDeadline, isMyTurn])
+  }, [room.turnDeadline, isMyTurn, tuningModeActive])
 
   // Countdown timer — results/palillo phase (continueDeadline)
   useEffect(() => {
@@ -976,15 +986,19 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                           ? botDiscards
                           : (currentPlayer?.pendingDiscards ?? [])
                     }
-                    interactive={(isMyTurn && !me?.done && !mustPass && rollNum > 0) || (!!targetingPowerup && !isMyTurn)}
+                    interactive={!tuningModeActive && ((isMyTurn && !me?.done && !mustPass && rollNum > 0) || (!!targetingPowerup && !isMyTurn))}
                     onDieClick={handleDieClick}
                     blockedDice={(currentPlayer?.blockedDice ?? []).map(b => ({ index: b.index, color: colorForBlocker(room, b.blockerId) }))}
                     keyframes={rollKeyframes}
                     frameIntervalMs={frameIntervalMs}
-                    keptPositions={keptPositions}
                     rollId={rollId}
                     sorted={!!displayPlayer?.done}
                     skin={isMyTurn ? undefined : (currentPlayer?.diceSkin ?? null)}
+                    playerCount={room.players.length}
+                    mustPass={mustPass}
+                    turnDeadline={room.turnDeadline}
+                    continueDeadline={room.continueDeadline}
+                    awaitingContinue={awaitingContinue}
                     onSettled={(faces) => {
                       setRollingIndices([])
                       if (faces?.length === 5) {

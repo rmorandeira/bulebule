@@ -88,18 +88,21 @@ export default function PowerupsButton({ isMyTurn, currentPlayer, bloqueoUsedThi
           {items.length === 0 ? (
             <p className="powerups__empty">No tienes powerups</p>
           ) : (
-            items.map(item => (
-              <button
-                key={item.id}
-                type="button"
-                className="powerups__opt"
-                disabled={!canUsePowerup(item, { isMyTurn, currentPlayer, bloqueoUsedThisTurn })}
-                onClick={() => handleSelect(item)}
-              >
-                <span>{item.name}</span>
-                <span className="powerups__qty">x{item.quantity}</span>
-              </button>
-            ))
+            items.map(item => {
+              const ItemIcon = POWERUP_ICONS[item.id] ?? BoltIcon
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="powerups__opt"
+                  disabled={!canUsePowerup(item, { isMyTurn, currentPlayer, bloqueoUsedThisTurn })}
+                  onClick={() => handleSelect(item)}
+                >
+                  <span className="powerups__opt-icon"><ItemIcon /></span>
+                  <span>{item.name} <span className="powerups__qty">{item.quantity}x</span></span>
+                </button>
+              )
+            })
           )}
         </div>
       )}
