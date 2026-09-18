@@ -676,7 +676,7 @@ export default function DiceRollerScene({
   // Última tuning guardada en el backend para cada vista — se usa como
   // respaldo al cambiar de vista si este dispositivo no tiene nada en su
   // propio localStorage (p.ej. la primera vez que se abre en un móvil).
-  const [remoteTuning, setRemoteTuning] = useState({ view1: null, view2: null })
+  const [remoteTuning, setRemoteTuning] = useState({ view1: null, view2: null, view3: null })
   // Textura de suelo activa (elegida en el backoffice, Ajustes → Texturas
   // del suelo del tablero) — null = sin textura, el suelo se queda invisible
   // (solo sombra) como hasta ahora.
@@ -685,7 +685,26 @@ export default function DiceRollerScene({
     socket.emit('get_settings', res => {
       if (!res?.ok) return
       setTuningEnabledRemotely(res.settings?.featureFlags?.diceCameraTuning === true)
-      setRemoteTuning(res.settings?.diceCameraTuning ?? { view1: null, view2: null })
+      const remote = res.settings?.diceCameraTuning ?? { view1: null, view2: null, view3: null }
+      setRemoteTuning(remote)
+      // La tuning guardada desde el backoffice debe ser la real para
+      // CUALQUIER dispositivo/jugador, no solo un respaldo dentro de la
+      // propia herramienta de tuning — antes `remoteTuning` solo se
+      // consultaba en `switchToView` (herramienta de tuning), así que un
+      // móvil que nunca abrió esa herramienta seguía usando siempre
+      // TUNING_DEFAULTS/su localStorage local, sin enterarse nunca de lo
+      // guardado por otro dispositivo (bug reportado 2026-09-18). Si este
+      // dispositivo ya tiene un ajuste propio sin sincronizar en
+      // localStorage (p.ej. mientras se está tuneando en directo aquí
+      // mismo), se respeta y no se pisa con lo del backend.
+      ;['view1', 'view2', 'view3'].forEach(view => {
+        if (!remote[view]) return
+        let hasLocalOverride = false
+        try { hasLocalOverride = !!localStorage.getItem(`${TUNING_STORAGE_KEY}_${view}`) } catch { /* localStorage no disponible */ }
+        if (hasLocalOverride) return
+        tuning[view] = { ...tuning[view], ...remote[view] }
+      })
+      reapplyLiveTuning()
       setActiveFloorTexture(res.settings?.activeFloorTexture ?? null)
     })
   }, [])
