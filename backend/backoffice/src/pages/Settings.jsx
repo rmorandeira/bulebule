@@ -582,7 +582,7 @@ export default function Settings() {
               </label>
               {diceCameraTuning?.[slot] ? (
                 <pre style={{
-                  fontSize: 12, background: 'var(--surface-alt, #f4f4f4)', padding: 10,
+                  fontSize: 12, background: 'var(--surface2)', color: 'var(--text)', padding: 10,
                   borderRadius: 6, overflowX: 'auto', margin: 0,
                 }}>{JSON.stringify(diceCameraTuning[slot], null, 2)}</pre>
               ) : (
