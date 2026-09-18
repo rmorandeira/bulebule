@@ -317,16 +317,16 @@
 </nav>
 
 <div class="page-header">
-  <p class="label">Documentación técnica · v0.5</p>
+  <p class="label">Documentación técnica · v0.6</p>
   <h1>Bule Bule</h1>
-  <p class="subtitle">Juego multijugador online de póker de dados, con física 3D, marketplace de Bules, torneos, retos 1v1, backoffice de administración y apps nativas iOS/Android.</p>
+  <p class="subtitle">Juego multijugador online de póker de dados, con física 3D server-side, modo Powerups, marketplace de Bules, torneos, retos 1v1, backoffice de administración y app nativa Android publicada en producción (PEGI 18).</p>
   <div class="meta-row">
-    <div class="meta-item"><strong>386</strong> commits</div>
-    <div class="meta-item"><strong>18</strong> días de desarrollo activo <span class="tip" data-tip="Días naturales con al menos un commit, entre el 5 de junio y el 30 de julio de 2026 (~8 semanas de calendario)">ⓘ</span></div>
-    <div class="meta-item"><strong>~10.600</strong> líneas de código <span class="tip" data-tip="JavaScript/JSX en backend/ y frontend/, sin contar node_modules, dist ni build">ⓘ</span></div>
-    <div class="meta-item"><strong>v1.3.37</strong> versión de app (Android)</div>
+    <div class="meta-item"><strong>430</strong> commits</div>
+    <div class="meta-item"><strong>26</strong> días de desarrollo activo <span class="tip" data-tip="Días naturales con al menos un commit, entre el 5 de junio y el 18 de septiembre de 2026 (~15 semanas de calendario)">ⓘ</span></div>
+    <div class="meta-item"><strong>~16.900</strong> líneas de código <span class="tip" data-tip="JavaScript/JSX en backend/ y frontend/, sin contar node_modules, dist ni build">ⓘ</span></div>
+    <div class="meta-item"><strong>v1.3.50</strong> versión de app (Android, en producción) · <strong>PEGI 18</strong></div>
     <div class="meta-item"><strong>Frontend:</strong> <span class="tip" data-tip="Plataforma de backend de Google: hosting, autenticación, base de datos en tiempo real y funciones cloud">Firebase</span> · <strong>Backend:</strong> Railway</div>
-    <div class="meta-item"><strong>Generado:</strong> 31 julio 2026</div>
+    <div class="meta-item"><strong>Generado:</strong> 18 septiembre 2026</div>
   </div>
 </div>
 
@@ -349,12 +349,16 @@
       <p>Salas públicas y privadas con código de 4 caracteres. Hasta 10 jugadores. Lobby de espera con vista en tiempo real, invitaciones directas y retos 1v1.</p>
     </div>
     <div class="card">
-      <h3>Física 3D</h3>
-      <p>Dados renderizados con <span class="tip" data-tip="Librería JavaScript para crear y renderizar gráficos 3D en el navegador usando WebGL">Three.js</span> y simulación de física real con <span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento">Rapier3D</span>. Sombras, rebotes, colisiones deterministas (semilla por tirada) y antialiasing <span class="tip" data-tip="Fast Approximate Anti-Aliasing — técnica gráfica para suavizar los bordes dentados en escenas 3D">FXAA</span>.</p>
+      <h3>Física 3D — server-side desde septiembre 2026</h3>
+      <p>Dados renderizados con <span class="tip" data-tip="Librería JavaScript para crear y renderizar gráficos 3D en el navegador usando WebGL">Three.js</span>. La simulación de física ya no corre en cada cliente: corre una sola vez en el <strong>servidor</strong> con <span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento">Rapier3D</span> headless contra un <strong>banco de semillas</strong> pre-computado (<code>diceSeedBank.json</code>), y se retransmite como keyframes — así todos los dispositivos ven exactamente la misma tirada, eliminando el riesgo de desincronización que tenía el modelo anterior.</p>
+    </div>
+    <div class="card">
+      <h3>Modo Powerups <span class="tag">nuevo, sep. 2026</span></h3>
+      <p>Variante de partida ("Powerups", junto al modo "Classic") con objetos comprables que se activan durante la partida — de momento el powerup <strong>Bloqueo</strong> (inmoviliza un dado rival, 1 uso/turno), con outline de color por jugador y protección server-side ante relanzamientos. Otros 10 powerups diseñados, pendientes de implementar.</p>
     </div>
     <div class="card">
       <h3>Marketplace y Bules</h3>
-      <p>Moneda virtual del juego (<strong>Bules</strong>) ganada jugando o comprada (paquete de 1.000 Bules vía Bizum). Se gasta en skins de dados (mármoles, rojo transparente) e items cosméticos de bar (cubata, churros, balón…). Economía cerrada: no canjeable por dinero real.</p>
+      <p>Moneda virtual del juego (<strong>Bules</strong>) ganada jugando o comprada (paquete de 1.000 Bules vía Bizum). Se gasta en skins de dados (mármoles, rojo transparente), items cosméticos de bar y, desde septiembre, en <strong>powerups apilables</strong> (comprables por cantidad). Economía cerrada: no canjeable por dinero real — respaldado desde septiembre por la clasificación <strong>PEGI 18</strong> de la app (ver sección 11).</p>
     </div>
     <div class="card">
       <h3>Torneos con acceso por item</h3>
@@ -386,11 +390,11 @@
     </div>
     <div class="card">
       <h3>Login y publicidad nativos</h3>
-      <p>Google Sign-In nativo en Android (además de <span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)">OAuth</span> web) con verificación de token en servidor. AdMob integrado (banners + UMP consent), pendiente de vincular App ID real hasta publicación en producción. Sin login: modo invitado con nombre autogenerado tipo <em>el_pirri_042</em>, persistido en localStorage.</p>
+      <p>Google Sign-In nativo en Android (además de <span class="tip" data-tip="Open Authorization — protocolo estándar que permite autenticarse con una cuenta externa (ej: Entrar con Google)">OAuth</span> web) con verificación de token en servidor. AdMob con <strong>App ID e IDs de banner reales</strong> desde el lanzamiento a producción en Play Store (2026-09-13). Sin login: modo invitado con nombre autogenerado tipo <em>el_pirri_042</em>, persistido en localStorage.</p>
     </div>
     <div class="card">
       <h3>Mobile-first y apps nativas</h3>
-      <p>Agitar el móvil para tirar, gestos táctiles para descartar dados, PWA con service worker. App Android empaquetada con Capacitor (v1.3.37), actualización forzosa por versión mínima gestionada desde el backoffice.</p>
+      <p>Agitar el móvil para tirar, gestos táctiles para descartar dados, PWA con service worker. App Android empaquetada con Capacitor (v1.3.50), <strong>publicada en producción en Play Store</strong> desde el 13 de septiembre de 2026, actualización forzosa por versión mínima gestionada desde el backoffice.</p>
     </div>
     <div class="card">
       <h3>Backoffice de administración</h3>
@@ -702,7 +706,64 @@
       <div class="tl-item"><span class="tl-hash">f5eba29</span><span class="tl-cat cat-feat">feat</span><strong>Botón de quejas/sugerencias</strong> + fix de evaluación de repóker + ajustes de UI.</div>
       <div class="tl-item"><span class="tl-hash">6d9b1ac</span><span class="tl-cat cat-fix">fix</span><strong>Etiquetas y valores</strong> corregidos en la ficha de crear partida.</div>
       <div class="tl-item"><span class="tl-hash">03b3631</span><span class="tl-cat cat-fix">fix</span><strong>Feedback de conexión en partida y blindaje del backend</strong> — corrige el bug de app minimizada durante una partida (bots colgados / desconexiones fantasma) en <code>server.js</code>, <code>App.jsx</code> y <code>GameBoard.jsx</code>.</div>
-      <div class="tl-item"><span class="tl-hash">73418cf</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.37 (versionCode 62)</strong> — versión Android actual a fecha de este documento.</div>
+      <div class="tl-item"><span class="tl-hash">73418cf</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.37 (versionCode 62)</strong> — versión Android a fecha de la versión anterior de este documento.</div>
+    </div>
+
+    <!-- 5-6 agosto -->
+    <div class="tl-group">
+      <div class="tl-date">5–6 agosto 2026 — Onboarding, RGPD, i18n y Modo Historia</div>
+      <div class="tl-item"><span class="tl-hash">d7be541</span><span class="tl-cat cat-feat">feat</span><strong>Consentimiento RGPD en login</strong> + selector de idioma ES/EN.</div>
+      <div class="tl-item"><span class="tl-hash">72e1faa</span><span class="tl-cat cat-feat">feat</span><strong>Onboarding y ayuda de reglas del juego</strong> para nuevos jugadores.</div>
+      <div class="tl-item"><span class="tl-hash">dffab20</span><span class="tl-cat cat-feat">feat</span><strong>Modo "forzar a última versión"</strong> en el selector de actualización forzosa del backoffice.</div>
+      <div class="tl-item"><span class="tl-hash">e2e55a5</span><span class="tl-cat cat-feat">feat</span><strong>Modo Historia</strong> (mapa procedural low-poly) + <strong>canal de reporte de mensajes ofensivos</strong> — primera versión.</div>
+      <div class="tl-item"><span class="tl-hash">691629c</span><span class="tl-cat cat-feat">feat</span><strong>Ríos, puentes y relieve procedural</strong> en el mapa de Modo Historia.</div>
+      <div class="tl-item"><span class="tl-hash">4e63800</span><span class="tl-cat cat-feat">feat</span><strong>Feature flags</strong> de Modo Historia, comentarios y emoticonos, gestionables desde el backoffice.</div>
+    </div>
+
+    <!-- 11-17 agosto -->
+    <div class="tl-group">
+      <div class="tl-date">11–17 agosto 2026 — Estabilización, música configurable y QA</div>
+      <div class="tl-item"><span class="tl-hash">079459d–aa02963</span><span class="tl-cat cat-fix">fix</span><strong>Fixes de backoffice y navegación</strong> — reconstrucción de <code>backoffice-dist</code> tras cambios de feature flags; el gesto de volver atrás ya no salía de la app y Ajustes de usuario dejó de crashear.</div>
+      <div class="tl-item"><span class="tl-hash">583cc5f</span><span class="tl-cat cat-feat">feat</span><strong>Música de intro/hall configurable</strong> — activar/desactivar y elegir pista desde el backoffice.</div>
+      <div class="tl-item"><span class="tl-hash">a211745</span><span class="tl-cat cat-fix">fix</span><strong>Batch de QA</strong> (PrimeTestLab #5500) — marketplace, versión, i18n, enlaces legales, orientación landscape, logout.</div>
+      <div class="tl-item"><span class="tl-hash">a9c3fdd</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.44 (versionCode 69)</strong>.</div>
+    </div>
+
+    <!-- 13 septiembre -->
+    <div class="tl-group">
+      <div class="tl-date">13 septiembre 2026 — Lanzamiento a producción en Play Store</div>
+      <div class="tl-item"><span class="tl-cat cat-feat">hito</span><strong>App publicada en producción en Google Play</strong> — superada la pista de prueba cerrada exigida a cuentas de desarrollador nuevas (12+ testers, 14 días). Desbloquea la vinculación real de AdMob (ver sección 6).</div>
+    </div>
+
+    <!-- 14 septiembre -->
+    <div class="tl-group">
+      <div class="tl-date">14 septiembre 2026 — Física de dados movida al servidor</div>
+      <div class="tl-item"><span class="tl-hash">6f34987</span><span class="tl-cat cat-fix">fix</span><strong>Física de la tirada movida al servidor</strong> — corrige la desincronización de la animación entre dispositivos que tenía el modelo cliente-autoritativo anterior. Simulación headless con Rapier3D contra un banco de semillas pre-computado (<code>backend/game/dicePhysics.js</code> + <code>diceSeedBank.json</code>).</div>
+      <div class="tl-item"><span class="tl-hash">58743a2–685c3e1–57ff1d0</span><span class="tl-cat cat-fix">fix</span><strong>Fixes de despliegue</strong> — dependencias no declaradas (<code>@capacitor/app</code>, <code>@capacitor/browser</code>), copia de <code>backend/game/</code> en el Dockerfile de Railway (sin esto, el contenedor moría con <code>MODULE_NOT_FOUND</code>).</div>
+      <div class="tl-item"><span class="tl-hash">2fa723a</span><span class="tl-cat cat-fix">fix</span><strong>Dados atravesando a los ya guardados</strong> en la esquina de aparcado.</div>
+      <div class="tl-item"><span class="tl-hash">b93203a</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.46 (versionCode 71)</strong>.</div>
+    </div>
+
+    <!-- 15 septiembre -->
+    <div class="tl-group">
+      <div class="tl-date">15 septiembre 2026 — Efectos de manga, fixes de dados y nace el modo Powerups</div>
+      <div class="tl-item"><span class="tl-hash">f9dd6dd–d2e9993–a225176–0366d5e–39ee827–3dc84b5</span><span class="tl-cat cat-feat">feat</span><strong>Efecto manga (speed lines) al sacar Póker/Repóker</strong> — no destapa el resultado hasta que paran los dados; imágenes reales en vez de gradientes CSS; ajustado por tema claro/oscuro y a que suene una sola vez por turno.</div>
+      <div class="tl-item"><span class="tl-hash">5a4362b–4480fb0–cd9e6ac</span><span class="tl-cat cat-fix">fix</span><strong>Orientación de dados al posarse</strong> — quedaban torcidos (solo se animaba la posición, no la rotación); K y Q mostraban siempre la cara del 8; texto de K/Q/J ilegible.</div>
+      <div class="tl-item"><span class="tl-hash">85531df</span><span class="tl-cat cat-fix">fix</span><strong>Usuario real de Google perdía su estado</strong> (<code>isTester</code>, etc.) al reconectar.</div>
+      <div class="tl-item"><span class="tl-hash">fcf6b34</span><span class="tl-cat cat-fix">fix</span><strong>Efectos manga de póker/repóker/violinazo, remontada, orientación de dados y música intro/hall</strong> — consolidación de la ronda de pulido anterior.</div>
+      <div class="tl-item"><span class="tl-hash">d81641a</span><span class="tl-cat cat-feat">feat</span><strong>Modo Powerups</strong> — primer powerup, Bloqueo, funcional de extremo a extremo (marketplace apilable, armado/objetivo, protección server-side).</div>
+      <div class="tl-item"><span class="tl-hash">38bb92f–0f26751</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.47 → v1.3.48</strong> (versionCode 72 → 73).</div>
+    </div>
+
+    <!-- 17-18 septiembre -->
+    <div class="tl-group">
+      <div class="tl-date">17–18 septiembre 2026 — Tablero 3D rediseñado y clasificación PEGI 18</div>
+      <div class="tl-item"><span class="tl-hash">f2a11be</span><span class="tl-cat cat-feat">feat</span><strong>Tablero 3D de dados alargado</strong>, cámara con 3 vistas ligadas a los contadores de turno visibles, y ajustes de UX (banco de semillas regenerado para las nuevas dimensiones).</div>
+      <div class="tl-item"><span class="tl-hash">0fc225f</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.49 (versionCode 74)</strong>.</div>
+      <div class="tl-item"><span class="tl-hash">173bdae</span><span class="tl-cat cat-fix">fix</span><strong>Términos y privacidad actualizados a PEGI 18</strong> — azar simulado sin dinero real, prohibición de canje con consecuencia de baneo, canal de denuncia documentado; fix del enlace legal en la app nativa, que apuntaba a un origen local inalcanzable en vez de a producción.</div>
+      <div class="tl-item"><span class="tl-hash">54a1adf</span><span class="tl-cat cat-fix">fix</span><strong>Sincronización de la tuning de cámara</strong> guardada en el backoffice — no llegaba a otros dispositivos.</div>
+      <div class="tl-item"><span class="tl-hash">465966a</span><span class="tl-cat cat-chore">chore</span><strong>v1.3.50 (versionCode 75)</strong> — versión Android actual a fecha de este documento.</div>
+      <div class="tl-item"><span class="tl-hash">10d956b</span><span class="tl-cat cat-fix">fix</span><strong>Contraste ilegible</strong> en el bloque de tuning de cámara del backoffice (variable CSS inexistente, texto casi blanco sobre fondo claro fijo).</div>
     </div>
 
   </div>
@@ -731,8 +792,8 @@
   <div class="card">
     <h4>gameLogic.js — Evaluación de manos</h4>
     <p>Módulo puro sin efectos secundarios. Exporta <code>rollDie()</code>, <code>evaluateHand(dice[])</code> y <code>compareHands(h1, h2)</code>. El rango 7 (Repóker de X) devuelve <code>{ rank: 7, name: 'Repóker de K', topKey: 'K', … }</code>.</p>
-    <div class="alert alert-yellow">
-      <strong>⚠ Atención:</strong> <code>rollDie()</code> usa <code>Math.random()</code> en servidor. El cliente usa <code>rollSeed</code> solo para la animación visual. Si <code>report_faces</code> diverge del resultado servidor, la mano mostrada puede no coincidir con la evaluada.
+    <div class="alert alert-green" style="margin-bottom:0">
+      <strong>✓ Resuelto (sep. 2026):</strong> hasta septiembre, cada cliente calculaba su propia física y confirmaba el resultado al servidor vía <code>report_faces</code> — sin verificación de coherencia, era una superficie de ataque real (ver el riesgo equivalente que tenía la versión anterior de este documento). Ahora la física corre una única vez en el servidor (<code>backend/game/dicePhysics.js</code>, Rapier3D headless) contra un banco de semillas pre-verificado (<code>diceSeedBank.json</code>); el resultado se calcula server-side y se retransmite como keyframes — <code>report_faces</code> ya no existe como evento, el cliente solo reproduce lo que el servidor decidió.
     </div>
   </div>
 
@@ -792,10 +853,8 @@
   </div>
 
   <div class="card">
-    <h4>report_faces — Superficie de ataque</h4>
-    <div class="alert alert-red" style="margin-bottom:0">
-      <strong>⚠ Error potencial:</strong> El servidor acepta cualquier combinación de 5 valores enviados por el cliente. Un cliente modificado podría enviar siempre "Repóker de AS". No existe verificación de coherencia con la semilla ni con los dados generados serverside.
-    </div>
+    <h4>Modo Powerups — <code>use_powerup</code> (nuevo, sep. 2026)</h4>
+    <p>Handler server-side: valida que el objetivo sea el jugador con el turno activo (nunca uno mismo), que no esté <code>done</code>, índice de dado válido y no bloqueado ya, cooldown de 1 uso por bloqueador y turno-objetivo (<code>POWERUP_TURN_LIMITS</code>), y stock real en <code>user_items.quantity</code> (se descuenta al usar). El dado bloqueado es inmune a relanzamientos: tanto <code>roll</code> como el turno del bot filtran <code>blockedDice</code> fuera de los índices que se relanzan, así que el servidor protege la regla aunque el cliente mintiera.</p>
   </div>
 
   <div class="card">
@@ -819,7 +878,12 @@
 
   <div class="card">
     <h4>API REST de administración — <code>/api/admin/*</code></h4>
-    <p>Endpoints protegidos con middleware <code>requireAdmin</code> (token de admin persistido en SQLite), usados exclusivamente por el backoffice: <code>items</code>, <code>tournaments</code>, <code>settings</code>, <code>app-versions</code>, <code>feedback</code>, <code>users</code> y <code>upload</code> (subida de imágenes). El evento de socket público <code>get_settings</code> expone <code>maxPlayersLimit</code> y <code>featureFlags</code> sin autenticación, para que el cliente del juego los consuma en tiempo real.</p>
+    <p>Endpoints protegidos con middleware <code>requireAdmin</code> (token de admin persistido en SQLite), usados exclusivamente por el backoffice: <code>items</code>, <code>tournaments</code>, <code>settings</code>, <code>app-versions</code>, <code>feedback</code>, <code>users</code>, <code>upload</code> (subida de imágenes) y, desde septiembre, <code>reported-messages</code> (canal de denuncia, ver más abajo). El evento de socket público <code>get_settings</code> expone <code>maxPlayersLimit</code> y <code>featureFlags</code> sin autenticación, para que el cliente del juego los consuma en tiempo real.</p>
+  </div>
+
+  <div class="card">
+    <h4>Canal de denuncia — <code>/api/report-message</code> (nuevo, ago. 2026)</h4>
+    <p>Endpoint público con rate limiting (5 cada 10 min por IP) para reportar mensajes/jugadores por lenguaje ofensivo, acoso, violencia o discriminación. Guarda el mensaje reportado, quien reporta y, si se indica, el jugador reportado en la tabla <code>reported_messages</code>, con purga automática a los <strong>90 días</strong> (solo se conserva con fin de moderación). Visible y gestionable desde el backoffice (<code>/api/admin/reported-messages</code>). Documentado como requisito de la clasificación PEGI 18 de la app (ver sección 11).</p>
   </div>
 
   <div class="card">
@@ -925,12 +989,12 @@
   <h2>5. Roadmap y mejoras futuras</h2>
 
   <div class="alert alert-yellow">
-    <strong>Estado actual:</strong> producto mucho más completo que el <span class="tip" data-tip="Minimum Viable Product — primera versión lanzable que aporta valor real con el mínimo de funcionalidad">MVP</span> original — marketplace, torneos, retos, backoffice y apps nativas ya en producción de desarrollo. El riesgo principal ya no es de funcionalidad sino de <strong>datos</strong>: no hay backup automático de SQLite. Esa es la prioridad número uno antes de cualquier crecimiento de usuarios.
+    <strong>Estado actual:</strong> app ya <strong>publicada en producción en Play Store</strong> (13 sep. 2026, PEGI 18), con AdMob real, física de dados movida al servidor (elimina el riesgo de manipulación de <code>report_faces</code> que señalaba la versión anterior de este documento), y un segundo modo de juego (Powerups) en producción parcial. El riesgo principal sigue siendo de <strong>datos</strong>: no hay backup automático de SQLite. Sigue siendo la prioridad número uno.
   </div>
 
   <h3>Ya completado desde la primera versión del roadmap</h3>
   <div class="card">
-    <p style="font-size:.88rem;color:var(--muted);margin-bottom:.75rem">Estas eran "deuda técnica prioritaria" o "features pendientes" en la versión anterior de este documento y ya están implementadas — verificado directamente en el código:</p>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:.75rem">Estas eran "deuda técnica prioritaria" o "features pendientes" en versiones anteriores de este documento y ya están implementadas — verificado directamente en el código:</p>
     <ul style="margin-bottom:0">
       <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Rate limiting</strong> por socket, con límites diferenciados por tipo de evento.</li>
       <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>CORS restringido</strong> vía <code>ALLOWED_ORIGIN</code> en Express y Socket.io.</li>
@@ -941,22 +1005,26 @@
       <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Reutilización de objetos <code>Audio</code></strong> y <code>IS_MOBILE</code> extraído del render.</li>
       <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong><span class="tip" data-tip="Continuous Integration / Continuous Delivery — automatización de pruebas y despliegue de código">CI/CD</span> automático</strong> — GitHub Actions (frontend) + integración Railway (backend), deploy al hacer push a <code>main</code>.</li>
       <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>App nativa Android</strong> (Capacitor), con Google Sign-In y push nativos.</li>
-      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Chat en sala</strong> — POC de mensajería con reacciones y burbujas.</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Chat en sala</strong> — reacciones y mensajes cortos, con canal de denuncia (ago. 2026).</li>
       <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Ranking global / favoritos</strong> y sistema de torneos (con acceso condicionado por item).</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Lanzamiento a producción en Play Store</strong> (13 sep. 2026) y <strong>AdMob real</strong> (App ID + banners de producción).</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Física de dados server-side</strong> — elimina la superficie de ataque de <code>report_faces</code> (ese evento ya no existe).</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Clasificación de contenido PEGI 18</strong> — términos/privacidad actualizados, canal de denuncia documentado (sep. 2026).</li>
+      <li><span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">✓ hecho</span> <strong>Modo Powerups</strong> — powerup Bloqueo funcional end-to-end (10 más diseñados, sin implementar).</li>
     </ul>
   </div>
 
   <h3>Deuda técnica prioritaria — pendiente hoy</h3>
   <div class="card">
     <ol>
-      <li><strong style="color:var(--red)">Backups automáticos de SQLite</strong> — riesgo real y activo: el fichero único en el volumen de Railway no tiene copia de seguridad. Máxima prioridad antes de cualquier otra cosa.</li>
-      <li><strong>Lanzamiento a producción en Play Store</strong> — prerrequisito para vincular el App ID real de AdMob y empezar a monetizar con publicidad. Vídeo, capturas, mockups y feature graphic ya listos; falta subir la ficha/build.</li>
+      <li><strong style="color:var(--red)">Backups automáticos de SQLite</strong> — riesgo real y activo: el fichero único en el volumen de Railway no tiene copia de seguridad. Sigue siendo la máxima prioridad.</li>
       <li><strong>Validación serverside del código de sala privada</strong> — el código sigue viajando en el listado público (<code>sanitizeForList</code> incluye <code>code</code>); la "privacidad" es solo visual (candado + modal), no una protección real.</li>
-      <li><strong>Validación serverside de caras</strong> — <code>report_faces</code> sigue sin verificar coherencia con la semilla generada en servidor.</li>
-      <li><strong>Modularizar <code>server.js</code></strong> (2.241 líneas) en módulos por dominio (juego, marketplace, torneos, admin).</li>
-      <li><strong>Dividir <code>GameBoard.jsx</code> y <code>RoomList.jsx</code></strong> (~1.050–1.060 líneas cada uno) en subcomponentes.</li>
+      <li><strong>Terminar de regenerar el banco de semillas del tablero rediseñado</strong> — tras el redimensionado de septiembre (<code>WX=4.3</code>/<code>WZ=7.5</code>), las combinaciones de 5 dados (las 252 más difíciles) siguen sin completar su regeneración.</li>
+      <li><strong>Modularizar <code>server.js</code></strong> (2.926 líneas, +685 desde la versión anterior) en módulos por dominio (juego, marketplace, torneos, admin, powerups).</li>
+      <li><strong>Dividir <code>GameBoard.jsx</code></strong> (1.232 líneas) y <strong><code>RoomList.jsx</code></strong> (1.228 líneas) en subcomponentes.</li>
       <li><strong>Limpieza de <code>registeredUsers{}</code> inactivos</strong> en memoria — hoy crece sin cota con el histórico de usuarios.</li>
       <li><strong>Notificación de desconexión</strong> — informar a la sala cuando un jugador se desconecta, más allá del feedback visual ya añadido en julio.</li>
+      <li><strong>Generalizar el handler <code>use_powerup</code></strong> — hoy hardcodeado para <code>powerup-bloqueo</code>; antes de añadir los 10 powerups restantes hace falta una tabla de definiciones por powerup (objetivo, self/rival, efecto).</li>
     </ol>
   </div>
 
@@ -965,12 +1033,13 @@
     <div class="roadmap-col card">
       <h4>🎮 Juego</h4>
       <ul>
+        <li><strong>10 powerups adicionales</strong> diseñados sin implementar (Cambiazo, Niebla, Robo de tirada, Maldición, Escudo, Amuleto, Tirada extra, Sexto dado, Comodín, Vista rápida, Carpintero)</li>
         <li>Espectadores (modo solo lectura)</li>
         <li>Revancha abierta a todos (no solo host)</li>
         <li>Variantes de reglas configurables</li>
         <li>Historial de manos de la partida</li>
         <li>Estadísticas de jugador ampliadas (W/L, manos)</li>
-        <li>Consumir el primer feature flag real desde el backoffice</li>
+        <li>Feature Owner/sala (bar/local con sala y campeonatos propios) — en diseño</li>
       </ul>
     </div>
     <div class="roadmap-col card">
@@ -995,12 +1064,10 @@
     <div class="roadmap-col card">
       <h4>📱 Cliente</h4>
       <ul>
-        <li><strong>Publicación en producción en Play Store</strong></li>
         <li>App iOS (actualmente solo Android)</li>
-        <li>App ID real de AdMob (pendiente de publicación)</li>
         <li>Haptic feedback en móvil</li>
-        <li>Accesibilidad (ARIA, alto contraste)</li>
-        <li>i18n (castellano / galego / inglés)</li>
+        <li>Accesibilidad — selector de tamaño de texto propio, ARIA, alto contraste <span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36;font-size:.65rem">parcial: textZoom fijo al 100% ya aplicado</span></li>
+        <li>i18n — galego, pendiente <span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36;font-size:.65rem">castellano/inglés ya en producción</span></li>
       </ul>
     </div>
   </div>
@@ -1091,38 +1158,39 @@
     <p><strong>Por qué se descartó (de momento):</strong> requiere abrirse cuenta en Stripe e implementar webhooks. Se optó primero por un canal de pago más simple (Bizum, sin integración técnica ni comisión de pasarela) para validar la demanda de compra de Bules antes de invertir en la integración con Stripe. Es el paso siguiente natural una vez validado el modelo.</p>
   </div>
 
-  <div class="mon-block mon-block--yellow">
-    <span class="mon-label mon-label--yellow">Pendiente de producción</span>
-    <h4>Publicidad — AdMob</h4>
-    <p>El SDK <code>@capacitor-community/admob</code> ya está integrado en la app Android con banners y formulario de consentimiento UMP (obligatorio en la UE). Actualmente funciona con IDs de test de Google.</p>
-    <p><strong>Por qué está pendiente:</strong> vincular el App ID real de producción en AdMob requiere que la app esté publicada en <strong>producción</strong> en Play Console — no es suficiente con una pista de prueba cerrada o interna. Es decir, AdMob real depende del lanzamiento a producción en Play Store (ver sección 9).</p>
-  </div>
-
   <!-- VERDE -->
   <h3>Modelo implementado <span style="color:var(--green)">●</span></h3>
 
   <div class="mon-block mon-block--green">
+    <span class="mon-label mon-label--green">En producción desde el 13 de septiembre de 2026</span>
+    <h4>Publicidad — AdMob</h4>
+    <p>El SDK <code>@capacitor-community/admob</code> está integrado en la app Android con banners y formulario de consentimiento UMP (obligatorio en la UE). Desde el lanzamiento a producción en Play Store, la app usa <strong>App ID e IDs de banner reales</strong> (<code>ca-app-pub-4894674675461010/…</code>) en vez de los IDs de test de Google — ya genera ingresos reales por impresión/click, aunque todavía no se ha medido ni reportado el volumen.</p>
+  </div>
+
+  <div class="mon-block mon-block--green">
     <span class="mon-label mon-label--green">En producción desde junio 2026</span>
-    <h4>Bules — moneda virtual + marketplace + torneos con acceso por item</h4>
+    <h4>Bules — moneda virtual + marketplace + torneos con acceso por item + powerups</h4>
     <p>
       Los jugadores ganan <strong>Bules</strong> jugando partidas, o compran un paquete de <strong>1.000 Bules por 1 €</strong> vía Bizum
       (pago manual, sin pasarela integrada — el saldo se acredita tras confirmación del admin desde el backoffice).
-      Los Bules se gastan en el <strong>Marketplace</strong>: skins de dados (mármol azul/negro/rojo/verde, dados rojos transparentes)
-      e items cosméticos de bar (cubata, churros, balón…). Algunos items funcionan además como <strong>llave de entrada</strong> a
+      Los Bules se gastan en el <strong>Marketplace</strong>: skins de dados (mármol azul/negro/rojo/verde, dados rojos transparentes),
+      items cosméticos de bar (cubata, churros, balón…) y, desde septiembre, <strong>powerups apilables</strong> del modo Powerups
+      (de momento solo "Bloqueo"). Algunos items funcionan además como <strong>llave de entrada</strong> a
       torneos exclusivos — por ejemplo, el torneo "Bar Doce" solo es accesible poseyendo el item Churros.
     </p>
     <ul>
-      <li>✓ Economía cerrada: los Bules no se canjean de vuelta a dinero real → no requiere licencia <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span>, no requiere PSP licenciado.</li>
-      <li>✓ Ya implementado y en uso: rename puntos→Bules, marketplace, skins, items de bar, torneos con acceso condicionado, todo gestionable desde el backoffice.</li>
+      <li>✓ Economía cerrada: los Bules no se canjean de vuelta a dinero real → no requiere licencia <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span>, no requiere PSP licenciado, y desde septiembre está respaldada explícitamente por la clasificación PEGI 18 (ver sección 11).</li>
+      <li>✓ Ya implementado y en uso: rename puntos→Bules, marketplace, skins, items de bar, torneos con acceso condicionado, powerups apilables, todo gestionable desde el backoffice.</li>
       <li>✓ El paquete de 1.000 Bules por Bizum ya genera el primer ingreso real, aunque sea manual y de bajo volumen.</li>
-      <li>✗ El cobro por Bizum es manual (no escalable) — el siguiente paso es integrar Stripe para pagos automáticos y más paquetes.</li>
-      <li>✗ Todavía no hay AdMob en producción (pendiente de publicación en Play Store) ni suscripción premium.</li>
+      <li>✓ AdMob ya en producción con IDs reales (ver bloque anterior).</li>
+      <li>✗ El cobro por Bizum sigue siendo manual (no escalable) — el siguiente paso es integrar Stripe para pagos automáticos y más paquetes.</li>
+      <li>✗ Todavía no hay suscripción premium ni cuota B2B a bares.</li>
     </ul>
     <p style="margin-bottom:0"><strong>Siguientes pasos de monetización, en orden:</strong></p>
     <ol style="margin-bottom:0">
-      <li>Lanzamiento a producción en Play Store → habilita AdMob real (banners con ingresos reales por impresión/click).</li>
+      <li>Medir el volumen real de ingresos por AdMob ahora que está en producción.</li>
       <li>Más paquetes de Bules vía Stripe (pagos automáticos, sin intervención manual del admin).</li>
-      <li>Explorar suscripción premium o cuota <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> a bares como se planteó originalmente (ver secciones 8–9), ahora como complemento a la economía de Bules ya validada.</li>
+      <li>Explorar suscripción premium o cuota <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> a bares como se planteó originalmente (ver secciones 8–9), ahora como complemento a la economía de Bules ya validada — ver también la feature Owner/sala en diseño.</li>
     </ol>
   </div>
 
@@ -1163,15 +1231,15 @@
       <td>Media</td>
       <td style="color:var(--yellow);font-weight:700">Pendiente — siguiente paso</td>
     </tr>
-    <tr>
+    <tr style="background:var(--green-bg)">
       <td>AdMob en producción</td>
       <td>Sí (Play Console)</td>
       <td>No</td>
-      <td>Baja (ya integrado)</td>
-      <td style="color:var(--yellow);font-weight:700">Pendiente publicación</td>
+      <td><strong>Ya implementado</strong></td>
+      <td style="color:var(--green);font-weight:700">✓ En producción (13 sep. 2026)</td>
     </tr>
     <tr style="background:var(--green-bg)">
-      <td><strong>Bules + Marketplace + torneos por item</strong></td>
+      <td><strong>Bules + Marketplace + torneos por item + powerups</strong></td>
       <td><strong>No</strong> (Bizum manual)</td>
       <td><strong>No</strong></td>
       <td><strong>Ya implementado</strong></td>
@@ -1200,29 +1268,31 @@
 
   <div class="metric-grid">
     <div class="metric-card">
-      <div class="metric-value">~20 M</div>
+      <div class="metric-value">~22 M</div>
       <div class="metric-label">Tokens de entrada</div>
-      <div class="metric-sub">~7M no cacheados · ~13M cacheados</div>
+      <div class="metric-sub">~8M no cacheados · ~14M cacheados</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value">~2.7 M</div>
+      <div class="metric-value">~3.0 M</div>
       <div class="metric-label">Tokens de salida</div>
       <div class="metric-sub">Código generado, análisis, respuestas</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value">~386</div>
+      <div class="metric-value">~430</div>
       <div class="metric-label">Commits</div>
-      <div class="metric-sub">18 días activos entre el 5 jun y el 30 jul 2026</div>
+      <div class="metric-sub">26 días activos entre el 5 jun y el 18 sep 2026</div>
     </div>
     <div class="metric-card--accent metric-card">
-      <div class="metric-value">≈ $65</div>
+      <div class="metric-value">≈ $72</div>
       <div class="metric-label">Coste total en <span class="tip" data-tip="Application Programming Interface — interfaz que permite a sistemas distintos comunicarse entre sí">API</span></div>
-      <div class="metric-sub">≈ €60 · rango real: $45–$90</div>
+      <div class="metric-sub">≈ €67 · rango real: $50–$100</div>
     </div>
   </div>
   <p style="font-size:.8rem;color:var(--muted);margin-top:.5rem">
-    Estimación proporcional al crecimiento del proyecto (×3,6 commits) desde la cifra de referencia calculada el 26 de junio de 2026
-    (~5,5M tokens de entrada, ~750k de salida, ≈$23). No se ha vuelto a analizar el historial completo de sesiones para este documento.
+    Estimación proporcional al crecimiento del proyecto (×1,11 commits, 430 vs. 386) desde la cifra de referencia de la versión
+    anterior de este documento (31 jul 2026: ~20M tokens de entrada, ~2,7M de salida, ≈$65). No se ha vuelto a analizar el
+    historial completo de sesiones para este documento — sigue sin incluir el uso de otras sesiones de Claude Code trabajando
+    en paralelo sobre el mismo repositorio (ver metodología de trabajo del equipo, no cuantificada aquí).
   </p>
 
   <h3>7.2 Coste equivalente sin Claude — equipo de desarrollo humano</h3>
@@ -1349,23 +1419,119 @@
       <td>Actualización de documentación técnica</td>
       <td>8 h</td>
       <td>€520</td>
-      <td>Esta regeneración (v0.5)</td>
+      <td>Regeneración v0.5 (31 jul 2026)</td>
+    </tr>
+    <tr style="font-weight:700;background:var(--tag-bg)">
+      <td>Subtotal a 31 jul 2026 (v0.5)</td>
+      <td>898 h</td>
+      <td>€58,370</td>
+      <td>Estado del documento anterior</td>
+    </tr>
+    <tr>
+      <td>RGPD en login + selector de idioma ES/EN</td>
+      <td>12 h</td>
+      <td>€780</td>
+      <td>Consentimiento + i18n</td>
+    </tr>
+    <tr>
+      <td>Onboarding y ayuda de reglas del juego</td>
+      <td>10 h</td>
+      <td>€650</td>
+      <td>Nuevos jugadores</td>
+    </tr>
+    <tr>
+      <td>Modo Historia (mapa procedural)</td>
+      <td>45 h</td>
+      <td>€2,925</td>
+      <td>Terreno low-poly, ríos/puentes/relieve, feature flags</td>
+    </tr>
+    <tr>
+      <td>Canal de denuncia (reporte de mensajes)</td>
+      <td>12 h</td>
+      <td>€780</td>
+      <td>Endpoint, tabla con purga a 90 días, panel admin</td>
+    </tr>
+    <tr>
+      <td>QA batch + fixes de agosto</td>
+      <td>15 h</td>
+      <td>€975</td>
+      <td>Marketplace, versión, i18n, legales, landscape, logout</td>
+    </tr>
+    <tr>
+      <td>Música intro/hall configurable</td>
+      <td>8 h</td>
+      <td>€520</td>
+      <td>Selección de pista desde el backoffice</td>
+    </tr>
+    <tr>
+      <td>Lanzamiento a producción en Play Store</td>
+      <td>12 h</td>
+      <td>€780</td>
+      <td>Pista de prueba cerrada, gestión de testers, publicación</td>
+    </tr>
+    <tr>
+      <td>Física de dados movida al servidor</td>
+      <td>40 h</td>
+      <td>€2,600</td>
+      <td>Rapier3D headless + banco de semillas, fixes de despliegue</td>
+    </tr>
+    <tr>
+      <td>Efectos de manga + fixes de orientación de dados</td>
+      <td>20 h</td>
+      <td>€1,300</td>
+      <td>Speed lines póker/repóker/violinazo, K/Q/J torcidos</td>
+    </tr>
+    <tr>
+      <td>Modo Powerups (Bloqueo end-to-end)</td>
+      <td>40 h</td>
+      <td>€2,600</td>
+      <td>Marketplace apilable, armado/objetivo, protección server-side</td>
+    </tr>
+    <tr>
+      <td>Tablero 3D rediseñado</td>
+      <td>45 h</td>
+      <td>€2,925</td>
+      <td>Dimensiones, 3 vistas de cámara, banco de semillas, herramienta de tuning</td>
+    </tr>
+    <tr>
+      <td>Clasificación PEGI 18 + documentos legales</td>
+      <td>6 h</td>
+      <td>€390</td>
+      <td>Términos, privacidad, fix de enlace legal en la app</td>
+    </tr>
+    <tr>
+      <td>Fixes de backoffice</td>
+      <td>4 h</td>
+      <td>€260</td>
+      <td>Contraste de tuning, sincronización entre dispositivos</td>
+    </tr>
+    <tr>
+      <td>Testing + debugging adicional (ago–sep)</td>
+      <td>25 h</td>
+      <td>€1,625</td>
+      <td>Multiplataforma, edge cases de física server-side y powerups</td>
+    </tr>
+    <tr>
+      <td>Actualización de documentación técnica</td>
+      <td>10 h</td>
+      <td>€650</td>
+      <td>Esta regeneración (v0.6)</td>
     </tr>
     <tr style="font-weight:700">
       <td>TOTAL a fecha de este documento</td>
-      <td>~898 h</td>
-      <td>≈€58,370</td>
+      <td>~1,202 h</td>
+      <td>≈€78,130</td>
       <td>Sin overhead ni herramientas</td>
     </tr>
   </table>
 
   <div class="roi-callout">
-    <div class="roi-number">× 900</div>
+    <div class="roi-number">× 1.085</div>
     <div class="roi-desc">
       <strong>Factor de eficiencia económica.</strong><br>
-      ≈€60 en tokens de Claude producen el equivalente a ≈€58.400 en tiempo de desarrollo senior.<br>
-      El mismo proyecto habría requerido <strong>5–7 meses de trabajo</strong> de un desarrollador senior (o 3–4 meses con un equipo de 2).
-      Con Claude Code se completó en <strong>18 días naturales de desarrollo activo</strong>, repartidos en ~8 semanas de calendario.
+      ≈€67 en tokens de Claude producen el equivalente a ≈€78.130 en tiempo de desarrollo senior.<br>
+      El mismo proyecto habría requerido <strong>7–9 meses de trabajo</strong> de un desarrollador senior (o 4–5 meses con un equipo de 2).
+      Con Claude Code se completó en <strong>26 días naturales de desarrollo activo</strong>, repartidos en ~15 semanas de calendario.
     </div>
   </div>
 
@@ -1416,9 +1582,9 @@
     </tr>
     <tr>
       <td>Desarrollo hasta hoy (estado actual)</td>
-      <td><strong>≈ $65 / 18 días activos</strong></td>
-      <td>≈ €58,400 / 5–7 meses</td>
-      <td style="color:var(--green);font-weight:700">~900×</td>
+      <td><strong>≈ $72 / 26 días activos</strong></td>
+      <td>≈ €78,130 / 7–9 meses</td>
+      <td style="color:var(--green);font-weight:700">~1.085×</td>
     </tr>
     <tr>
       <td>Hasta escalado real (Fase 3 restante)</td>
@@ -1457,7 +1623,7 @@
     Modela un escenario de ingresos basado en suscripción de usuario + cuota <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> a bares, que sigue sin implementarse.
     Lo que realmente se construyó es la economía de <strong>Bules + marketplace</strong> (sección 6), más cercana en espíritu a la
     "moneda virtual no canjeable" descrita aquí como opción dudosa que a una suscripción de pago. Los números de tamaño de mercado
-    (<span class="tip" data-tip="Total Addressable Market — mercado total al que podría llegar el producto si capturara el 100%">TAM</span>/<span class="tip" data-tip="Serviceable Addressable Market — parte del TAM a la que realmente se puede llegar con el modelo actual">SAM</span>/<span class="tip" data-tip="Serviceable Obtainable Market — cuota realista de mercado a capturar a corto plazo">SOM</span>) y el diagnóstico de efecto red siguen siendo relevantes; las proyecciones de ingresos concretas deben leerse como escenario, no como plan ejecutado. La app sigue sin publicarse en producción en Play Store, así que ningún número de usuarios reales existe todavía.
+    (<span class="tip" data-tip="Total Addressable Market — mercado total al que podría llegar el producto si capturara el 100%">TAM</span>/<span class="tip" data-tip="Serviceable Addressable Market — parte del TAM a la que realmente se puede llegar con el modelo actual">SAM</span>/<span class="tip" data-tip="Serviceable Obtainable Market — cuota realista de mercado a capturar a corto plazo">SOM</span>) y el diagnóstico de efecto red siguen siendo relevantes; las proyecciones de ingresos concretas deben leerse como escenario, no como plan ejecutado. La app ya está publicada en producción en Play Store (desde el 13 de septiembre de 2026), pero ningún número de usuarios reales, instalaciones o ingresos por AdMob se ha medido o reportado todavía — los datos de este análisis siguen siendo enteramente hipotéticos.
   </div>
 
   <p>
@@ -1989,14 +2155,14 @@
   <h2>9. Plan de acción — equipo de 2 personas</h2>
 
   <div class="alert alert-yellow">
-    <strong>Estado real a 31 de julio de 2026:</strong> el desarrollo de producto ha avanzado muy por delante del plan comercial
-    de esta sección. Ya están <strong>hechos</strong>: marketplace + Bules, sistema de torneos con acceso por item, retos 1v1,
-    backoffice de administración completo (items, torneos, usuarios, feedback, versiones de app, ajustes/feature flags), app
-    nativa Android con Google Sign-In y AdMob integrado. Siguen <strong>pendientes</strong> los tres bloqueantes reales:
-    <strong>backups automáticos de SQLite</strong> (riesgo de datos, cero coste técnico para resolverlo), el
-    <strong>lanzamiento a producción en Play Store</strong> (prerrequisito para todo lo demás: AdMob real, visibilidad pública,
-    reseñas) y, por tanto, el <strong>App ID real de AdMob</strong>. El plan comercial de bares/suscripción que sigue no se ha
-    ejecutado — sigue siendo la hoja de ruta de negocio propuesta, no un hecho consumado.
+    <strong>Estado real a 18 de septiembre de 2026:</strong> el desarrollo de producto sigue muy por delante del plan comercial
+    de esta sección. Ya están <strong>hechos</strong>: marketplace + Bules + powerups apilables, sistema de torneos con acceso
+    por item, retos 1v1, Modo Historia, backoffice de administración completo, app nativa Android con Google Sign-In, física
+    de dados server-side, y — desde este documento anterior — el <strong>lanzamiento a producción en Play Store</strong>
+    (13 sep. 2026, con clasificación PEGI 18) y el <strong>App ID real de AdMob</strong>, ya vinculado y sirviendo anuncios
+    reales. Sigue pendiente el único bloqueante real que queda: <strong>backups automáticos de SQLite</strong> (riesgo de
+    datos, cero coste técnico para resolverlo). El plan comercial de bares/suscripción que sigue no se ha ejecutado — sigue
+    siendo la hoja de ruta de negocio propuesta, no un hecho consumado.
   </div>
 
   <p>
@@ -2517,7 +2683,15 @@
         <span class="gitem-term"><span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento"><span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento">Rapier3D</span></span></span>
         <span class="gitem-cat gcat--tech">Tecnología</span>
       </div>
-      <p class="gitem-def">Motor de física 3D de alta precisión compilado en <span class="tip" data-tip="Formato binario que permite ejecutar código de alto rendimiento directamente en el navegador, sin plugins"><span class="tip" data-tip="Formato binario que permite ejecutar código de alto rendimiento directamente en el navegador, sin plugins">WebAssembly</span></span>. Simula cuerpos rígidos, colisiones, gravedad y fricción en tiempo real. En Bule Bule se usa para que los dados reboten de forma realista sobre el tablero, con física determinista: la misma semilla numérica produce exactamente el mismo resultado en todos los dispositivos.</p>
+      <p class="gitem-def">Motor de física 3D de alta precisión compilado en <span class="tip" data-tip="Formato binario que permite ejecutar código de alto rendimiento directamente en el navegador, sin plugins"><span class="tip" data-tip="Formato binario que permite ejecutar código de alto rendimiento directamente en el navegador, sin plugins">WebAssembly</span></span>. Simula cuerpos rígidos, colisiones, gravedad y fricción en tiempo real. En Bule Bule se usa para que los dados reboten de forma realista sobre el tablero. Desde septiembre de 2026 corre en modo <em>headless</em> en el <strong>servidor</strong> (no en cada cliente) contra un banco de semillas pre-verificado — el cliente solo reproduce visualmente el resultado ya decidido, eliminando el riesgo de desincronización que tenía el modelo anterior.</p>
+    </div>
+
+    <div class="gitem" data-cat="tech" data-terms="banco de semillas dice seed bank server side fisica determinista">
+      <div class="gitem-head">
+        <span class="gitem-term">Banco de semillas</span>
+        <span class="gitem-cat gcat--tech">Tecnología</span>
+      </div>
+      <p class="gitem-def">Conjunto de semillas de <span class="tip" data-tip="Motor de física 3D compilado en WebAssembly; simula colisiones, gravedad y cuerpos rígidos con alto rendimiento">Rapier3D</span> pre-computadas y verificadas offline, agrupadas por combinación de resultado final (<code>backend/game/diceSeedBank.json</code>, generado con <code>scripts/generateDiceSeedBank.js</code>/<code>topupDiceSeedBank.js</code>). El servidor elige una semilla del banco cuyo resultado coincide con el valor decidido por <code>rollDie()</code>, simula esa tirada una única vez, y retransmite los keyframes a todos los clientes — así la animación es idéntica en cualquier dispositivo sin tener que confiar en que cada cliente calcule lo mismo.</p>
     </div>
 
     <div class="gitem" data-cat="tech" data-terms="three.js threejs libreria 3d webgl navegador">
@@ -2644,6 +2818,15 @@
       <p class="gitem-def">Organismo del Ministerio de Consumo de España responsable de regular, supervisar y licenciar los juegos de azar online. Cualquier plataforma que intermedie en apuestas de dinero real entre usuarios necesita su licencia. El proceso es largo, costoso (garantías de decenas de miles de euros) y con auditorías técnicas. Las sanciones por operar sin licencia alcanzan los 50M€ (Ley 13/2011).</p>
     </div>
 
+    <div class="gitem" data-cat="legal" data-terms="pegi pan european game information clasificacion edad google play azar simulado">
+      <div class="gitem-head">
+        <span class="gitem-term">PEGI</span>
+        <span class="gitem-short">Pan European Game Information</span>
+        <span class="gitem-cat gcat--legal">Legal</span>
+      </div>
+      <p class="gitem-def">Sistema europeo de clasificación por edad para videojuegos (3/7/12/16/18), usado por Google Play y otras tiendas para restringir la visibilidad e instalación de una app según la cuenta del usuario. Es un marco distinto al de la <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span>: regula audiencia/contenido, no licencias de operador de apuestas. Bule Bule recibió clasificación <strong>PEGI 18</strong> en septiembre de 2026 por el descriptor "azar simulado" (ver sección 11.5), aunque no ofrece juego de azar con dinero real.</p>
+    </div>
+
     <div class="gitem" data-cat="legal" data-terms="psp payment service provider pagos stripe paypal autorizado">
       <div class="gitem-head">
         <span class="gitem-term"><span class="tip" data-tip="Payment Service Provider — entidad autorizada para procesar pagos (ej: Stripe, PayPal)"><span class="tip" data-tip="Payment Service Provider — entidad autorizada para procesar pagos (ej: Stripe, PayPal)">PSP</span></span></span>
@@ -2766,15 +2949,18 @@
 
 <!-- ═══════════════════════════════════════════════════════════ SECCIÓN 11 -->
 <section id="regulacion">
-  <h2>11. Marco legal — Ley 13/2011 de Regulación del Juego</h2>
-  <p>Análisis del coste y viabilidad de operar Bule Bule como juego regulado bajo la normativa española de juego online, gestionada por la <strong><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span></strong> (Dirección General de Ordenación del Juego).</p>
+  <h2>11. Marco legal — Ley 13/2011 de Regulación del Juego y clasificación PEGI 18</h2>
+  <p>Análisis del coste y viabilidad de operar Bule Bule como juego regulado bajo la normativa española de juego online, gestionada por la <strong><span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span></strong> (Dirección General de Ordenación del Juego), y de la clasificación de contenido que Google Play asignó a la app en septiembre de 2026 (sección 11.5) — dos marcos regulatorios distintos que llegan a la misma conclusión.</p>
 
   <div class="alert alert-green">
-    <strong>Estado actual — sigue aplicando sin cambios:</strong> el sistema de Bules implementado en producción (sección 6) es
+    <strong>Estado actual — sigue aplicando sin cambios, y ahora reforzado:</strong> el sistema de Bules implementado en producción (sección 6) es
     exactamente el escenario "juego social sin dinero real" descrito en la sección 11.4: moneda virtual ganada jugando o
-    comprada con dinero real, gastada en items y acceso a torneos, <strong>nunca canjeable de vuelta a dinero</strong>.
+    comprada con dinero real, gastada en items, powerups y acceso a torneos, <strong>nunca canjeable de vuelta a dinero</strong>.
     Todo el análisis de esta sección — y en particular la conclusión de que el modelo regulado con apuestas reales es
-    inviable para un equipo pequeño — sigue vigente sin ninguna modificación.
+    inviable para un equipo pequeño — sigue vigente sin ninguna modificación. En septiembre de 2026, Google Play clasificó
+    la app como <strong>PEGI 18</strong> por "azar simulado" (sección 11.5): es la confirmación, desde un marco regulatorio
+    distinto (política de contenido de la tienda, no la DGOJ), de que Bule Bule es percibida como juego de azar simulado
+    y no como juego de habilidad puro — razón de más para mantener la economía de Bules estrictamente no canjeable.
   </div>
 
   <h3>11.1 Clasificación del juego</h3>
@@ -2894,6 +3080,37 @@
 
   <div class="roi-callout" style="margin-top:1.5rem">
     <strong>Conclusión:</strong> Para un equipo de 2 personas, el modelo regulado con apuestas reales es <strong>inviable en fase inicial</strong> — el aval bancario de €1,5M–3M es una barrera insuperable sin inversión institucional. La ruta recomendada es operar como juego social (sin dinero real) y monetizar vía <span class="tip" data-tip="Business to Business — venta de empresa a empresa (ej: la app vende a bares)">B2B</span> a bares, sin cruzar el umbral de "juego de azar" según la Ley 13/2011.
+  </div>
+
+  <h3>11.5 Clasificación de contenido — PEGI 18 y política de Google Play <span class="tag" style="background:var(--green-bg);border-color:var(--green-border);color:#1a5c36">nuevo, sep. 2026</span></h3>
+  <p>
+    En septiembre de 2026, Google Play clasificó Bule Bule como <strong>PEGI 18</strong> por el descriptor de contenido
+    <strong>"azar simulado"</strong> — las tiradas de dados con la moneda virtual Bules encajan en esa categoría aunque no
+    haya dinero real en juego. Es un marco <strong>distinto</strong> al de la sección 11.1–11.4: la <span class="tip" data-tip="Dirección General de Ordenación del Juego — organismo español regulador de los juegos de azar online">DGOJ</span>
+    regula quién puede <em>operar</em> un juego de azar con dinero real; PEGI/Google Play regula qué <em>audiencia</em> puede
+    <em>ver e instalar</em> un contenido determinado en la tienda. Ambos análisis, por caminos distintos, llegan a la misma
+    conclusión práctica: mientras los Bules no sean canjeables por dinero real, Bule Bule no necesita licencia DGOJ — pero sí
+    debe cumplir la política de Google Play sobre azar simulado, que exige:
+  </p>
+  <div class="risk-grid">
+    <div class="risk-card" style="border-left-color:#27ae60">
+      <strong>Restricción de edad (PEGI 18)</strong>
+      <p>Google Play restringe la instalación y visibilidad de la ficha a cuentas de la edad adecuada. No existe age-gate propio dentro de la app — el filtro depende enteramente de la cuenta de Google del dispositivo.</p>
+    </div>
+    <div class="risk-card" style="border-left-color:#27ae60">
+      <strong>Declaración explícita de "no dinero real"</strong>
+      <p>Los Términos y la Política de Privacidad (<code>terminos.html</code>, <code>privacidad.html</code>) declaran de forma explícita que Bule Bule no es un servicio de apuestas, que no se puede ganar dinero ni premios reales, y que el canje de Bules por dinero real conlleva suspensión o baneo permanente de la cuenta.</p>
+    </div>
+    <div class="risk-card" style="border-left-color:#f39c12">
+      <strong>Canal de denuncia de conducta</strong>
+      <p>Política de contenido generado por el usuario: el chat de partida debe tener un canal para denunciar acoso, violencia o discriminación. Implementado desde agosto de 2026 (<code>/api/report-message</code>, purga a 90 días, panel admin) y documentado en ambos textos legales desde septiembre.</p>
+    </div>
+  </div>
+  <div class="alert alert-yellow" style="margin-top:1rem">
+    <strong>⚠ Atención — hallazgo de esta sesión de documentación:</strong> no existe ningún mecanismo de auto-declaración de
+    edad dentro de la propia app (ni checkbox ni fecha de nacimiento) — la única barrera de edad es la que aplica Google Play
+    a nivel de cuenta. Es la implementación mínima suficiente para la política de la tienda, pero una capa adicional de
+    auto-declaración en el primer arranque sería una defensa extra si se quisiera reforzar.
   </div>
 
 </section>
