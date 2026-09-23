@@ -1233,22 +1233,6 @@ export default function DiceRollerScene({
     const discardedIdle = pendingDiscards.filter(i => ctx.dice[i]?.phase === 'idle' && !blockedColorByIndex.has(i))
     const nDiscard = discardedIdle.length
 
-    // Dados "agrupados" (en juego, ni aparcados ni marcados a descartar):
-    // ordenados por valor (As→7, agrupando iguales — una escalera ya sale
-    // ordenada así sin necesitar detección especial) y repartidos en los
-    // slots de lectura (arriba-izquierda → abajo-derecha) en ese orden, en
-    // vez de cada uno en su slotPos(i) fijo por índice — así no quedan
-    // huecos cuando algunos dados están aparcados o en el cementerio.
-    const groupedIdle = [0,1,2,3,4].filter(i => {
-      const d = ctx.dice[i]
-      return d.phase === 'idle' && !d.inCorner && !discardedIdle.includes(i)
-    })
-    const groupedSlotByIndex = new Map(
-      [...groupedIdle]
-        .sort((a, b) => (VALUE_RANK[ctx.dice[a].value] ?? 99) - (VALUE_RANK[ctx.dice[b].value] ?? 99))
-        .map((dieIdx, slot) => [dieIdx, slot])
-    )
-
     ctx.dice.forEach((d, i) => {
       if (d.phase !== 'idle') return
       const blockedColor = blockedColorByIndex.get(i)
@@ -1280,7 +1264,10 @@ export default function DiceRollerScene({
         const slot = discardedIdle.indexOf(i)
         d.moveTo.set((slot - (nDiscard - 1) / 2) * SLOT_SPACING, REST_Y, DISCARD_Z)
       } else {
-        const { x, z: slotZ } = slotPos(groupedSlotByIndex.get(i) ?? i)
+        // Se queda en su slot fijo por índice — no se reagrupa/compacta con
+        // los demás dados en juego mientras el jugador decide qué descartar
+        // (pedido explícito: dejar los dados donde están, sin reorganizar).
+        const { x, z: slotZ } = slotPos(i)
         d.moveTo.set(x, REST_Y, slotZ)
       }
       d.moveTs = now
