@@ -1515,6 +1515,7 @@ body {
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
+  margin-top: -4px;
 }
 
 .dice-box__footer {
@@ -1531,6 +1532,7 @@ body {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
+  margin-top: 4px;
 }
 
 .dice-box__beat-left {
@@ -1575,6 +1577,7 @@ body {
   color: #22c55e;
   white-space: nowrap;
   margin-left: 8px;
+  margin-top: -4px;
 }
 
 /* ── Game hand (dice slots below dice-box) ───────────────── */
