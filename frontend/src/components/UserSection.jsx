@@ -11,6 +11,14 @@ import { openExternal } from '../utils/openExternal'
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || ''
 
+// Safari iOS exige permiso explícito (gesto del usuario) para leer eventos de
+// movimiento — el resto de navegadores no lo necesitan. Antes se pedía con un
+// botón dentro de la partida ("Activar agitar"); ahora solo aparece aquí, en
+// Ajustes, para no interrumpir la partida con un botón de permisos.
+const needsMotionPermission = () =>
+  typeof DeviceMotionEvent !== 'undefined' &&
+  typeof DeviceMotionEvent.requestPermission === 'function'
+
 const TIER_COLOR = { Diamante: '#4fc3f7', Oro: '#ffd700', Plata: '#9e9e9e', Bronce: '#cd7f32' }
 
 // Map raw game values to display names
@@ -497,6 +505,7 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [theme, setThemeState]        = useState(getTheme)
+  const [shakeEnabled, setShakeEnabled] = useState(() => localStorage.getItem('shakePermGranted') === '1')
   const [commentsEnabled, setCommentsEnabled] = useState(true)
   const [reportOpen, setReportOpen]       = useState(false)
   const [reportedPlayer, setReportedPlayer] = useState('')
@@ -551,6 +560,16 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
 
   function handleLanguageChange(value) {
     setLanguage(value)
+  }
+
+  async function enableShake() {
+    try {
+      const perm = await DeviceMotionEvent.requestPermission()
+      if (perm === 'granted') {
+        localStorage.setItem('shakePermGranted', '1')
+        setShakeEnabled(true)
+      }
+    } catch {}
   }
 
   function saveName() {
@@ -629,6 +648,19 @@ function SettingsTab({ user, onUpdate, onLogout, onDeleteAccount }) {
         </div>
         <p className="us__version-text" style={{ marginTop: 6 }}>{t('user.settings.languageHint')}</p>
       </div>
+
+      {needsMotionPermission() && (
+        <div className="usec__settings-section">
+          <p className="usec__settings-label">{t('user.settings.gameplay')}</p>
+          {shakeEnabled ? (
+            <p className="us__version-text">{t('user.settings.shakeEnabled')}</p>
+          ) : (
+            <button className="btn btn--secondary btn--full" onClick={enableShake}>
+              {t('user.settings.shakeEnable')}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="usec__settings-section">
         <p className="usec__settings-label">{t('user.settings.nameLabel')}</p>

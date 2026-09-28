@@ -507,9 +507,14 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     }
   }, [])
 
-  // Shake to roll
+  // Shake to roll — en iOS el permiso se pide una sola vez desde Ajustes
+  // (UserSection.jsx), no con un botón dentro de la partida; aquí solo se
+  // recoge si ya se concedió antes.
   useEffect(() => {
-    if (IS_MOBILE && !needsMotionPermission()) setShakeEnabled(true)
+    if (!IS_MOBILE) return
+    if (!needsMotionPermission() || localStorage.getItem('shakePermGranted') === '1') {
+      setShakeEnabled(true)
+    }
   }, [])
 
   useEffect(() => {
@@ -526,12 +531,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
     return () => window.removeEventListener('devicemotion', onMotion)
   }, [shakeEnabled, canRoll, handleRoll])
 
-  async function enableShakeIOS() {
-    try {
-      const perm = await DeviceMotionEvent.requestPermission()
-      if (perm === 'granted') setShakeEnabled(true)
-    } catch {}
-  }
 
   // Bot: tras tirar espera a que los dados caigan y se paren (onSettled de la
   // escena 3D); después marca sus descartes de uno en uno cada 300ms y relanza.
@@ -1120,11 +1119,6 @@ export default function GameBoard({ room, myId, onLeave, musicOn, onToggleMusic 
                       {me?.isTester && <TesterHandPicker forcedHandRank={me?.forcedHandRank ?? null} />}
                     </div>
                   </>
-                )}
-                {IS_MOBILE && needsMotionPermission() && !shakeEnabled && (
-                  <button className="btn btn--secondary btn--full" onClick={enableShakeIOS} style={{ marginTop: 8 }}>
-                    Activar agitar
-                  </button>
                 )}
               </>
             )}
